@@ -34,6 +34,9 @@ func (c *Config) DBPath() string       { return filepath.Join(c.DataDir, "openpl
 func (c *Config) SitesDir() string     { return filepath.Join(c.DataDir, "sites") }
 func (c *Config) CaddyDir() string     { return filepath.Join(c.DataDir, "caddy") }
 func (c *Config) BackupsDir() string   { return filepath.Join(c.DataDir, "backups") }
+func (c *Config) LogsDir() string      { return filepath.Join(c.DataDir, "logs") }
+func (c *Config) RunDir() string       { return filepath.Join(c.DataDir, "run") }
+func (c *Config) PanelSocket() string  { return filepath.Join(c.RunDir(), "openplexd.sock") }
 func (c *Config) secretPath() string   { return filepath.Join(c.DataDir, "secret.key") }
 func (c *Config) AdminPassPath() string { return filepath.Join(c.DataDir, "initial-admin-password") }
 
@@ -61,7 +64,7 @@ func Load(args []string) (*Config, error) {
 		return nil, fmt.Errorf("resolve data dir: %w", err)
 	}
 	c.DataDir = abs
-	for _, d := range []string{c.DataDir, c.SitesDir(), c.CaddyDir(), c.BackupsDir()} {
+	for _, d := range []string{c.DataDir, c.SitesDir(), c.CaddyDir(), c.BackupsDir(), c.LogsDir(), c.RunDir()} {
 		if err := os.MkdirAll(d, 0o750); err != nil {
 			return nil, fmt.Errorf("create %s: %w", d, err)
 		}

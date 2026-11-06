@@ -35,15 +35,15 @@ has been verified on the Linux test server. One commit per milestone.
 - [ ] Audit log writes for security-relevant actions + `/audit` endpoint (admin)
 
 ## M4 — Docker orchestrator (`internal/docker`, `internal/ssl`)
-- [ ] Engine client + ping, managed labels
-- [ ] `openplex_edge` network
-- [ ] Caddy edge container (80/443/443udp, admin API on 127.0.0.1:2019)
-- [ ] Caddyfile rendering: vhosts, aliases, redirects, force-HTTPS, PHP FastCGI, reverse proxy, static
-- [ ] Live config reload via Caddy admin API
-- [ ] Site runtimes: static, PHP 7.4/8.1/8.2/8.3/8.4-FPM, Node.js, Python, Go
-- [ ] Per-site CPU/memory limits, env vars, restart policy, hardening
-- [ ] Deploy / start / stop / restart / remove site container
-- [ ] Reconcile loop (DB → Docker + Caddy) at boot and on demand
+- [x] Engine client + ping, managed labels
+- [x] `openplex_edge` network
+- [x] Caddy edge container (80/443/443udp, admin API on 127.0.0.1:2019)
+- [x] Caddyfile rendering: vhosts, aliases, redirects, force-HTTPS, PHP FastCGI, reverse proxy, static
+- [x] Live config reload via Caddy admin API
+- [x] Site runtimes: static, PHP 7.4/8.1/8.2/8.3/8.4-FPM, Node.js, Python, Go
+- [x] Per-site CPU/memory limits, env vars, restart policy, hardening
+- [x] Deploy / start / stop / restart / remove site container
+- [x] Reconcile loop (DB → Docker + Caddy) at boot and on demand
 
 ## M5 — Domains & websites (`/api/v1/domains`)
 - [ ] CRUD domains (primary, subdomain, alias) with ownership checks + quota
