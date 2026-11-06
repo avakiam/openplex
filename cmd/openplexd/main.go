@@ -97,6 +97,7 @@ func run(args []string) error {
 			workers.Add(1)
 			go func() {
 				defer workers.Done()
+				orch.RemoveStaleShells(ctx)
 				if err := orch.Reconcile(ctx); err != nil {
 					log.Error("initial reconcile finished with errors", "err", err)
 				}

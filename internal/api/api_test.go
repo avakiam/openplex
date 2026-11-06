@@ -307,3 +307,38 @@ func TestAdminerGuard(t *testing.T) {
 		t.Errorf("allowed server: %d, want 502 from proxy", res.StatusCode)
 	}
 }
+
+func TestTerminalGuards(t *testing.T) {
+	h := newHarness(t)
+	h.mkUser("carla", db.RoleCustomer, nil)
+	adm, cust := h.login("admin").AccessToken, h.login("carla").AccessToken
+	var d db.Domain
+	h.do("POST", "/domains", adm, map[string]any{"name": "term.test"}, &d)
+	ticket := func(tok string) string {
+		var tk map[string]string
+		h.do("POST", "/auth/ws-ticket", tok, nil, &tk)
+		return tk["ticket"]
+	}
+	get := func(path string) int {
+		res, err := http.Get(h.ts.URL + "/api/v1" + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		return res.StatusCode
+	}
+	// Another customer cannot open a terminal on the admin's site.
+	if c := get("/domains/" + itoa(d.ID) + "/terminal/ws?ticket=" + ticket(cust)); c != 404 {
+		t.Fatalf("foreign terminal: %d", c)
+	}
+	// Tickets are single-use.
+	tk := ticket(adm)
+	get("/domains/" + itoa(d.ID) + "/terminal/ws?ticket=" + tk)
+	if c := get("/domains/" + itoa(d.ID) + "/terminal/ws?ticket=" + tk); c != 401 {
+		t.Fatalf("ticket reuse: %d", c)
+	}
+	// Without Docker the endpoint refuses cleanly.
+	if c := get("/domains/" + itoa(d.ID) + "/terminal/ws?ticket=" + ticket(adm)); c != 503 {
+		t.Fatalf("no docker: %d", c)
+	}
+}

@@ -121,6 +121,7 @@ func (s *Server) Handler() http.Handler {
 				r.Post("/backups", s.handleItemBackupNow)
 				r.Post("/backups/{snap}/restore", s.handleItemRestore)
 				r.Get("/logs/ws", s.handleLogsWS)
+				r.Get("/terminal/ws", s.handleTerminalWS)
 				r.Get("/redirects", s.handleListRedirects)
 				r.Post("/redirects", s.handleCreateRedirect)
 				r.Delete("/redirects/{rid}", s.handleDeleteRedirect)

@@ -19,35 +19,48 @@ import (
 	"github.com/docker/docker/pkg/jsonmessage"
 )
 
-//go:embed php/Dockerfile php/openplex.ini
-var phpRecipe embed.FS
+//go:embed php/Dockerfile php/openplex.ini shell/Dockerfile
+var recipes embed.FS
 
-// phpRecipeHash identifies the build recipe; changing the Dockerfile or ini
-// yields a new image tag, so sites are rebuilt and redeployed automatically.
-var phpRecipeHash = func() string {
+// recipeHash identifies a build recipe directory; changing it yields a new
+// image tag, so images are rebuilt and containers redeployed automatically.
+func recipeHash(dir string) string {
 	h := sha256.New()
-	_ = fs.WalkDir(phpRecipe, "php", func(p string, d fs.DirEntry, err error) error {
+	_ = fs.WalkDir(recipes, dir, func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
 		}
-		b, _ := phpRecipe.ReadFile(p)
+		b, _ := recipes.ReadFile(p)
 		h.Write([]byte(p))
 		h.Write(b)
 		return nil
 	})
 	return hex.EncodeToString(h.Sum(nil))[:10]
-}()
+}
+
+var (
+	phpRecipeHash   = recipeHash("php")
+	shellRecipeHash = recipeHash("shell")
+)
 
 // PHPImage is the locally built runtime image for a PHP version.
 func PHPImage(version string) string {
 	return fmt.Sprintf("openplex/php:%s-%s", version, phpRecipeHash)
 }
 
-func phpBuildContext() (io.Reader, error) {
+// ShellImage is the locally built image used for web-terminal shells.
+func ShellImage() string { return "openplex/shell:" + shellRecipeHash }
+
+func buildContext(dir string) (io.Reader, error) {
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
-	for _, name := range []string{"Dockerfile", "openplex.ini"} {
-		b, err := phpRecipe.ReadFile("php/" + name)
+	entries, err := fs.ReadDir(recipes, dir)
+	if err != nil {
+		return nil, err
+	}
+	for _, e := range entries {
+		name := e.Name()
+		b, err := recipes.ReadFile(dir + "/" + name)
 		if err != nil {
 			return nil, err
 		}
@@ -64,26 +77,39 @@ func phpBuildContext() (io.Reader, error) {
 // ensurePHPImage builds openplex/php:<version>-<hash> if it is not present.
 // The first build of a version compiles the extensions and takes a few minutes.
 func (o *Orchestrator) ensurePHPImage(ctx context.Context, version string) error {
-	tag := PHPImage(version)
-	o.buildMu.Lock() // one compile at a time: builds are CPU-heavy
+	v := version
+	if err := o.buildImage(ctx, PHPImage(version), "php", "php:"+version+"-fpm-alpine", map[string]*string{"PHP_VERSION": &v}); err != nil {
+		return err
+	}
+	o.removeStalePHPImages(ctx, version)
+	return nil
+}
+
+// EnsureShellImage builds the web-terminal shell image if needed.
+func (o *Orchestrator) EnsureShellImage(ctx context.Context) error {
+	return o.buildImage(ctx, ShellImage(), "shell", "alpine:3.22", nil)
+}
+
+// buildImage builds tag from an embedded recipe directory if it is missing.
+func (o *Orchestrator) buildImage(ctx context.Context, tag, dir, base string, args map[string]*string) error {
+	o.buildMu.Lock() // one build at a time: builds are CPU-heavy
 	defer o.buildMu.Unlock()
 	if _, err := o.cli.ImageInspect(ctx, tag); err == nil {
 		return nil
 	}
-	if err := o.ensureImage(ctx, fmt.Sprintf("php:%s-fpm-alpine", version)); err != nil {
+	if err := o.ensureImage(ctx, base); err != nil {
 		return err
 	}
-	bctx, err := phpBuildContext()
+	bctx, err := buildContext(dir)
 	if err != nil {
 		return err
 	}
-	o.log.Info("building PHP runtime image (first use of this version, takes a few minutes)", "image", tag)
+	o.log.Info("building image (first use, may take a few minutes)", "image", tag)
 	start := time.Now()
-	v := version
 	resp, err := o.cli.ImageBuild(ctx, bctx, build.ImageBuildOptions{
 		Tags:        []string{tag},
 		Dockerfile:  "Dockerfile",
-		BuildArgs:   map[string]*string{"PHP_VERSION": &v},
+		BuildArgs:   args,
 		Remove:      true,
 		ForceRemove: true,
 		Labels:      map[string]string{LabelManaged: "true", LabelKind: "image"},
@@ -99,8 +125,7 @@ func (o *Orchestrator) ensurePHPImage(ctx context.Context, version string) error
 	if _, err := o.cli.ImageInspect(ctx, tag); err != nil {
 		return fmt.Errorf("build %s finished but the image is missing:\n%s", tag, tail.String())
 	}
-	o.log.Info("PHP runtime image built", "image", tag, "took", time.Since(start).Round(time.Second))
-	o.removeStalePHPImages(ctx, version)
+	o.log.Info("image built", "image", tag, "took", time.Since(start).Round(time.Second))
 	return nil
 }
 

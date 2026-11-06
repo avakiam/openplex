@@ -60,7 +60,9 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] List / read / write / mkdir / rename / delete / chmod
 - [x] Multipart upload + download
 - [x] Extract `.zip` / `.tar.gz` (zip-slip safe) + compress
-- [ ] WebSocket container terminal (docker exec TTY, resize)
+- [x] WebSocket web terminal (xterm.js): docker exec TTY in the site's own container as the site uid,
+      throwaway `openplex/shell` tools container for static sites, resize, root mode (admins only),
+      30 min idle / 4 h max, whole session killed on disconnect, audited open/close
 
 ## M7 — Databases
 - [x] Shared MariaDB 11.8 / PostgreSQL 17 servers + per-instance Redis 7.4 on internal `openplex_db`
@@ -117,7 +119,8 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] Views: dashboard (live host telemetry + containers), domains list/create, domain detail
       (overview/actions, settings, env vars, redirects, aliases & subdomains, live logs),
       file manager with Monaco (self-hosted, no CDN), users, API/SSH keys, account (password, 2FA + QR), audit log
-- [ ] Views for upcoming modules: terminal (xterm.js), databases, mail, DNS, security, cron, backups
+- [x] Views: terminal (xterm.js), databases, backups
+- [ ] Views for upcoming modules: mail, DNS, security, cron
 - [ ] Trim the embedded Monaco bundle (~25 MB of the 41 MB binary) to the languages we need
 
 ## M14 — Installer & packaging
@@ -158,3 +161,8 @@ has been verified on the Linux test server. One commit per milestone.
   exact state: MariaDB rows + dropped extra table, Postgres rows, Redis keys (extra key gone), site
   files (injected malware.php deleted, owner uid kept). Restoring a DB snapshot into a site was
   refused. The daily scheduler caught up on first start and applied retention. Restore from the UI OK.
+- 2026-11-06 — Web terminal on the real server: PHP 8.3 site shell runs as uid 100002 inside its
+  container (php CLI, DB hosts reachable); static site gets a throwaway `openplex/shell` container
+  (bash, git, DB clients, internet) removed on disconnect. Closing the tab killed the shell and a
+  background `sleep` it had started (Docker does not hang up TTY execs on its own — fixed).
+  Open/close audited with duration.

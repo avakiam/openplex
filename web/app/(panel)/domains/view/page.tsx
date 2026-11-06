@@ -14,11 +14,13 @@ import {
   ScrollText,
   Settings2,
   Square,
+  SquareTerminal,
   Trash2,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Suspense, useEffect, useState } from "react";
 
 import { CreateDomainDialog } from "@/components/create-domain-dialog";
@@ -50,6 +52,12 @@ import {
   Th,
 } from "@/components/ui";
 import { api } from "@/lib/api";
+import { isAdmin, useAuth } from "@/lib/auth";
+
+const WebTerminal = dynamic(() => import("@/components/web-terminal").then((m) => m.WebTerminal), {
+  ssr: false,
+  loading: () => <div className="flex h-80 items-center justify-center"><Spinner /></div>,
+});
 import { keys, useAction, useDomain, useDomainStats, useDomains, useRedirects, useRuntimes } from "@/lib/hooks";
 import type { Domain } from "@/lib/types";
 import { bytes, dateTime, pct } from "@/lib/utils";
@@ -371,6 +379,7 @@ function DomainView() {
   const { data: d, isLoading, error } = useDomain(id);
   const [tab, setTab] = useState("overview");
   const [logKind, setLogKind] = useState<"access" | "error">("access");
+  const { user } = useAuth();
 
   if (isLoading) return <div className="flex justify-center py-20"><Spinner /></div>;
   if (error || !d) return <ErrorBox error={error ?? new Error("Website not found")} />;
@@ -388,6 +397,7 @@ function DomainView() {
           <TabsTrigger value="settings"><Settings2 /> Settings</TabsTrigger>
           <TabsTrigger value="redirects"><Link2 /> Redirects</TabsTrigger>
           <TabsTrigger value="aliases"><Plus /> Aliases</TabsTrigger>
+          <TabsTrigger value="terminal"><SquareTerminal /> Terminal</TabsTrigger>
           <TabsTrigger value="logs"><ScrollText /> Logs</TabsTrigger>
           <TabsTrigger value="backups"><Archive /> Backups</TabsTrigger>
         </TabsList>
@@ -396,6 +406,15 @@ function DomainView() {
         <TabsContent value="settings"><SettingsTab d={d} /></TabsContent>
         <TabsContent value="redirects"><RedirectsTab d={d} /></TabsContent>
         <TabsContent value="aliases"><AliasesTab d={d} /></TabsContent>
+        <TabsContent value="terminal">
+          <Card>
+            <CardHeader
+              title="Terminal"
+              description={d.runtime === "static" ? "A shell with git, curl, rsync, editors and database clients, with this website's files mounted." : `A shell inside this website's ${d.runtime} ${d.runtime_version} container — run composer, npm, artisan, migrations…`}
+            />
+            <CardBody>{tab === "terminal" && <WebTerminal domainId={d.id} canRoot={isAdmin(user)} />}</CardBody>
+          </Card>
+        </TabsContent>
         <TabsContent value="backups">
           <Card>
             <CardHeader title="Backups" description="Restore points of this website's files. Databases are backed up and restored on the Databases page." />
