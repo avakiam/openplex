@@ -6,25 +6,25 @@ has been verified on the Linux test server. One commit per milestone.
 ## M0 — Project foundation
 - [x] Git repository, `.gitignore`, `.editorconfig`
 - [x] `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `PROGRESS.md`
-- [ ] `Makefile` (check / build / backend / web / run) + Docker toolchain fallback
-- [ ] `go.mod` (CGO-free deps pinned)
+- [x] `Makefile` (check / build / backend / web / run) + Docker toolchain fallback
+- [x] `go.mod` (CGO-free deps pinned)
 
 ## M1 — Daemon core (`cmd/openplexd`, `internal/config`)
-- [ ] Flags + `OPENPLEX_*` env config, data-dir creation (0700)
-- [ ] Persistent signing secret (`secret.key`, 0600)
+- [x] Flags + `OPENPLEX_*` env config, data-dir creation (0700)
+- [x] Persistent signing secret (`secret.key`, 0600)
 - [ ] First-boot admin bootstrap (`initial-admin-password`, 0600)
 - [ ] Structured logging (slog), graceful shutdown
 
 ## M2 — State database (`internal/db`)
-- [ ] SQLite open: WAL, foreign keys, busy timeout, in-memory test helper
-- [ ] Versioned migration runner
-- [ ] Schema v1: users, refresh_tokens, api_keys, ssh_keys, domains, redirects, audit_log
-- [ ] Repositories: users, refresh tokens, API keys, SSH keys, domains, redirects, audit log
-- [ ] Repository tests
+- [x] SQLite open: WAL, foreign keys, busy timeout, in-memory test helper
+- [x] Versioned migration runner
+- [x] Schema v1: users, refresh_tokens, api_keys, ssh_keys, domains, redirects, audit_log
+- [x] Repositories: users, refresh tokens, API keys, SSH keys, domains, redirects, audit log
+- [x] Repository tests
 
 ## M3 — Authentication & RBAC (`internal/auth`, `internal/api`)
-- [ ] bcrypt password hashing + policy
-- [ ] JWT access tokens (HS256, 15 min)
+- [x] bcrypt password hashing + policy
+- [x] JWT access tokens (HS256, 15 min)
 - [ ] Refresh tokens (opaque, hashed, rotation, reuse detection → revoke family)
 - [ ] TOTP 2FA: setup / enable / disable / login challenge
 - [ ] API keys (`opx_` prefix, hashed, last-used tracking)
