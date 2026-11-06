@@ -68,8 +68,10 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] Passwords encrypted at rest (AES-256-GCM, HKDF from secret.key); credentials + connection URL view
 - [x] Adminer 5.4.1 behind `/tools/adminer/` with one-click login; SSRF guard (only `mariadb`/`postgres`, MySQL/PG drivers)
 - [x] Databases UI page (create, connect details, rotate, Adminer, delete)
-- [ ] PHP runtime images with common extensions (mysqli, pdo_mysql, pgsql, redis, gd, intl, zip, opcache) — the
-      official php-fpm images lack them, so PHP apps (e.g. WordPress) cannot reach MariaDB yet
+- [x] PHP runtime images `openplex/php:<ver>-<recipe-hash>` built on demand from the official
+      php-fpm-alpine images: bcmath exif gd(freetype/jpeg/webp) intl(+full ICU) mysqli opcache pdo_mysql
+      pdo_pgsql pgsql redis zip, production php.ini + OpenPlex overrides; recipe changes rebuild and
+      redeploy automatically, stale images are removed
 - [ ] Remote access option (publish a DB port per-IP allow-list) and per-database size limits
 
 ## M8 — Mail
@@ -139,3 +141,7 @@ has been verified on the Linux test server. One commit per milestone.
   NOAUTH; DB network has no internet; site containers reach `mariadb:3306`/`postgres:5432`;
   quota → 403; rotation invalidates the old password; Adminer one-click login lands on the DB;
   deletion removes DBs, users/roles and Redis containers.
+- 2026-11-06 — PHP images on the real server: recipe builds on 7.4 (Alpine 3.16), 8.3 and 8.4
+  (~3–5 min first build, 130–195 MB); all 11 extensions load. A PHP 8.3 site connected to MariaDB
+  (PDO + mysqli), PostgreSQL (PDO) and Redis, GD/intl/OPcache work, es_ES formatting correct
+  (`1.234,50 €`). Rebuild after a recipe change swapped the site container with no downtime.

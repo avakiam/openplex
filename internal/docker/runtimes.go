@@ -15,6 +15,7 @@ type Runtime struct {
 	Versions     []string    `json:"versions"`
 	Default      string      `json:"default"`
 	ImageFormat  string      `json:"-"` // fmt pattern taking the version
+	Build        bool        `json:"-"` // image is built locally (see phpimage.go)
 	NeedsCommand bool        `json:"needs_command"`
 	DefaultPort  int         `json:"default_port"`
 	Backend      ssl.Backend `json:"backend"`
@@ -22,6 +23,9 @@ type Runtime struct {
 
 // Image returns the container image for version v.
 func (r Runtime) Image(v string) string {
+	if r.Build {
+		return PHPImage(v)
+	}
 	if r.ImageFormat == "" {
 		return ""
 	}
@@ -33,7 +37,7 @@ func (r Runtime) Image(v string) string {
 var Runtimes = map[string]Runtime{
 	"static": {Name: "static", Label: "Static (HTML/CSS/JS)", Backend: ssl.BackendStatic},
 	"php": {Name: "php", Label: "PHP-FPM", Versions: []string{"7.4", "8.1", "8.2", "8.3", "8.4"}, Default: "8.3",
-		ImageFormat: "php:%s-fpm-alpine", DefaultPort: 9000, Backend: ssl.BackendFastCGI},
+		ImageFormat: "php:%s-fpm-alpine", Build: true, DefaultPort: 9000, Backend: ssl.BackendFastCGI},
 	"node": {Name: "node", Label: "Node.js", Versions: []string{"20", "22", "24"}, Default: "22",
 		ImageFormat: "node:%s-alpine", NeedsCommand: true, DefaultPort: 3000, Backend: ssl.BackendProxy},
 	"python": {Name: "python", Label: "Python", Versions: []string{"3.11", "3.12", "3.13"}, Default: "3.13",

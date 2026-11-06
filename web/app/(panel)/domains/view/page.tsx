@@ -79,7 +79,9 @@ function Overview({ d }: { d: Domain }) {
           </Info>
           <Info label="Status">
             <StatusBadge status={d.status} />
-            {d.status_message && <p className="mt-1 text-xs text-destructive">{d.status_message}</p>}
+            {d.status_message && (
+              <p className={`mt-1 text-xs ${d.status === "error" ? "text-destructive" : "text-muted-foreground"}`}>{d.status_message}</p>
+            )}
           </Info>
           <Info label="Runtime">{d.runtime === "static" ? "Static files (served by the edge)" : `${d.runtime} ${d.runtime_version}`}</Info>
           <Info label="Document root"><code className="text-xs">{d.document_root}/</code></Info>

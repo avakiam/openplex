@@ -48,8 +48,9 @@ type Orchestrator struct {
 	cfg *config.Config
 	log *slog.Logger
 
-	edgeMu sync.Mutex // serializes edge config writes/reloads
-	locks  keyedMutex // per-site lifecycle locks
+	edgeMu  sync.Mutex // serializes edge config writes/reloads
+	buildMu sync.Mutex // serializes local image builds
+	locks   keyedMutex // per-site lifecycle locks
 }
 
 // New connects to the Docker Engine and verifies it responds.

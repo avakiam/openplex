@@ -166,7 +166,14 @@ func (o *Orchestrator) deploy(ctx context.Context, d *db.Domain) error {
 	if err := o.ensureNetwork(ctx, DBNetwork, true); err != nil {
 		return err
 	}
-	if err := o.ensureImage(ctx, spec.Image); err != nil {
+	if rt := Runtimes[d.Runtime]; rt.Build {
+		if _, err := o.cli.ImageInspect(ctx, spec.Image); err != nil {
+			_ = o.db.SetDomainStatus(ctx, d.ID, db.StatusPending, "building the PHP "+d.RuntimeVersion+" runtime (first use, a few minutes)", d.ContainerID)
+		}
+		if err := o.ensurePHPImage(ctx, d.RuntimeVersion); err != nil {
+			return err
+		}
+	} else if err := o.ensureImage(ctx, spec.Image); err != nil {
 		return err
 	}
 	name := SiteContainerName(d.ID)
