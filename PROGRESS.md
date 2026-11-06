@@ -100,7 +100,7 @@ has been verified on the Linux test server. One commit per milestone.
       terminal (xterm.js), databases, mail, DNS, security, cron, backups, API/SSH keys, settings
 
 ## M14 — Installer & packaging
-- [ ] `scripts/install.sh`: unattended Ubuntu/Debian install (Docker, user, dirs, binary, systemd, firewall)
-- [ ] `deploy/openplexd.service` (hardened systemd unit)
+- [x] `scripts/install.sh`: unattended Ubuntu/Debian install (Docker, user, dirs, binary, systemd, firewall)
+- [x] `deploy/openplexd.service` (hardened systemd unit)
 - [ ] Release build (`linux/amd64`, `linux/arm64`) + checksums
 - [ ] Verified end-to-end on the Linux test server

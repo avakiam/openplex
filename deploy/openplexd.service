@@ -1,0 +1,38 @@
+# OpenPlex control-plane daemon. Keep in sync with the copy embedded in scripts/install.sh.
+[Unit]
+Description=OpenPlex hosting control panel
+Documentation=https://openplex.dev
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/openplex/openplex.env
+ExecStart=/usr/local/bin/openplexd
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=30
+LimitNOFILE=65536
+
+# Hardening. openplexd runs as root because it manages the Docker engine,
+# file ownership of site directories and (later) host firewall rules.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=full
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+RestrictNamespaces=yes
+SystemCallArchitectures=native
+ReadWritePaths=/var/lib/openplex
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target
