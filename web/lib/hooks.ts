@@ -6,6 +6,9 @@ import { toast } from "sonner";
 import { api } from "./api";
 import type {
   APIKey,
+  BackupRun,
+  BackupSettings,
+  Snapshot,
   Database,
   DatabaseEngine,
   AuditEntry,
@@ -32,6 +35,9 @@ export const keys = {
   dbSizes: ["databases", "sizes"] as const,
   engines: ["database-engines"] as const,
   apiKeys: ["api-keys"] as const,
+  backupSettings: ["backups", "settings"] as const,
+  backupRuns: ["backups", "runs"] as const,
+  itemBackups: (base: string) => ["backups", "item", base] as const,
   sshKeys: ["ssh-keys"] as const,
   audit: ["audit"] as const,
   info: ["system", "info"] as const,
@@ -133,4 +139,24 @@ export const useDatabaseSizes = (enabled: boolean) =>
     queryFn: () => api.get<Record<string, number>>("/databases/sizes"),
     enabled,
     refetchInterval: 30_000,
+  });
+
+export const useBackupSettings = () =>
+  useQuery({ queryKey: keys.backupSettings, queryFn: () => api.get<BackupSettings>("/backups/settings"), retry: false });
+
+export const useBackupRuns = () =>
+  useQuery({
+    queryKey: keys.backupRuns,
+    queryFn: () => api.get<BackupRun[]>("/backups/runs?limit=50"),
+    refetchInterval: (q) => (q.state.data?.some((r) => r.status === "running") ? 2000 : 15_000),
+  });
+
+/** Snapshots + recent runs of one website or database (base: "/domains/3" or "/databases/9"). */
+export const useItemBackups = (base: string, enabled = true) =>
+  useQuery({
+    queryKey: keys.itemBackups(base),
+    queryFn: () => api.get<{ snapshots: Snapshot[]; runs: BackupRun[] }>(`${base}/backups`),
+    enabled,
+    retry: false,
+    refetchInterval: (q) => (q.state.data?.runs.some((r) => r.status === "running") ? 2000 : false),
   });

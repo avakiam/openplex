@@ -17,6 +17,7 @@ import (
 
 	"openplex.dev/openplex/internal/api"
 	"openplex.dev/openplex/internal/auth"
+	"openplex.dev/openplex/internal/backup"
 	"openplex.dev/openplex/internal/config"
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/docker"
@@ -123,9 +124,16 @@ func run(args []string) error {
 		}
 	}()
 
+	var backups *backup.Manager
+	if orch != nil {
+		backups = backup.New(cfg, store, orch, box, log)
+		workers.Add(1)
+		go func() { defer workers.Done(); backups.Run(ctx) }()
+	}
+
 	srv := api.New(api.Options{
 		Config: cfg, DB: store, Orchestrator: orch, Monitor: mon, Logger: log,
-		UI: ui.Handler(), Version: version, BaseContext: ctx, Box: box,
+		UI: ui.Handler(), Version: version, BaseContext: ctx, Box: box, Backups: backups,
 	})
 	httpSrv := &http.Server{
 		Handler:           srv.Handler(),

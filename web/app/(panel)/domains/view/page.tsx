@@ -1,5 +1,6 @@
 "use client";
 import {
+  Archive,
   ArrowLeft,
   ExternalLink,
   FileText,
@@ -22,6 +23,7 @@ import { Suspense, useEffect, useState } from "react";
 
 import { CreateDomainDialog } from "@/components/create-domain-dialog";
 import { FileManager } from "@/components/file-manager";
+import { ItemBackups } from "@/components/item-backups";
 import { LogViewer } from "@/components/log-viewer";
 import { StatusBadge } from "@/components/status";
 import {
@@ -387,12 +389,27 @@ function DomainView() {
           <TabsTrigger value="redirects"><Link2 /> Redirects</TabsTrigger>
           <TabsTrigger value="aliases"><Plus /> Aliases</TabsTrigger>
           <TabsTrigger value="logs"><ScrollText /> Logs</TabsTrigger>
+          <TabsTrigger value="backups"><Archive /> Backups</TabsTrigger>
         </TabsList>
         <TabsContent value="overview"><Overview d={d} /></TabsContent>
         <TabsContent value="files"><FileManager domainId={d.id} /></TabsContent>
         <TabsContent value="settings"><SettingsTab d={d} /></TabsContent>
         <TabsContent value="redirects"><RedirectsTab d={d} /></TabsContent>
         <TabsContent value="aliases"><AliasesTab d={d} /></TabsContent>
+        <TabsContent value="backups">
+          <Card>
+            <CardHeader title="Backups" description="Restore points of this website's files. Databases are backed up and restored on the Databases page." />
+            <CardBody>
+              {tab === "backups" && (
+                <ItemBackups
+                  base={`/domains/${d.id}`}
+                  label={d.name}
+                  warning="All files of this website are replaced with the backup. Files created or changed since then are lost. The site is redeployed afterwards."
+                />
+              )}
+            </CardBody>
+          </Card>
+        </TabsContent>
         <TabsContent value="logs">
           <Card>
             <CardHeader

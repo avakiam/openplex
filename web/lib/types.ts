@@ -186,3 +186,43 @@ export interface DatabaseCredentials {
   url: string;
   adminer: { driver: string; server: string };
 }
+
+export interface BackupSettings {
+  target: "local" | "s3";
+  local_path: string;
+  s3_endpoint: string;
+  s3_bucket: string;
+  s3_prefix: string;
+  s3_region: string;
+  s3_access_key: string;
+  s3_secret_set: boolean;
+  schedule_enabled: boolean;
+  schedule_time: string;
+  keep_daily: number;
+  keep_weekly: number;
+  keep_monthly: number;
+  last_scheduled_at: string | null;
+  location: string;
+}
+
+export interface BackupRun {
+  id: number;
+  kind: "backup" | "restore";
+  trigger: "manual" | "scheduled";
+  scope: string;
+  status: "running" | "success" | "error";
+  message: string;
+  bytes_added: number;
+  user_id: number | null;
+  started_at: string;
+  finished_at: string | null;
+}
+
+export interface Snapshot {
+  id: string;
+  short_id: string;
+  time: string;
+  tags: string[];
+  paths: string[];
+  summary?: { total_bytes_processed: number; data_added: number; total_files_processed: number };
+}

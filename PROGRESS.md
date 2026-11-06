@@ -91,10 +91,18 @@ has been verified on the Linux test server. One commit per milestone.
 - [ ] Cron jobs per site (run inside site container) + scheduler + run history
 
 ## M11 — Backup & restore
-- [ ] Backup engine: files (incremental tar), DB dumps, mail, panel DB snapshot
-- [ ] Targets: local directory, S3-compatible
-- [ ] Schedules + retention
-- [ ] One-click restore (site / DB / full panel)
+- [x] Backup engine: restic 0.18.1 in throwaway containers — incremental, deduplicated, encrypted;
+      one snapshot per site (files), database (mariadb-dump --single-transaction / pg_dump -Fc / Redis SAVE)
+      and the panel (SQLite VACUUM INTO, secret.key, engine root passwords, TLS certificates, env file)
+- [x] Targets: local directory (default or mounted disk), S3-compatible (secret stored encrypted)
+- [x] Daily schedule (catches up if missed) + retention (keep daily/weekly/monthly per item, prune)
+- [x] One-click restore of a site (exact, `--delete`, ownership fixed, redeploy) or a database
+      (MariaDB reset + import, pg_restore --clean as the owner role, Redis data swap); snapshot must
+      carry the item's own tag (no cross-tenant restores)
+- [x] Recovery key view (audited), activity log, owners can back up/restore their own sites and DBs
+- [ ] Mail backups (with the mail module)
+- [ ] Disaster recovery: `openplexd restore-panel` CLI to rebuild a new server from the repository
+- [ ] Off-site copy check: warn when the repository is on the same disk as the data
 
 ## M12 — Telemetry
 - [x] Host CPU / RAM / disk / network sampling
@@ -145,3 +153,8 @@ has been verified on the Linux test server. One commit per milestone.
   (~3–5 min first build, 130–195 MB); all 11 extensions load. A PHP 8.3 site connected to MariaDB
   (PDO + mysqli), PostgreSQL (PDO) and Redis, GD/intl/OPcache work, es_ES formatting correct
   (`1.234,50 €`). Rebuild after a recipe change swapped the site container with no downtime.
+- 2026-11-06 — Backups on the real server: full backup (3 sites, 3 DBs, panel) in ~10 s, second run
+  added ~150 KB (incremental). After deliberately corrupting everything, restores brought back the
+  exact state: MariaDB rows + dropped extra table, Postgres rows, Redis keys (extra key gone), site
+  files (injected malware.php deleted, owner uid kept). Restoring a DB snapshot into a site was
+  refused. The daily scheduler caught up on first start and applied retention. Restore from the UI OK.

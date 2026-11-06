@@ -1,6 +1,7 @@
 "use client";
 import {
   Activity,
+  Archive,
   Database,
   Globe,
   KeyRound,
@@ -37,6 +38,7 @@ const nav: NavItem[] = [
   { href: "/databases/", label: "Databases", icon: Database },
   { href: "/users/", label: "Users", icon: Users, show: canManageUsers },
   { href: "/keys/", label: "API & SSH keys", icon: KeyRound },
+  { href: "/backups/", label: "Backups", icon: Archive, show: isAdmin },
   { href: "/audit/", label: "Audit log", icon: ScrollText, show: isAdmin },
   { href: "/account/", label: "Account & security", icon: UserCog },
 ];

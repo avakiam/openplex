@@ -3,8 +3,10 @@ package api
 
 import (
 	"context"
+
 	"log/slog"
 	"net/http"
+	"openplex.dev/openplex/internal/backup"
 	"sync"
 	"time"
 
@@ -27,6 +29,7 @@ type Server struct {
 	mon     *monitor.Sampler
 	signer  *auth.Signer
 	box     *secrets.Box
+	backups *backup.Manager // nil without Docker
 	log     *slog.Logger
 	ui      http.Handler
 	version string
@@ -49,6 +52,7 @@ type Options struct {
 	Version      string
 	BaseContext  context.Context // cancelled at shutdown; parent of background jobs
 	Box          *secrets.Box    // encrypts recoverable secrets (database passwords)
+	Backups      *backup.Manager // nil when Docker is unavailable
 }
 
 // New builds the API server.
@@ -57,6 +61,7 @@ func New(o Options) *Server {
 		cfg: o.Config, db: o.DB, orch: o.Orchestrator, mon: o.Monitor, log: o.Logger, ui: o.UI, version: o.Version,
 		signer:       auth.NewSigner(o.Config.Secret, o.Config.AccessTTL),
 		box:          o.Box,
+		backups:      o.Backups,
 		loginLimiter: newLimiter(10, 5*time.Minute),
 		baseCtx:      o.BaseContext,
 	}
@@ -112,6 +117,9 @@ func (s *Server) Handler() http.Handler {
 					r.Post("/actions/"+a, s.handleDomainAction)
 				}
 				r.Get("/stats", s.handleDomainStats)
+				r.Get("/backups", s.handleItemBackups)
+				r.Post("/backups", s.handleItemBackupNow)
+				r.Post("/backups/{snap}/restore", s.handleItemRestore)
 				r.Get("/logs/ws", s.handleLogsWS)
 				r.Get("/redirects", s.handleListRedirects)
 				r.Post("/redirects", s.handleCreateRedirect)
@@ -135,6 +143,9 @@ func (s *Server) Handler() http.Handler {
 			r.Delete("/databases/{id}", s.handleDeleteDatabase)
 			r.Get("/databases/{id}/credentials", s.handleDatabaseCredentials)
 			r.Post("/databases/{id}/rotate-password", s.handleRotateDatabasePassword)
+			r.Get("/databases/{id}/backups", s.handleItemBackups)
+			r.Post("/databases/{id}/backups", s.handleItemBackupNow)
+			r.Post("/databases/{id}/backups/{snap}/restore", s.handleItemRestore)
 
 			r.Group(func(r chi.Router) {
 				r.Use(requireRole(db.RoleAdmin))
@@ -144,6 +155,13 @@ func (s *Server) Handler() http.Handler {
 				r.Get("/system/containers", s.handleContainers)
 				r.Post("/system/reconcile", s.handleReconcile)
 				r.Get("/audit", s.handleAudit)
+				r.Get("/backups/settings", s.handleGetBackupSettings)
+				r.Put("/backups/settings", s.handlePutBackupSettings)
+				r.Post("/backups/test", s.handleTestBackupRepo)
+				r.Get("/backups/recovery-key", s.handleRecoveryKey)
+				r.Post("/backups/run", s.handleRunBackup)
+				r.Get("/backups/runs", s.handleListBackupRuns)
+				r.Get("/backups/panel-snapshots", s.handlePanelSnapshots)
 			})
 		})
 

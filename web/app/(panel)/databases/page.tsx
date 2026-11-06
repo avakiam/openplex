@@ -1,8 +1,9 @@
 "use client";
-import { Check, Copy, Database as DbIcon, Eye, EyeOff, KeyRound, Loader2, MoreHorizontal, Plus, SquareArrowOutUpRight, Trash2 } from "lucide-react";
+import { Archive, Check, Copy, Database as DbIcon, Eye, EyeOff, KeyRound, Loader2, MoreHorizontal, Plus, SquareArrowOutUpRight, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { ItemBackups } from "@/components/item-backups";
 import {
   Badge,
   Button,
@@ -221,6 +222,7 @@ export default function DatabasesPage() {
   const [create, setCreate] = useState(false);
   const [connect, setConnect] = useState<Database | null>(null);
   const [del, setDel] = useState<Database | null>(null);
+  const [backups, setBackups] = useState<Database | null>(null);
   const remove = useAction((id: number) => api.del(`/databases/${id}`), { success: "Database is being deleted", invalidate: [keys.databases], onSuccess: () => setDel(null) });
   const owner = (id: number) => users.data?.find((u) => u.id === id)?.username ?? `#${id}`;
 
@@ -284,6 +286,7 @@ export default function DatabasesPage() {
                             <SquareArrowOutUpRight /> Open in Adminer
                           </DropdownItem>
                         )}
+                        <DropdownItem disabled={d.status !== "running"} onSelect={() => setBackups(d)}><Archive /> Backups</DropdownItem>
                         <DropdownSeparator />
                         <DropdownItem destructive disabled={d.status === "pending"} onSelect={() => setDel(d)}><Trash2 /> Delete</DropdownItem>
                       </DropdownContent>
@@ -297,6 +300,17 @@ export default function DatabasesPage() {
       </Card>
       <CreateDialog open={create} onOpenChange={setCreate} />
       <CredentialsDialog db={connect} onClose={() => setConnect(null)} />
+      <Dialog open={!!backups} onOpenChange={(o) => !o && setBackups(null)}>
+        <DialogContent title={`Backups of ${backups?.name ?? ""}`} className="max-w-2xl">
+          {backups && (
+            <ItemBackups
+              base={`/databases/${backups.id}`}
+              label={backups.name}
+              warning="The database is replaced with the backup: changes made since then are lost. Applications using it may see errors while it is being restored."
+            />
+          )}
+        </DialogContent>
+      </Dialog>
       <Confirm
         open={!!del}
         onOpenChange={(o) => !o && setDel(null)}

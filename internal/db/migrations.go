@@ -127,6 +127,42 @@ CREATE TABLE databases (
 );
 CREATE INDEX databases_owner ON databases(owner_id);
 `,
+	// 3: backups
+	`
+CREATE TABLE backup_settings (
+	id                INTEGER PRIMARY KEY CHECK (id = 1),
+	target            TEXT NOT NULL DEFAULT 'local' CHECK (target IN ('local','s3')),
+	local_path        TEXT NOT NULL DEFAULT '',
+	s3_endpoint       TEXT NOT NULL DEFAULT '',
+	s3_bucket         TEXT NOT NULL DEFAULT '',
+	s3_prefix         TEXT NOT NULL DEFAULT 'openplex',
+	s3_region         TEXT NOT NULL DEFAULT '',
+	s3_access_key     TEXT NOT NULL DEFAULT '',
+	s3_secret_enc     TEXT NOT NULL DEFAULT '',
+	repo_password_enc TEXT NOT NULL DEFAULT '',
+	schedule_enabled  INTEGER NOT NULL DEFAULT 1,
+	schedule_time     TEXT NOT NULL DEFAULT '03:00',
+	keep_daily        INTEGER NOT NULL DEFAULT 7,
+	keep_weekly       INTEGER NOT NULL DEFAULT 4,
+	keep_monthly      INTEGER NOT NULL DEFAULT 6,
+	last_scheduled_at TIMESTAMP,
+	updated_at        TIMESTAMP NOT NULL
+);
+
+CREATE TABLE backup_runs (
+	id          INTEGER PRIMARY KEY AUTOINCREMENT,
+	kind        TEXT NOT NULL CHECK (kind IN ('backup','restore')),
+	trigger     TEXT NOT NULL DEFAULT 'manual',
+	scope       TEXT NOT NULL,
+	status      TEXT NOT NULL DEFAULT 'running',
+	message     TEXT NOT NULL DEFAULT '',
+	bytes_added INTEGER NOT NULL DEFAULT 0,
+	user_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+	started_at  TIMESTAMP NOT NULL,
+	finished_at TIMESTAMP
+);
+CREATE INDEX backup_runs_started ON backup_runs(started_at);
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

@@ -520,3 +520,16 @@ func (o *Orchestrator) ReconcileDatabases(ctx context.Context, box *secrets.Box)
 	}
 	return errors.Join(errs...)
 }
+
+// ResetMariaDB drops and recreates an (empty) MariaDB database before a
+// restore; the user's grants on it are kept.
+func (o *Orchestrator) ResetMariaDB(ctx context.Context, d *db.Database) error {
+	if !ValidIdentifier(d.Name) || !ValidIdentifier(d.Username) {
+		return fmt.Errorf("invalid database or user name")
+	}
+	_, err := o.runSQL(ctx, db.EngineMariaDB,
+		fmt.Sprintf("DROP DATABASE IF EXISTS `%s`", d.Name),
+		fmt.Sprintf("CREATE DATABASE `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", d.Name),
+		fmt.Sprintf("GRANT ALL PRIVILEGES ON `%s`.* TO '%s'@'%%'", d.Name, d.Username))
+	return err
+}
