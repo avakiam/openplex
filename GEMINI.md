@@ -5,7 +5,7 @@ before changing anything. Keep this file and `CLAUDE.md` identical except for th
 
 ## Build & test
 
-Linux / macOS with Go ≥ 1.25 and Node ≥ 22:
+Linux / macOS with Go ≥ 1.26 and Node ≥ 22:
 
 ```bash
 make check          # go vet + go test + CGO_ENABLED=0 build
@@ -18,14 +18,14 @@ make run            # runs ./bin/openplexd with data dir ./.data and listen :708
 No local Go toolchain (e.g. the Windows dev box)? Use the toolchain image — identical results:
 
 ```bash
-docker run --rm -v "$PWD":/src -v openplex-gomod:/go/pkg/mod -w /src golang:1.25-bookworm make check
+docker run --rm -v "$PWD":/src -v openplex-gomod:/go/pkg/mod -w /src golang:1.26-bookworm make check
 ```
 
 Run the daemon against the local Docker engine (smoke test):
 
 ```bash
 docker run --rm -it -p 7080:7080 -v /var/run/docker.sock:/var/run/docker.sock \
-  -v "$PWD":/src -v openplex-gomod:/go/pkg/mod -w /src golang:1.25-bookworm \
+  -v "$PWD":/src -v openplex-gomod:/go/pkg/mod -w /src golang:1.26-bookworm \
   go run ./cmd/openplexd --data-dir /tmp/opx --listen :7080
 ```
 
@@ -55,7 +55,7 @@ Runtime data dir (default `/var/lib/openplex`): `openplex.db`, `secret.key`,
 
 ## Go conventions
 
-- Go 1.25, module `openplex.dev/openplex`. `gofmt`/`go vet` clean. No CGO.
+- Go 1.26, module `openplex.dev/openplex`. `gofmt`/`go vet` clean. No CGO.
 - Router: `go-chi/chi/v5`; WebSockets: `github.com/coder/websocket`; JWT: `golang-jwt/jwt/v5`;
   TOTP: `pquerna/otp`; Docker: `github.com/docker/docker/client` (moby Engine SDK);
   telemetry: `shirou/gopsutil/v4`.
