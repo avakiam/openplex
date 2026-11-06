@@ -30,14 +30,14 @@ type Config struct {
 }
 
 // Paths derived from DataDir.
-func (c *Config) DBPath() string       { return filepath.Join(c.DataDir, "openplex.db") }
-func (c *Config) SitesDir() string     { return filepath.Join(c.DataDir, "sites") }
-func (c *Config) CaddyDir() string     { return filepath.Join(c.DataDir, "caddy") }
-func (c *Config) BackupsDir() string   { return filepath.Join(c.DataDir, "backups") }
-func (c *Config) LogsDir() string      { return filepath.Join(c.DataDir, "logs") }
-func (c *Config) RunDir() string       { return filepath.Join(c.DataDir, "run") }
-func (c *Config) PanelSocket() string  { return filepath.Join(c.RunDir(), "openplexd.sock") }
-func (c *Config) secretPath() string   { return filepath.Join(c.DataDir, "secret.key") }
+func (c *Config) DBPath() string        { return filepath.Join(c.DataDir, "openplex.db") }
+func (c *Config) SitesDir() string      { return filepath.Join(c.DataDir, "sites") }
+func (c *Config) CaddyDir() string      { return filepath.Join(c.DataDir, "caddy") }
+func (c *Config) BackupsDir() string    { return filepath.Join(c.DataDir, "backups") }
+func (c *Config) LogsDir() string       { return filepath.Join(c.DataDir, "logs") }
+func (c *Config) RunDir() string        { return filepath.Join(c.DataDir, "run") }
+func (c *Config) PanelSocket() string   { return filepath.Join(c.RunDir(), "openplexd.sock") }
+func (c *Config) secretPath() string    { return filepath.Join(c.DataDir, "secret.key") }
 func (c *Config) AdminPassPath() string { return filepath.Join(c.DataDir, "initial-admin-password") }
 
 // Load parses flags (falling back to OPENPLEX_* environment variables) and

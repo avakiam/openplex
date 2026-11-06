@@ -18,7 +18,7 @@ import (
 	"openplex.dev/openplex/internal/ssl"
 )
 
-func (o *Orchestrator) caddyEtcDir() string  { return filepath.Join(o.cfg.CaddyDir(), "etc") }
+func (o *Orchestrator) caddyEtcDir() string   { return filepath.Join(o.cfg.CaddyDir(), "etc") }
 func (o *Orchestrator) caddyfilePath() string { return filepath.Join(o.caddyEtcDir(), "Caddyfile") }
 
 // BuildEdgeConfig derives the edge configuration from the database.

@@ -18,6 +18,7 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 
+	"openplex.dev/openplex/internal/config"
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/ssl"
 )
@@ -32,8 +33,12 @@ func (o *Orchestrator) SiteDir(name string) string { return filepath.Join(o.cfg.
 func (o *Orchestrator) SiteLogDir(name string) string { return filepath.Join(o.cfg.LogsDir(), name) }
 
 // PrepareSiteDir creates the site directory tree owned by the site uid.
-func (o *Orchestrator) PrepareSiteDir(d *db.Domain) error {
-	root := o.SiteDir(d.Name)
+func (o *Orchestrator) PrepareSiteDir(d *db.Domain) error { return PrepareSiteDir(o.cfg, d) }
+
+// PrepareSiteDir creates the site (and log) directories of d, owned by the
+// site uid, with a placeholder index page on first creation. It does not need Docker.
+func PrepareSiteDir(cfg *config.Config, d *db.Domain) error {
+	root := filepath.Join(cfg.SitesDir(), d.Name)
 	uid := SiteUID(d.ID)
 	docroot := filepath.Join(root, filepath.FromSlash(d.DocumentRoot))
 	created := false
@@ -46,7 +51,7 @@ func (o *Orchestrator) PrepareSiteDir(d *db.Domain) error {
 		}
 		_ = os.Lchown(dir, uid, uid) // best effort: fails harmlessly when not root (dev)
 	}
-	if err := os.MkdirAll(o.SiteLogDir(d.Name), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(cfg.LogsDir(), d.Name), 0o755); err != nil {
 		return err
 	}
 	if created {

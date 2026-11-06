@@ -12,8 +12,8 @@ has been verified on the Linux test server. One commit per milestone.
 ## M1 — Daemon core (`cmd/openplexd`, `internal/config`)
 - [x] Flags + `OPENPLEX_*` env config, data-dir creation (0700)
 - [x] Persistent signing secret (`secret.key`, 0600)
-- [ ] First-boot admin bootstrap (`initial-admin-password`, 0600)
-- [ ] Structured logging (slog), graceful shutdown
+- [x] First-boot admin bootstrap (`initial-admin-password`, 0600)
+- [x] Structured logging (slog), graceful shutdown
 
 ## M2 — State database (`internal/db`)
 - [x] SQLite open: WAL, foreign keys, busy timeout, in-memory test helper
@@ -25,14 +25,14 @@ has been verified on the Linux test server. One commit per milestone.
 ## M3 — Authentication & RBAC (`internal/auth`, `internal/api`)
 - [x] bcrypt password hashing + policy
 - [x] JWT access tokens (HS256, 15 min)
-- [ ] Refresh tokens (opaque, hashed, rotation, reuse detection → revoke family)
-- [ ] TOTP 2FA: setup / enable / disable / login challenge
-- [ ] API keys (`opx_` prefix, hashed, last-used tracking)
-- [ ] SSH public-key manager (parse + fingerprint validation)
-- [ ] RBAC: admin → all; reseller → own customers; customer → self
-- [ ] Endpoints: `/auth/login|refresh|logout|me`, `/auth/2fa/*`, `/users`, `/api-keys`, `/ssh-keys`
-- [ ] Login rate limiting
-- [ ] Audit log writes for security-relevant actions + `/audit` endpoint (admin)
+- [x] Refresh tokens (opaque, hashed, rotation, reuse detection → revoke family)
+- [x] TOTP 2FA: setup / enable / disable / login challenge
+- [x] API keys (`opx_` prefix, hashed, last-used tracking)
+- [x] SSH public-key manager (parse + fingerprint validation)
+- [x] RBAC: admin → all; reseller → own customers; customer → self
+- [x] Endpoints: `/auth/login|refresh|logout|me`, `/auth/2fa/*`, `/users`, `/api-keys`, `/ssh-keys`
+- [x] Login rate limiting
+- [x] Audit log writes for security-relevant actions + `/audit` endpoint (admin)
 
 ## M4 — Docker orchestrator (`internal/docker`, `internal/ssl`)
 - [x] Engine client + ping, managed labels
@@ -46,17 +46,17 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] Reconcile loop (DB → Docker + Caddy) at boot and on demand
 
 ## M5 — Domains & websites (`/api/v1/domains`)
-- [ ] CRUD domains (primary, subdomain, alias) with ownership checks + quota
-- [ ] Redirect rules CRUD
-- [ ] SSL toggle + force HTTPS
-- [ ] Runtime selector + environment variables
-- [ ] Access/error log streaming over WebSocket
+- [x] CRUD domains (primary, subdomain, alias) with ownership checks + quota
+- [x] Redirect rules CRUD
+- [x] SSL toggle + force HTTPS
+- [x] Runtime selector + environment variables
+- [x] Access/error log streaming over WebSocket
 
 ## M6 — File manager & terminal (`internal/files`, `internal/terminal`)
-- [ ] Jailed path resolution (symlink-safe)
-- [ ] List / read / write / mkdir / rename / delete / chmod
-- [ ] Multipart upload + download
-- [ ] Extract `.zip` / `.tar.gz` (zip-slip safe) + compress
+- [x] Jailed path resolution (symlink-safe)
+- [x] List / read / write / mkdir / rename / delete / chmod
+- [x] Multipart upload + download
+- [x] Extract `.zip` / `.tar.gz` (zip-slip safe) + compress
 - [ ] WebSocket container terminal (docker exec TTY, resize)
 
 ## M7 — Databases
@@ -87,13 +87,13 @@ has been verified on the Linux test server. One commit per milestone.
 - [ ] One-click restore (site / DB / full panel)
 
 ## M12 — Telemetry
-- [ ] Host CPU / RAM / disk / network sampling
-- [ ] Per-container CPU / memory / network
-- [ ] WebSocket live stream + short ring-buffer history
+- [x] Host CPU / RAM / disk / network sampling
+- [x] Per-container CPU / memory / network
+- [x] WebSocket live stream + short ring-buffer history
 
 ## M13 — Web dashboard (`web/`)
 - [ ] Next.js scaffold (App Router, TS, Tailwind, shadcn/ui, TanStack Query, static export)
-- [ ] `go:embed` integration + SPA fallback (`internal/ui`)
+- [x] `go:embed` integration + SPA fallback (`internal/ui`)
 - [ ] Auth: login, 2FA challenge, token refresh
 - [ ] Layout: sidebar, role-aware navigation, dark mode
 - [ ] Views: dashboard (telemetry), users, domains, domain detail, file manager (Monaco),

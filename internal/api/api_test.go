@@ -1,0 +1,234 @@
+package api
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"io"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
+	"github.com/pquerna/otp/totp"
+
+	"openplex.dev/openplex/internal/auth"
+	"openplex.dev/openplex/internal/config"
+	"openplex.dev/openplex/internal/db"
+	"openplex.dev/openplex/internal/monitor"
+)
+
+type harness struct {
+	t   *testing.T
+	ts  *httptest.Server
+	db  *db.DB
+	cfg *config.Config
+}
+
+func newHarness(t *testing.T) *harness {
+	t.Helper()
+	dir := t.TempDir()
+	cfg, err := config.Load([]string{"--data-dir", dir, "--docker=false", "--dev"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := db.OpenMemory(t)
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	srv := New(Options{Config: cfg, DB: store, Monitor: monitor.New(time.Second, 10, dir, log), Logger: log, BaseContext: context.Background()})
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(ts.Close)
+	h := &harness{t: t, ts: ts, db: store, cfg: cfg}
+	h.mkUser("admin", db.RoleAdmin, nil)
+	return h
+}
+
+func (h *harness) mkUser(name, role string, parent *int64) *db.User {
+	hash, _ := auth.HashPassword("password123")
+	u := &db.User{Username: name, PasswordHash: hash, Role: role, ParentID: parent}
+	if err := h.db.CreateUser(context.Background(), u); err != nil {
+		h.t.Fatal(err)
+	}
+	return u
+}
+
+func (h *harness) do(method, path, token string, body any, out any) int {
+	h.t.Helper()
+	var rd io.Reader
+	if body != nil {
+		b, _ := json.Marshal(body)
+		rd = bytes.NewReader(b)
+	}
+	req, _ := http.NewRequest(method, h.ts.URL+"/api/v1"+path, rd)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		h.t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if out != nil {
+		_ = json.NewDecoder(res.Body).Decode(out)
+	}
+	return res.StatusCode
+}
+
+func (h *harness) login(user string) tokenResponse {
+	h.t.Helper()
+	var tr tokenResponse
+	if code := h.do("POST", "/auth/login", "", map[string]string{"username": user, "password": "password123"}, &tr); code != 200 {
+		h.t.Fatalf("login %s: %d", user, code)
+	}
+	return tr
+}
+
+func TestAuthFlow(t *testing.T) {
+	h := newHarness(t)
+	if code := h.do("POST", "/auth/login", "", map[string]string{"username": "admin", "password": "nope"}, nil); code != 401 {
+		t.Fatalf("bad password: %d", code)
+	}
+	tr := h.login("admin")
+	var me db.User
+	if code := h.do("GET", "/auth/me", tr.AccessToken, nil, &me); code != 200 || me.Username != "admin" {
+		t.Fatalf("me: %d %+v", code, me)
+	}
+	if code := h.do("GET", "/auth/me", "garbage", nil, nil); code != 401 {
+		t.Fatalf("garbage token: %d", code)
+	}
+
+	// Refresh rotation and reuse detection.
+	var tr2 tokenResponse
+	if code := h.do("POST", "/auth/refresh", "", map[string]string{"refresh_token": tr.RefreshToken}, &tr2); code != 200 {
+		t.Fatalf("refresh: %d", code)
+	}
+	if code := h.do("POST", "/auth/refresh", "", map[string]string{"refresh_token": tr.RefreshToken}, nil); code != 401 {
+		t.Fatalf("reuse must fail: %d", code)
+	}
+	if code := h.do("POST", "/auth/refresh", "", map[string]string{"refresh_token": tr2.RefreshToken}, nil); code != 401 {
+		t.Fatalf("family must be revoked after reuse: %d", code)
+	}
+
+	// API key.
+	var created struct {
+		Key string `json:"key"`
+	}
+	if code := h.do("POST", "/api-keys", tr.AccessToken, map[string]any{"name": "ci"}, &created); code != 201 {
+		t.Fatalf("create key: %d", code)
+	}
+	if code := h.do("GET", "/auth/me", created.Key, nil, nil); code != 200 {
+		t.Fatalf("api key auth: %d", code)
+	}
+}
+
+func TestTOTPLogin(t *testing.T) {
+	h := newHarness(t)
+	tok := h.login("admin").AccessToken
+	var setup map[string]string
+	h.do("POST", "/auth/2fa/setup", tok, nil, &setup)
+	code, _ := totp.GenerateCode(setup["secret"], time.Now())
+	if c := h.do("POST", "/auth/2fa/enable", tok, map[string]string{"code": code}, nil); c != 204 {
+		t.Fatalf("enable: %d", c)
+	}
+	var e apiError
+	if c := h.do("POST", "/auth/login", "", map[string]string{"username": "admin", "password": "password123"}, &e); c != 401 || e.Error != "totp_required" {
+		t.Fatalf("expected totp_required, got %d %+v", c, e)
+	}
+	if c := h.do("POST", "/auth/login", "", map[string]string{"username": "admin", "password": "password123", "totp_code": code}, nil); c != 200 {
+		t.Fatalf("totp login: %d", c)
+	}
+}
+
+func TestRBAC(t *testing.T) {
+	h := newHarness(t)
+	res := h.mkUser("reseller", db.RoleReseller, nil)
+	c1 := h.mkUser("cust1", db.RoleCustomer, &res.ID)
+	c2 := h.mkUser("cust2", db.RoleCustomer, nil)
+	rTok, c1Tok, c2Tok := h.login("reseller").AccessToken, h.login("cust1").AccessToken, h.login("cust2").AccessToken
+
+	// Reseller sees itself + its customer only.
+	var users []db.User
+	h.do("GET", "/users", rTok, nil, &users)
+	if len(users) != 2 {
+		t.Fatalf("reseller sees %d users", len(users))
+	}
+	if c := h.do("GET", "/users/"+itoa(c2.ID), rTok, nil, nil); c != 404 {
+		t.Fatalf("reseller reading foreign customer: %d", c)
+	}
+	// Reseller may only create customers.
+	if c := h.do("POST", "/users", rTok, map[string]any{"username": "evil", "password": "password123", "role": "admin"}, nil); c != 403 {
+		t.Fatalf("reseller creating admin: %d", c)
+	}
+	// Customers cannot use admin endpoints.
+	if c := h.do("GET", "/audit", c1Tok, nil, nil); c != 403 {
+		t.Fatalf("customer audit: %d", c)
+	}
+
+	// Domains: customer creates; other customer cannot see; reseller can.
+	var d db.Domain
+	if c := h.do("POST", "/domains", c1Tok, map[string]any{"name": "Example.COM", "runtime": "php"}, &d); c != 201 {
+		t.Fatalf("create domain: %d", c)
+	}
+	if d.Name != "example.com" || d.RuntimeVersion != "8.3" || d.OwnerID != c1.ID {
+		t.Fatalf("domain defaults: %+v", d)
+	}
+	if c := h.do("GET", "/domains/"+itoa(d.ID), c2Tok, nil, nil); c != 404 {
+		t.Fatalf("foreign domain visible: %d", c)
+	}
+	if c := h.do("GET", "/domains/"+itoa(d.ID), rTok, nil, nil); c != 200 {
+		t.Fatalf("reseller domain access: %d", c)
+	}
+	// Hijack protection: cust2 cannot claim a subdomain of cust1's domain.
+	if c := h.do("POST", "/domains", c2Tok, map[string]any{"name": "shop.example.com"}, nil); c != 409 {
+		t.Fatalf("hijack: %d", c)
+	}
+	// Customer cannot assign a domain to someone else.
+	if c := h.do("POST", "/domains", c1Tok, map[string]any{"name": "other.org", "owner_id": c2.ID}, nil); c != 403 {
+		t.Fatalf("foreign owner: %d", c)
+	}
+	// Validation.
+	if c := h.do("POST", "/domains", c1Tok, map[string]any{"name": "app.example.net", "runtime": "node"}, nil); c != 400 {
+		t.Fatalf("node without command: %d", c)
+	}
+	// Subdomain + alias + redirect.
+	var sub db.Domain
+	if c := h.do("POST", "/domains", c1Tok, map[string]any{"name": "blog.example.com", "kind": "subdomain", "parent_id": d.ID}, &sub); c != 201 {
+		t.Fatalf("subdomain: %d", c)
+	}
+	if c := h.do("POST", "/domains/"+itoa(d.ID)+"/redirects", c1Tok, map[string]any{"source_path": "/old", "target_url": "/new"}, nil); c != 201 {
+		t.Fatalf("redirect: %d", c)
+	}
+	if c := h.do("POST", "/domains/"+itoa(d.ID)+"/redirects", c1Tok, map[string]any{"source_path": "/x\n}", "target_url": "/y"}, nil); c != 400 {
+		t.Fatalf("redirect injection: %d", c)
+	}
+}
+
+func TestFileManager(t *testing.T) {
+	h := newHarness(t)
+	tok := h.login("admin").AccessToken
+	var d db.Domain
+	h.do("POST", "/domains", tok, map[string]any{"name": "files.test"}, &d)
+	base := "/domains/" + itoa(d.ID) + "/files"
+	if c := h.do("POST", base+"/mkdir", tok, map[string]string{"path": "public/css"}, nil); c != 200 {
+		t.Fatalf("mkdir: %d", c)
+	}
+	if c := h.do("PUT", base+"/content", tok, map[string]string{"path": "public/index.php", "content": "<?php echo 1;"}, nil); c != 200 {
+		t.Fatalf("write: %d", c)
+	}
+	var rd struct {
+		Content string `json:"content"`
+	}
+	if c := h.do("GET", base+"/content?path=public/index.php", tok, nil, &rd); c != 200 || rd.Content != "<?php echo 1;" {
+		t.Fatalf("read: %d %q", c, rd.Content)
+	}
+	if c := h.do("GET", base+"/content?path=../../secret.key", tok, nil, nil); c != 404 {
+		t.Fatalf("traversal should resolve inside jail and 404, got %d", c)
+	}
+	if c := h.do("POST", base+"/delete", tok, map[string]any{"paths": []string{"/"}}, nil); c != 400 {
+		t.Fatalf("delete root: %d", c)
+	}
+}
+
+func itoa(i int64) string {
+	return json.Number(func() string { b, _ := json.Marshal(i); return string(b) }()).String()
+}
