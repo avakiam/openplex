@@ -1,0 +1,106 @@
+# PROGRESS.md — OpenPlex MVP checklist
+
+Tick `[x]` only when the item is implemented, routed, builds, and (for host-level items)
+has been verified on the Linux test server. One commit per milestone.
+
+## M0 — Project foundation
+- [x] Git repository, `.gitignore`, `.editorconfig`
+- [x] `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `PROGRESS.md`
+- [ ] `Makefile` (check / build / backend / web / run) + Docker toolchain fallback
+- [ ] `go.mod` (CGO-free deps pinned)
+
+## M1 — Daemon core (`cmd/openplexd`, `internal/config`)
+- [ ] Flags + `OPENPLEX_*` env config, data-dir creation (0700)
+- [ ] Persistent signing secret (`secret.key`, 0600)
+- [ ] First-boot admin bootstrap (`initial-admin-password`, 0600)
+- [ ] Structured logging (slog), graceful shutdown
+
+## M2 — State database (`internal/db`)
+- [ ] SQLite open: WAL, foreign keys, busy timeout, in-memory test helper
+- [ ] Versioned migration runner
+- [ ] Schema v1: users, refresh_tokens, api_keys, ssh_keys, domains, redirects, audit_log
+- [ ] Repositories: users, refresh tokens, API keys, SSH keys, domains, redirects, audit log
+- [ ] Repository tests
+
+## M3 — Authentication & RBAC (`internal/auth`, `internal/api`)
+- [ ] bcrypt password hashing + policy
+- [ ] JWT access tokens (HS256, 15 min)
+- [ ] Refresh tokens (opaque, hashed, rotation, reuse detection → revoke family)
+- [ ] TOTP 2FA: setup / enable / disable / login challenge
+- [ ] API keys (`opx_` prefix, hashed, last-used tracking)
+- [ ] SSH public-key manager (parse + fingerprint validation)
+- [ ] RBAC: admin → all; reseller → own customers; customer → self
+- [ ] Endpoints: `/auth/login|refresh|logout|me`, `/auth/2fa/*`, `/users`, `/api-keys`, `/ssh-keys`
+- [ ] Login rate limiting
+- [ ] Audit log writes for security-relevant actions + `/audit` endpoint (admin)
+
+## M4 — Docker orchestrator (`internal/docker`, `internal/ssl`)
+- [ ] Engine client + ping, managed labels
+- [ ] `openplex_edge` network
+- [ ] Caddy edge container (80/443/443udp, admin API on 127.0.0.1:2019)
+- [ ] Caddyfile rendering: vhosts, aliases, redirects, force-HTTPS, PHP FastCGI, reverse proxy, static
+- [ ] Live config reload via Caddy admin API
+- [ ] Site runtimes: static, PHP 7.4/8.1/8.2/8.3/8.4-FPM, Node.js, Python, Go
+- [ ] Per-site CPU/memory limits, env vars, restart policy, hardening
+- [ ] Deploy / start / stop / restart / remove site container
+- [ ] Reconcile loop (DB → Docker + Caddy) at boot and on demand
+
+## M5 — Domains & websites (`/api/v1/domains`)
+- [ ] CRUD domains (primary, subdomain, alias) with ownership checks + quota
+- [ ] Redirect rules CRUD
+- [ ] SSL toggle + force HTTPS
+- [ ] Runtime selector + environment variables
+- [ ] Access/error log streaming over WebSocket
+
+## M6 — File manager & terminal (`internal/files`, `internal/terminal`)
+- [ ] Jailed path resolution (symlink-safe)
+- [ ] List / read / write / mkdir / rename / delete / chmod
+- [ ] Multipart upload + download
+- [ ] Extract `.zip` / `.tar.gz` (zip-slip safe) + compress
+- [ ] WebSocket container terminal (docker exec TTY, resize)
+
+## M7 — Databases
+- [ ] MariaDB / PostgreSQL / Redis service containers per owner (internal network)
+- [ ] Database + user create / drop, password rotation, size reporting
+- [ ] phpMyAdmin / Adminer routing + one-click signed login
+
+## M8 — Mail
+- [ ] Mail stack containers (Postfix, Dovecot, Rspamd, OpenDKIM) + Roundcube
+- [ ] Mail domains, mailboxes, aliases, forwarders, quotas, password rotation
+- [ ] DKIM key generation, SPF/DKIM/DMARC record generation
+- [ ] Webmail one-click login
+
+## M9 — DNS
+- [ ] PowerDNS container (gsqlite3 backend) + API key
+- [ ] Zones CRUD synced from panel state; default records on domain create
+- [ ] Records: A, AAAA, CNAME, MX, TXT, SRV, NS, CAA
+
+## M10 — Security & cron
+- [ ] Firewall rules (nftables) CRUD + apply with safety rollback
+- [ ] Fail2Ban / CrowdSec status, jails, banned IPs, unban
+- [ ] Cron jobs per site (run inside site container) + scheduler + run history
+
+## M11 — Backup & restore
+- [ ] Backup engine: files (incremental tar), DB dumps, mail, panel DB snapshot
+- [ ] Targets: local directory, S3-compatible
+- [ ] Schedules + retention
+- [ ] One-click restore (site / DB / full panel)
+
+## M12 — Telemetry
+- [ ] Host CPU / RAM / disk / network sampling
+- [ ] Per-container CPU / memory / network
+- [ ] WebSocket live stream + short ring-buffer history
+
+## M13 — Web dashboard (`web/`)
+- [ ] Next.js scaffold (App Router, TS, Tailwind, shadcn/ui, TanStack Query, static export)
+- [ ] `go:embed` integration + SPA fallback (`internal/ui`)
+- [ ] Auth: login, 2FA challenge, token refresh
+- [ ] Layout: sidebar, role-aware navigation, dark mode
+- [ ] Views: dashboard (telemetry), users, domains, domain detail, file manager (Monaco),
+      terminal (xterm.js), databases, mail, DNS, security, cron, backups, API/SSH keys, settings
+
+## M14 — Installer & packaging
+- [ ] `scripts/install.sh`: unattended Ubuntu/Debian install (Docker, user, dirs, binary, systemd, firewall)
+- [ ] `deploy/openplexd.service` (hardened systemd unit)
+- [ ] Release build (`linux/amd64`, `linux/arm64`) + checksums
+- [ ] Verified end-to-end on the Linux test server

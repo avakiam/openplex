@@ -1,0 +1,13 @@
+/bin/
+/dist/
+/.data/
+*.db
+*.db-wal
+*.db-shm
+/internal/ui/dist/*
+!/internal/ui/dist/.gitkeep
+web/node_modules/
+web/.next/
+web/out/
+.env
+.env.*
