@@ -44,6 +44,9 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] Per-site CPU/memory limits, env vars, restart policy, hardening
 - [x] Deploy / start / stop / restart / remove site container
 - [x] Reconcile loop (DB → Docker + Caddy) at boot and on demand
+- [ ] Sync domain status from container health (a crash-looping container still shows `running`)
+- [ ] Catch-all edge vhost: unknown hosts → 404 instead of an empty 200
+- [ ] `AUTOINCREMENT` domain IDs so a deleted site's uid/container name is never reused
 
 ## M5 — Domains & websites (`/api/v1/domains`)
 - [x] CRUD domains (primary, subdomain, alias) with ownership checks + quota
@@ -113,5 +116,12 @@ has been verified on the Linux test server. One commit per milestone.
   PHP 8.4-FPM site served via FastCGI as isolated uid 100002 with injected env, stop → 503
   maintenance page, start → live again, Caddy hot reloads, per-site access log written,
   per-container stats and host telemetry returned. `go test ./...` green (db, auth, ssl, files, api).
-- Pending: installer + systemd + ufw on the real Ubuntu/Debian server; Let's Encrypt issuance
-  with a public DNS name.
+- 2026-11-06 — Real server `programacio-danzai` (Ubuntu 26.04.1 LTS, kernel 7.0, 4 vCPU, 7 GiB):
+  `install.sh --binary` installed Docker 29.9.3 from download.docker.com, the hardened systemd
+  unit and ufw (SSH/80/443/443udp + pre-existing 3000/3389/8734). Static, PHP 8.3 and Node 22
+  sites served over the LAN, 301 redirect, isolated uids 100002/100003, memory limits applied;
+  `systemctl restart docker` → daemon and all sites recovered automatically; re-running the
+  installer upgrades in place.
+  **Bug found & fixed:** systemd `UMask=0027` made site files 0640 → edge 403. The unit now uses
+  0022 and the code sets 0755/0644 explicitly (regression test forces umask 077).
+- Pending: Let's Encrypt issuance with a public DNS name (the test server is LAN-only).

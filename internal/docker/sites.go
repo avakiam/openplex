@@ -49,6 +49,9 @@ func PrepareSiteDir(cfg *config.Config, d *db.Domain) error {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("create site dir: %w", err)
 		}
+		if err := os.Chmod(dir, 0o755); err != nil { // independent of the process umask
+			return err
+		}
 		_ = os.Lchown(dir, uid, uid) // best effort: fails harmlessly when not root (dev)
 	}
 	if err := os.MkdirAll(filepath.Join(cfg.LogsDir(), d.Name), 0o755); err != nil {
@@ -60,6 +63,9 @@ func PrepareSiteDir(cfg *config.Config, d *db.Domain) error {
 			"<body style=\"font-family:system-ui;margin:4rem\"><h1>%s</h1><p>This site is hosted with OpenPlex. Upload your content in the file manager.</p></body></html>\n",
 			d.Name, d.Name)
 		if err := os.WriteFile(idx, []byte(page), 0o644); err != nil {
+			return err
+		}
+		if err := os.Chmod(idx, 0o644); err != nil {
 			return err
 		}
 		_ = os.Lchown(idx, uid, uid)

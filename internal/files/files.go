@@ -198,6 +198,9 @@ func (j Jail) WriteFile(p string, src io.Reader) (int64, error) {
 		_ = r.Remove(tmp)
 		return 0, err
 	}
+	if err := r.Chmod(p, mode); err != nil { // OpenFile perms are reduced by the umask
+		return 0, err
+	}
 	return n, j.own(r, p)
 }
 
@@ -210,6 +213,9 @@ func (j Jail) Mkdir(p string) error {
 	defer r.Close()
 	p = Clean(p)
 	if err := r.MkdirAll(p, 0o755); err != nil {
+		return err
+	}
+	if err := j.chmodNew(r, p); err != nil {
 		return err
 	}
 	return j.chownTree(r, p)
@@ -338,6 +344,9 @@ func (x *extractor) dir(p string) error {
 	if err := x.root.MkdirAll(p, 0o755); err != nil {
 		return err
 	}
+	if err := x.jail.chmodNew(x.root, p); err != nil {
+		return err
+	}
 	return x.jail.chownTreeIn(x.root, p)
 }
 
@@ -370,6 +379,9 @@ func (x *extractor) file(p string, mode fs.FileMode, src io.Reader) error {
 	}
 	if x.bytes > MaxExtractBytes {
 		return fmt.Errorf("%w: archive expands beyond %d bytes", ErrTooLarge, int64(MaxExtractBytes))
+	}
+	if err := x.root.Chmod(p, perm|0o600); err != nil {
+		return err
 	}
 	return x.jail.own(x.root, p)
 }
@@ -430,6 +442,25 @@ func (x *extractor) tar(src io.Reader) error {
 			}
 		}
 	}
+}
+
+// chmodNew sets 0755 on p and on each ancestor that is still owned by root
+// (i.e. was just created by us), regardless of the process umask. Directories
+// that already belong to the site keep the permissions the user chose.
+func (j Jail) chmodNew(r *os.Root, p string) error {
+	for ; p != "." && p != "/"; p = path.Dir(p) {
+		st, err := r.Lstat(p)
+		if err != nil {
+			return err
+		}
+		if os.Geteuid() == 0 && ownerUID(st) != 0 {
+			break
+		}
+		if err := r.Chmod(p, 0o755); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // chownTreeIn chowns p and its ancestors inside root r.
@@ -505,6 +536,9 @@ func (j Jail) Compress(paths []string, dst string) error {
 	if werr != nil {
 		_ = r.Remove(dst)
 		return werr
+	}
+	if err := r.Chmod(dst, 0o644); err != nil {
+		return err
 	}
 	return j.own(r, dst)
 }

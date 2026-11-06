@@ -87,3 +87,24 @@ func TestExtractZipSlip(t *testing.T) {
 		t.Fatalf("re-extract n=%d err=%v", n, err)
 	}
 }
+
+func TestModesIgnoreUmask(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("unix permissions only")
+	}
+	old := setUmask(0o077)
+	defer setUmask(old)
+	j := Jail{Root: t.TempDir()}
+	if err := j.Mkdir("a/b"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := j.WriteFile("a/b/index.php", strings.NewReader("x")); err != nil {
+		t.Fatal(err)
+	}
+	for p, want := range map[string]os.FileMode{"a": 0o755, "a/b": 0o755, "a/b/index.php": 0o644} {
+		st, err := os.Stat(filepath.Join(j.Root, p))
+		if err != nil || st.Mode().Perm() != want {
+			t.Errorf("%s: mode %v, want %v (err %v)", p, st.Mode().Perm(), want, err)
+		}
+	}
+}

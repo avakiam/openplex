@@ -184,7 +184,8 @@ LockPersonality=yes
 RestrictNamespaces=yes
 SystemCallArchitectures=native
 ReadWritePaths=/var/lib/openplex
-UMask=0027
+# Site files must be world-readable for the edge proxy; secrets are created 0600 explicitly.
+UMask=0022
 
 [Install]
 WantedBy=multi-user.target
