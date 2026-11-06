@@ -16,6 +16,7 @@ import (
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/docker"
 	"openplex.dev/openplex/internal/monitor"
+	"openplex.dev/openplex/internal/secrets"
 )
 
 // Server holds API dependencies.
@@ -25,6 +26,7 @@ type Server struct {
 	orch    *docker.Orchestrator // nil when Docker is disabled/unavailable
 	mon     *monitor.Sampler
 	signer  *auth.Signer
+	box     *secrets.Box
 	log     *slog.Logger
 	ui      http.Handler
 	version string
@@ -46,6 +48,7 @@ type Options struct {
 	UI           http.Handler
 	Version      string
 	BaseContext  context.Context // cancelled at shutdown; parent of background jobs
+	Box          *secrets.Box    // encrypts recoverable secrets (database passwords)
 }
 
 // New builds the API server.
@@ -53,6 +56,7 @@ func New(o Options) *Server {
 	return &Server{
 		cfg: o.Config, db: o.DB, orch: o.Orchestrator, mon: o.Monitor, log: o.Logger, ui: o.UI, version: o.Version,
 		signer:       auth.NewSigner(o.Config.Secret, o.Config.AccessTTL),
+		box:          o.Box,
 		loginLimiter: newLimiter(10, 5*time.Minute),
 		baseCtx:      o.BaseContext,
 	}
@@ -123,6 +127,15 @@ func (s *Server) Handler() http.Handler {
 				}
 			})
 
+			r.Get("/database-engines", s.handleListEngines)
+			r.Get("/databases", s.handleListDatabases)
+			r.Post("/databases", s.handleCreateDatabase)
+			r.Get("/databases/sizes", s.handleDatabaseSizes)
+			r.Get("/databases/{id}", s.handleGetDatabase)
+			r.Delete("/databases/{id}", s.handleDeleteDatabase)
+			r.Get("/databases/{id}/credentials", s.handleDatabaseCredentials)
+			r.Post("/databases/{id}/rotate-password", s.handleRotateDatabasePassword)
+
 			r.Group(func(r chi.Router) {
 				r.Use(requireRole(db.RoleAdmin))
 				r.Get("/system/info", s.handleSystemInfo)
@@ -139,6 +152,8 @@ func (s *Server) Handler() http.Handler {
 		})
 	})
 
+	r.Handle("/tools/adminer", s.adminerProxy())
+	r.Handle("/tools/adminer/*", s.adminerProxy())
 	if s.ui != nil {
 		r.Handle("/*", s.ui)
 	}

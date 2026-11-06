@@ -32,17 +32,18 @@ type User struct {
 	TOTPEnabled  bool      `json:"totp_enabled"`
 	Disabled     bool      `json:"disabled"`
 	MaxDomains   int       `json:"max_domains"`
+	MaxDatabases int       `json:"max_databases"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
-const userCols = `id, username, email, password_hash, role, parent_id, totp_secret, totp_enabled, disabled, max_domains, created_at, updated_at`
+const userCols = `id, username, email, password_hash, role, parent_id, totp_secret, totp_enabled, disabled, max_domains, max_databases, created_at, updated_at`
 
 func scanUser(row interface{ Scan(...any) error }) (*User, error) {
 	var u User
 	var parent sql.NullInt64
 	if err := row.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role, &parent,
-		&u.TOTPSecret, &u.TOTPEnabled, &u.Disabled, &u.MaxDomains, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		&u.TOTPSecret, &u.TOTPEnabled, &u.Disabled, &u.MaxDomains, &u.MaxDatabases, &u.CreatedAt, &u.UpdatedAt); err != nil {
 		return nil, mapErr(err)
 	}
 	u.ParentID = ptrInt(parent)
@@ -52,9 +53,9 @@ func scanUser(row interface{ Scan(...any) error }) (*User, error) {
 // CreateUser inserts u and sets its ID and timestamps.
 func (d *DB) CreateUser(ctx context.Context, u *User) error {
 	u.CreatedAt, u.UpdatedAt = now(), now()
-	res, err := d.sql.ExecContext(ctx, `INSERT INTO users (username, email, password_hash, role, parent_id, totp_secret, totp_enabled, disabled, max_domains, created_at, updated_at)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-		strings.TrimSpace(u.Username), u.Email, u.PasswordHash, u.Role, u.ParentID, u.TOTPSecret, u.TOTPEnabled, u.Disabled, u.MaxDomains, u.CreatedAt, u.UpdatedAt)
+	res, err := d.sql.ExecContext(ctx, `INSERT INTO users (username, email, password_hash, role, parent_id, totp_secret, totp_enabled, disabled, max_domains, max_databases, created_at, updated_at)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+		strings.TrimSpace(u.Username), u.Email, u.PasswordHash, u.Role, u.ParentID, u.TOTPSecret, u.TOTPEnabled, u.Disabled, u.MaxDomains, u.MaxDatabases, u.CreatedAt, u.UpdatedAt)
 	if err != nil {
 		return mapErr(err)
 	}
@@ -112,20 +113,20 @@ func (d *DB) CountUsers(ctx context.Context) (int, error) {
 // UpdateUser persists mutable profile fields (email, role, parent, disabled, quota, TOTP, password).
 func (d *DB) UpdateUser(ctx context.Context, u *User) error {
 	u.UpdatedAt = now()
-	res, err := d.sql.ExecContext(ctx, `UPDATE users SET email=?, password_hash=?, role=?, parent_id=?, totp_secret=?, totp_enabled=?, disabled=?, max_domains=?, updated_at=? WHERE id=?`,
-		u.Email, u.PasswordHash, u.Role, u.ParentID, u.TOTPSecret, u.TOTPEnabled, u.Disabled, u.MaxDomains, u.UpdatedAt, u.ID)
+	res, err := d.sql.ExecContext(ctx, `UPDATE users SET email=?, password_hash=?, role=?, parent_id=?, totp_secret=?, totp_enabled=?, disabled=?, max_domains=?, max_databases=?, updated_at=? WHERE id=?`,
+		u.Email, u.PasswordHash, u.Role, u.ParentID, u.TOTPSecret, u.TOTPEnabled, u.Disabled, u.MaxDomains, u.MaxDatabases, u.UpdatedAt, u.ID)
 	if err != nil {
 		return mapErr(err)
 	}
 	return expectOne(res)
 }
 
-// DeleteUser removes a user. Fails if the user still owns domains or customers.
+// DeleteUser removes a user. Fails if the user still owns websites, databases or customers.
 func (d *DB) DeleteUser(ctx context.Context, id int64) error {
 	res, err := d.sql.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, id)
 	if err != nil {
 		if strings.Contains(err.Error(), "FOREIGN KEY constraint failed") {
-			return fmt.Errorf("%w: user still owns domains or customers", ErrConflict)
+			return fmt.Errorf("%w: user still owns websites, databases or customers", ErrConflict)
 		}
 		return err
 	}

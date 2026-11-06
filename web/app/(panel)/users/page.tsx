@@ -36,16 +36,16 @@ const roleTone = { admin: "danger", reseller: "info", customer: "neutral" } as c
 function UserDialog({ open, onOpenChange, edit }: { open: boolean; onOpenChange: (o: boolean) => void; edit?: User }) {
   const { user: me } = useAuth();
   const users = useUsers();
-  const [f, setF] = useState({ username: "", email: "", password: "", role: "customer" as Role, parent_id: "", max_domains: "0" });
+  const [f, setF] = useState({ username: "", email: "", password: "", role: "customer" as Role, parent_id: "", max_domains: "0", max_databases: "0" });
   const resellers = (users.data ?? []).filter((u) => u.role === "reseller");
-  const reset = () => setF(edit ? { username: edit.username, email: edit.email, password: "", role: edit.role, parent_id: edit.parent_id ? String(edit.parent_id) : "", max_domains: String(edit.max_domains) } : { username: "", email: "", password: "", role: "customer", parent_id: "", max_domains: "0" });
+  const reset = () => setF(edit ? { username: edit.username, email: edit.email, password: "", role: edit.role, parent_id: edit.parent_id ? String(edit.parent_id) : "", max_domains: String(edit.max_domains), max_databases: String(edit.max_databases) } : { username: "", email: "", password: "", role: "customer", parent_id: "", max_domains: "0", max_databases: "0" });
   const save = useAction(
     () =>
       edit
         ? api.patch(`/users/${edit.id}`, {
             email: f.email,
             ...(isAdmin(me) && edit.id !== me?.id ? { role: f.role, parent_id: f.role === "customer" ? Number(f.parent_id || 0) : 0 } : {}),
-            ...(edit.id !== me?.id ? { max_domains: Number(f.max_domains) } : {}),
+            ...(edit.id !== me?.id ? { max_domains: Number(f.max_domains), max_databases: Number(f.max_databases) } : {}),
           })
         : api.post("/users", {
             username: f.username,
@@ -54,6 +54,7 @@ function UserDialog({ open, onOpenChange, edit }: { open: boolean; onOpenChange:
             role: f.role,
             parent_id: f.role === "customer" && f.parent_id ? Number(f.parent_id) : undefined,
             max_domains: Number(f.max_domains),
+            max_databases: Number(f.max_databases),
           }),
     { success: edit ? "User updated" : "User created", invalidate: [keys.users], onSuccess: () => onOpenChange(false) },
   );
@@ -90,9 +91,14 @@ function UserDialog({ open, onOpenChange, edit }: { open: boolean; onOpenChange:
             </div>
           )}
           {edit?.id !== me?.id && (
-            <Field label="Website quota" hint="0 = unlimited">
-              <Input type="number" min={0} value={f.max_domains} onChange={(e) => setF({ ...f, max_domains: e.target.value })} />
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Website quota" hint="0 = unlimited">
+                <Input type="number" min={0} value={f.max_domains} onChange={(e) => setF({ ...f, max_domains: e.target.value })} />
+              </Field>
+              <Field label="Database quota" hint="0 = unlimited">
+                <Input type="number" min={0} value={f.max_databases} onChange={(e) => setF({ ...f, max_databases: e.target.value })} />
+              </Field>
+            </div>
           )}
           <ErrorBox error={save.error} />
           <div className="flex justify-end gap-2">

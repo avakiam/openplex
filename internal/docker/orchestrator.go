@@ -145,8 +145,14 @@ func (o *Orchestrator) listManaged(ctx context.Context, kind string) ([]containe
 
 // Exec runs cmd inside a container and returns combined output and exit code.
 func (o *Orchestrator) Exec(ctx context.Context, containerID string, cmd []string, user string) (string, int, error) {
+	return o.ExecEnv(ctx, containerID, cmd, user, nil)
+}
+
+// ExecEnv is Exec with extra environment variables (used to pass secrets
+// without putting them on the command line).
+func (o *Orchestrator) ExecEnv(ctx context.Context, containerID string, cmd []string, user string, env []string) (string, int, error) {
 	ex, err := o.cli.ContainerExecCreate(ctx, containerID, container.ExecOptions{
-		Cmd: cmd, User: user, AttachStdout: true, AttachStderr: true,
+		Cmd: cmd, User: user, Env: env, AttachStdout: true, AttachStderr: true,
 	})
 	if err != nil {
 		return "", -1, fmt.Errorf("exec create: %w", err)

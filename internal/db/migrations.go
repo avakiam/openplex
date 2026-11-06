@@ -108,6 +108,25 @@ CREATE TABLE audit_log (
 );
 CREATE INDEX audit_log_created ON audit_log(created_at);
 `,
+	// 2: databases module
+	`
+ALTER TABLE users ADD COLUMN max_databases INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE databases (
+	id             INTEGER PRIMARY KEY AUTOINCREMENT,
+	owner_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+	engine         TEXT NOT NULL CHECK (engine IN ('mariadb','postgres','redis')),
+	name           TEXT NOT NULL,
+	username       TEXT NOT NULL,
+	password_enc   TEXT NOT NULL,
+	status         TEXT NOT NULL DEFAULT 'pending',
+	status_message TEXT NOT NULL DEFAULT '',
+	created_at     TIMESTAMP NOT NULL,
+	updated_at     TIMESTAMP NOT NULL,
+	UNIQUE (engine, name)
+);
+CREATE INDEX databases_owner ON databases(owner_id);
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

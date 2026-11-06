@@ -63,9 +63,14 @@ has been verified on the Linux test server. One commit per milestone.
 - [ ] WebSocket container terminal (docker exec TTY, resize)
 
 ## M7 — Databases
-- [ ] MariaDB / PostgreSQL / Redis service containers per owner (internal network)
-- [ ] Database + user create / drop, password rotation, size reporting
-- [ ] phpMyAdmin / Adminer routing + one-click signed login
+- [x] Shared MariaDB 11.8 / PostgreSQL 17 servers + per-instance Redis 7.4 on internal `openplex_db`
+- [x] Database + user create / drop, password rotation, size reporting, per-user database quota
+- [x] Passwords encrypted at rest (AES-256-GCM, HKDF from secret.key); credentials + connection URL view
+- [x] Adminer 5.4.1 behind `/tools/adminer/` with one-click login; SSRF guard (only `mariadb`/`postgres`, MySQL/PG drivers)
+- [x] Databases UI page (create, connect details, rotate, Adminer, delete)
+- [ ] PHP runtime images with common extensions (mysqli, pdo_mysql, pgsql, redis, gd, intl, zip, opcache) — the
+      official php-fpm images lack them, so PHP apps (e.g. WordPress) cannot reach MariaDB yet
+- [ ] Remote access option (publish a DB port per-IP allow-list) and per-database size limits
 
 ## M8 — Mail
 - [ ] Mail stack containers (Postfix, Dovecot, Rspamd, OpenDKIM) + Roundcube
@@ -128,3 +133,9 @@ has been verified on the Linux test server. One commit per milestone.
   **Bug found & fixed:** systemd `UMask=0027` made site files 0640 → edge 403. The unit now uses
   0022 and the code sets 0755/0644 explicitly (regression test forces umask 077).
 - Pending: Let's Encrypt issuance with a public DNS name (the test server is LAN-only).
+- 2026-11-06 — Databases on the real server: 4 databases for 2 customers provisioned in 22 s
+  (first pull included); own-DB read/write OK on MariaDB/PostgreSQL/Redis; cross-tenant access
+  denied (MariaDB 1044, Postgres CONNECT revoked incl. maintenance DBs); Redis without password
+  NOAUTH; DB network has no internet; site containers reach `mariadb:3306`/`postgres:5432`;
+  quota → 403; rotation invalidates the old password; Adminer one-click login lands on the DB;
+  deletion removes DBs, users/roles and Redis containers.

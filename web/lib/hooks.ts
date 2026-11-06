@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { api } from "./api";
 import type {
   APIKey,
+  Database,
+  DatabaseEngine,
   AuditEntry,
   ContainerStats,
   Domain,
@@ -26,6 +28,9 @@ export const keys = {
   redirects: (id: number) => ["domains", id, "redirects"] as const,
   files: (id: number, path: string) => ["domains", id, "files", path] as const,
   runtimes: ["runtimes"] as const,
+  databases: ["databases"] as const,
+  dbSizes: ["databases", "sizes"] as const,
+  engines: ["database-engines"] as const,
   apiKeys: ["api-keys"] as const,
   sshKeys: ["ssh-keys"] as const,
   audit: ["audit"] as const,
@@ -110,4 +115,22 @@ export const useDomainStats = (id: number, enabled: boolean) =>
     enabled,
     refetchInterval: 5000,
     retry: false,
+  });
+
+export const useEngines = () =>
+  useQuery({ queryKey: keys.engines, queryFn: () => api.get<DatabaseEngine[]>("/database-engines"), staleTime: Infinity });
+
+export const useDatabases = () =>
+  useQuery({
+    queryKey: keys.databases,
+    queryFn: () => api.get<Database[]>("/databases"),
+    refetchInterval: (q) => (q.state.data?.some((d) => d.status === "pending") ? 2000 : false),
+  });
+
+export const useDatabaseSizes = (enabled: boolean) =>
+  useQuery({
+    queryKey: keys.dbSizes,
+    queryFn: () => api.get<Record<string, number>>("/databases/sizes"),
+    enabled,
+    refetchInterval: 30_000,
   });

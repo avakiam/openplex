@@ -1,6 +1,7 @@
 "use client";
 import {
   Activity,
+  Database,
   Globe,
   KeyRound,
   LayoutDashboard,
@@ -33,6 +34,7 @@ interface NavItem {
 const nav: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/domains/", label: "Websites & Domains", icon: Globe },
+  { href: "/databases/", label: "Databases", icon: Database },
   { href: "/users/", label: "Users", icon: Users, show: canManageUsers },
   { href: "/keys/", label: "API & SSH keys", icon: KeyRound },
   { href: "/audit/", label: "Audit log", icon: ScrollText, show: isAdmin },

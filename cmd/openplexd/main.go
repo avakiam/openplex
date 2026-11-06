@@ -21,6 +21,7 @@ import (
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/docker"
 	"openplex.dev/openplex/internal/monitor"
+	"openplex.dev/openplex/internal/secrets"
 	"openplex.dev/openplex/internal/ui"
 )
 
@@ -77,6 +78,11 @@ func run(args []string) error {
 	workers.Add(1)
 	go func() { defer workers.Done(); mon.Run(ctx) }()
 
+	box, err := secrets.New(cfg.Secret, "database-passwords")
+	if err != nil {
+		return err
+	}
+
 	var orch *docker.Orchestrator
 	if cfg.EnableDocker {
 		pingCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -92,6 +98,9 @@ func run(args []string) error {
 				defer workers.Done()
 				if err := orch.Reconcile(ctx); err != nil {
 					log.Error("initial reconcile finished with errors", "err", err)
+				}
+				if err := orch.ReconcileDatabases(ctx, box); err != nil {
+					log.Error("database reconcile finished with errors", "err", err)
 				}
 			}()
 		}
@@ -116,7 +125,7 @@ func run(args []string) error {
 
 	srv := api.New(api.Options{
 		Config: cfg, DB: store, Orchestrator: orch, Monitor: mon, Logger: log,
-		UI: ui.Handler(), Version: version, BaseContext: ctx,
+		UI: ui.Handler(), Version: version, BaseContext: ctx, Box: box,
 	})
 	httpSrv := &http.Server{
 		Handler:           srv.Handler(),

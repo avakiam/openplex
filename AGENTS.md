@@ -35,8 +35,10 @@ Every change is owned by exactly one role. When a task spans roles, the Architec
 5. **Everything we create in Docker carries labels** `openplex.managed=true` and
    `openplex.kind=<edge|site|db|mail|dns>` (+ `openplex.domain_id` where relevant).
    OpenPlex must never touch unlabelled containers.
-6. **Tenant isolation.** One container per site; all site containers join only the
-   `openplex_edge` network; databases join a per-owner internal network. Memory/CPU limits are
+6. **Tenant isolation.** One container per site; site containers join only `openplex_edge` and
+   the internal (no-internet) `openplex_db` network. Shared MariaDB/PostgreSQL servers isolate
+   tenants by per-database users (`<owner>_<name>`, grants only on their own DB, Postgres
+   `REVOKE CONNECT … FROM PUBLIC`); Redis gets one container per instance. Memory/CPU limits are
    always set. Containers run with `no-new-privileges` and dropped capabilities where the image allows.
 7. **RBAC is enforced in the API layer**, never in the UI. Every handler that takes an ID
    resolves ownership through `api.authorize*` helpers before acting.

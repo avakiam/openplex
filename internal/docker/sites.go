@@ -84,6 +84,7 @@ type siteSpec struct {
 	CPUs     float64
 	UID      int
 	Mount    string
+	Networks []string
 }
 
 func (s siteSpec) hash() string {
@@ -112,7 +113,7 @@ func (o *Orchestrator) specFor(d *db.Domain) (*siteSpec, error) {
 	}
 	spec := &siteSpec{
 		Image: rt.Image(ver), Env: env, WorkDir: inner, MemoryMB: d.MemoryMB, CPUs: d.CPUs,
-		UID: SiteUID(d.ID), Mount: o.SiteDir(d.Name),
+		UID: SiteUID(d.ID), Mount: o.SiteDir(d.Name), Networks: []string{EdgeNetwork, DBNetwork},
 	}
 	if rt.NeedsCommand {
 		if d.StartCommand == "" || d.AppPort <= 0 {
@@ -160,6 +161,9 @@ func (o *Orchestrator) deploy(ctx context.Context, d *db.Domain) error {
 		return err
 	}
 	if err := o.ensureNetwork(ctx, EdgeNetwork, false); err != nil {
+		return err
+	}
+	if err := o.ensureNetwork(ctx, DBNetwork, true); err != nil {
 		return err
 	}
 	if err := o.ensureImage(ctx, spec.Image); err != nil {
@@ -210,7 +214,11 @@ func (o *Orchestrator) deploy(ctx context.Context, d *db.Domain) error {
 		SecurityOpt: []string{"no-new-privileges:true"},
 		LogConfig:   container.LogConfig{Type: "json-file", Config: map[string]string{"max-size": "10m", "max-file": "3"}},
 	}
-	nc := &network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{EdgeNetwork: {Aliases: []string{name}}}}
+	eps := map[string]*network.EndpointSettings{}
+	for _, n := range spec.Networks {
+		eps[n] = &network.EndpointSettings{Aliases: []string{name}}
+	}
+	nc := &network.NetworkingConfig{EndpointsConfig: eps}
 	created, err := o.cli.ContainerCreate(ctx, cc, hc, nc, nil, name)
 	if err != nil {
 		return fmt.Errorf("create container: %w", err)

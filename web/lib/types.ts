@@ -11,6 +11,7 @@ export interface User {
   totp_enabled: boolean;
   disabled: boolean;
   max_domains: number;
+  max_databases: number;
   created_at: string;
   updated_at: string;
 }
@@ -148,4 +149,40 @@ export interface Health {
   status: string;
   version: string;
   docker: boolean;
+}
+
+export type Engine = "mariadb" | "postgres" | "redis";
+
+export interface DatabaseEngine {
+  name: Engine;
+  label: string;
+  image: string;
+  host: string;
+  port: number;
+  shared: boolean;
+  adminer_driver: string;
+}
+
+export interface Database {
+  id: number;
+  owner_id: number;
+  engine: Engine;
+  engine_label: string;
+  name: string;
+  username: string;
+  host: string;
+  port: number;
+  status: "pending" | "running" | "error";
+  status_message: string;
+  created_at: string;
+}
+
+export interface DatabaseCredentials {
+  host: string;
+  port: number;
+  database: string;
+  username: string;
+  password: string;
+  url: string;
+  adminer: { driver: string; server: string };
 }

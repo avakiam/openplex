@@ -17,6 +17,7 @@ import (
 	"openplex.dev/openplex/internal/config"
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/monitor"
+	"openplex.dev/openplex/internal/secrets"
 )
 
 type harness struct {
@@ -24,6 +25,7 @@ type harness struct {
 	ts  *httptest.Server
 	db  *db.DB
 	cfg *config.Config
+	box *secrets.Box
 }
 
 func newHarness(t *testing.T) *harness {
@@ -35,10 +37,11 @@ func newHarness(t *testing.T) *harness {
 	}
 	store := db.OpenMemory(t)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	srv := New(Options{Config: cfg, DB: store, Monitor: monitor.New(time.Second, 10, dir, log), Logger: log, BaseContext: context.Background()})
+	box, _ := secrets.New(cfg.Secret, "database-passwords")
+	srv := New(Options{Config: cfg, DB: store, Monitor: monitor.New(time.Second, 10, dir, log), Logger: log, BaseContext: context.Background(), Box: box})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
-	h := &harness{t: t, ts: ts, db: store, cfg: cfg}
+	h := &harness{t: t, ts: ts, db: store, cfg: cfg, box: box}
 	h.mkUser("admin", db.RoleAdmin, nil)
 	return h
 }
@@ -231,4 +234,76 @@ func TestFileManager(t *testing.T) {
 
 func itoa(i int64) string {
 	return json.Number(func() string { b, _ := json.Marshal(i); return string(b) }()).String()
+}
+
+func TestDatabases(t *testing.T) {
+	h := newHarness(t)
+	alice := h.mkUser("alice", db.RoleCustomer, nil)
+	h.mkUser("bob", db.RoleCustomer, nil)
+	aTok, bTok := h.login("alice").AccessToken, h.login("bob").AccessToken
+
+	// Without Docker, creation is refused cleanly.
+	if c := h.do("POST", "/databases", aTok, map[string]any{"engine": "mariadb", "name": "shop"}, nil); c != 503 {
+		t.Fatalf("create without docker: %d", c)
+	}
+	// A provisioned database (as the orchestrator would leave it).
+	enc, _ := h.box.Seal("S3cretPassw0rdS3cretPass")
+	d := &db.Database{OwnerID: alice.ID, Engine: "postgres", Name: "alice_shop", Username: "alice_shop", PasswordEnc: enc, Status: "running"}
+	if err := h.db.CreateDatabase(context.Background(), d); err != nil {
+		t.Fatal(err)
+	}
+	var list []map[string]any
+	h.do("GET", "/databases", aTok, nil, &list)
+	if len(list) != 1 || list[0]["host"] != "postgres" || list[0]["port"].(float64) != 5432 {
+		t.Fatalf("list: %+v", list)
+	}
+	if _, leaked := list[0]["password_enc"]; leaked {
+		t.Fatal("encrypted password leaked in list")
+	}
+	var creds map[string]any
+	if c := h.do("GET", "/databases/"+itoa(d.ID)+"/credentials", aTok, nil, &creds); c != 200 || creds["password"] != "S3cretPassw0rdS3cretPass" {
+		t.Fatalf("credentials: %d %+v", c, creds)
+	}
+	if creds["url"] != "postgresql://alice_shop:S3cretPassw0rdS3cretPass@postgres:5432/alice_shop" {
+		t.Fatalf("url: %v", creds["url"])
+	}
+	// Another customer can neither see nor touch it.
+	h.do("GET", "/databases", bTok, nil, &list)
+	if len(list) != 0 {
+		t.Fatalf("bob sees %d databases", len(list))
+	}
+	if c := h.do("GET", "/databases/"+itoa(d.ID)+"/credentials", bTok, nil, nil); c != 404 {
+		t.Fatalf("bob credentials: %d", c)
+	}
+	if c := h.do("DELETE", "/databases/"+itoa(d.ID), bTok, nil, nil); c != 404 {
+		t.Fatalf("bob delete: %d", c)
+	}
+}
+
+func TestAdminerGuard(t *testing.T) {
+	h := newHarness(t)
+	for _, p := range []string{"/tools/adminer/?sqlite=&username=x", "/tools/adminer/?server=169.254.169.254&username=x", "/tools/adminer/?pgsql=evil.com"} {
+		res, err := http.Get(h.ts.URL + p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		if res.StatusCode != 403 {
+			t.Errorf("%s: %d, want 403", p, res.StatusCode)
+		}
+	}
+	res, err := http.PostForm(h.ts.URL+"/tools/adminer/", map[string][]string{"auth[driver]": {"server"}, "auth[server]": {"10.0.0.1"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != 403 {
+		t.Errorf("POST to foreign server: %d", res.StatusCode)
+	}
+	// An allowed server reaches the proxy (502: no Adminer running in tests).
+	res, _ = http.Get(h.ts.URL + "/tools/adminer/?server=mariadb")
+	res.Body.Close()
+	if res.StatusCode != 502 {
+		t.Errorf("allowed server: %d, want 502 from proxy", res.StatusCode)
+	}
 }

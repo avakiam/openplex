@@ -45,6 +45,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		Role       string `json:"role"`
 		ParentID   *int64 `json:"parent_id"`
 		MaxDomains int    `json:"max_domains"`
+		MaxDBs     int    `json:"max_databases"`
 	}
 	if !decode(w, r, &in) {
 		return
@@ -62,8 +63,8 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		badRequest(w, "role must be admin, reseller or customer")
 		return
 	}
-	if in.MaxDomains < 0 {
-		badRequest(w, "max_domains must be >= 0")
+	if in.MaxDomains < 0 || in.MaxDBs < 0 {
+		badRequest(w, "quotas must be >= 0")
 		return
 	}
 	switch a.Role {
@@ -94,7 +95,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
-	u := &db.User{Username: in.Username, Email: strings.TrimSpace(in.Email), PasswordHash: hash, Role: in.Role, ParentID: in.ParentID, MaxDomains: in.MaxDomains}
+	u := &db.User{Username: in.Username, Email: strings.TrimSpace(in.Email), PasswordHash: hash, Role: in.Role, ParentID: in.ParentID, MaxDomains: in.MaxDomains, MaxDatabases: in.MaxDBs}
 	if err := s.db.CreateUser(r.Context(), u); err != nil {
 		s.fail(w, r, err)
 		return
@@ -120,6 +121,7 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		ParentID   *int64  `json:"parent_id"`
 		Disabled   *bool   `json:"disabled"`
 		MaxDomains *int    `json:"max_domains"`
+		MaxDBs     *int    `json:"max_databases"`
 	}
 	if !decode(w, r, &in) {
 		return
@@ -157,7 +159,7 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 			u.ParentID = nil
 		}
 	}
-	if in.Disabled != nil || in.MaxDomains != nil {
+	if in.Disabled != nil || in.MaxDomains != nil || in.MaxDBs != nil {
 		if self { // nobody changes their own status or quota
 			forbidden(w)
 			return
@@ -171,6 +173,13 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			u.MaxDomains = *in.MaxDomains
+		}
+		if in.MaxDBs != nil {
+			if *in.MaxDBs < 0 {
+				badRequest(w, "max_databases must be >= 0")
+				return
+			}
+			u.MaxDatabases = *in.MaxDBs
 		}
 	}
 	if err := s.db.UpdateUser(r.Context(), u); err != nil {
