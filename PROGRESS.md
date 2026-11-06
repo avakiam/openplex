@@ -104,3 +104,14 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] `deploy/openplexd.service` (hardened systemd unit)
 - [ ] Release build (`linux/amd64`, `linux/arm64`) + checksums
 - [ ] Verified end-to-end on the Linux test server
+
+---
+
+## Verification log
+- 2026-11-06 — Local smoke test on Docker Desktop 29.9 (openplexd in a container with the
+  engine socket): edge auto-provisioned (caddy:2.10-alpine), static site served, 302 redirect,
+  PHP 8.4-FPM site served via FastCGI as isolated uid 100002 with injected env, stop → 503
+  maintenance page, start → live again, Caddy hot reloads, per-site access log written,
+  per-container stats and host telemetry returned. `go test ./...` green (db, auth, ssl, files, api).
+- Pending: installer + systemd + ufw on the real Ubuntu/Debian server; Let's Encrypt issuance
+  with a public DNS name.
