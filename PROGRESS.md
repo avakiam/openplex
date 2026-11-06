@@ -95,12 +95,15 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] WebSocket live stream + short ring-buffer history
 
 ## M13 — Web dashboard (`web/`)
-- [ ] Next.js scaffold (App Router, TS, Tailwind, shadcn/ui, TanStack Query, static export)
+- [x] Next.js scaffold (App Router, TS, Tailwind, shadcn/ui, TanStack Query, static export)
 - [x] `go:embed` integration + SPA fallback (`internal/ui`)
-- [ ] Auth: login, 2FA challenge, token refresh
-- [ ] Layout: sidebar, role-aware navigation, dark mode
-- [ ] Views: dashboard (telemetry), users, domains, domain detail, file manager (Monaco),
-      terminal (xterm.js), databases, mail, DNS, security, cron, backups, API/SSH keys, settings
+- [x] Auth: login, 2FA challenge, token refresh (in-memory access token + httpOnly refresh cookie)
+- [x] Layout: sidebar, role-aware navigation, dark mode
+- [x] Views: dashboard (live host telemetry + containers), domains list/create, domain detail
+      (overview/actions, settings, env vars, redirects, aliases & subdomains, live logs),
+      file manager with Monaco (self-hosted, no CDN), users, API/SSH keys, account (password, 2FA + QR), audit log
+- [ ] Views for upcoming modules: terminal (xterm.js), databases, mail, DNS, security, cron, backups
+- [ ] Trim the embedded Monaco bundle (~25 MB of the 41 MB binary) to the languages we need
 
 ## M14 — Installer & packaging
 - [x] `scripts/install.sh`: unattended Ubuntu/Debian install (Docker, user, dirs, binary, systemd, firewall)

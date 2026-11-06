@@ -21,6 +21,12 @@ No local Go toolchain (e.g. the Windows dev box)? Use the toolchain image — id
 docker run --rm -v "$PWD":/src -v openplex-gomod:/go/pkg/mod -w /src golang:1.26-bookworm make check
 ```
 
+Dashboard development (hot reload; proxies `/api` to a running openplexd, WebSockets go direct):
+
+```bash
+cd web && OPENPLEX_API=http://127.0.0.1:7080 NEXT_PUBLIC_WS_HOST=127.0.0.1:7080 npm run dev   # http://localhost:3100
+```
+
 Run the daemon against the local Docker engine (smoke test):
 
 ```bash

@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens. Light is default; .dark on <html> switches (set before paint
+   by the inline script in layout.tsx from localStorage / prefers-color-scheme). */
+:root {
+  --background: #f7f7f8;
+  --foreground: #111114;
+  --card: #ffffff;
+  --muted: #f1f1f3;
+  --muted-foreground: #5f5f68;
+  --border: #e3e3e8;
+  --input: #d9d9e0;
+  --primary: #2a62d6;
+  --primary-foreground: #ffffff;
+  --accent: #eef3fd;
+  --accent-foreground: #1d4bb0;
+  --ring: #2a62d6;
+  --destructive: #c8302f;
+  --success: #1a7f4b;
+  --warning: #a35f00;
+  /* Chart slots (validated categorical slots 1-2 of the reference palette). */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-grid: #ececf0;
+  --chart-surface: #ffffff;
+}
+
+.dark {
+  --background: #0f0f11;
+  --foreground: #ececef;
+  --card: #17171a;
+  --muted: #1f1f23;
+  --muted-foreground: #a0a0aa;
+  --border: #2a2a2f;
+  --input: #34343a;
+  --primary: #4b82f0;
+  --primary-foreground: #ffffff;
+  --accent: #1b2438;
+  --accent-foreground: #a9c4ff;
+  --ring: #4b82f0;
+  --destructive: #e55b5a;
+  --success: #3fb27a;
+  --warning: #e0a03a;
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-grid: #26262b;
+  --chart-surface: #17171a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "Cascadia Code", Menlo, Consolas, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

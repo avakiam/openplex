@@ -1,0 +1,151 @@
+// Mirrors the JSON shapes of openplexd (internal/db, internal/docker, internal/monitor).
+
+export type Role = "admin" | "reseller" | "customer";
+
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  role: Role;
+  parent_id: number | null;
+  totp_enabled: boolean;
+  disabled: boolean;
+  max_domains: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type DomainKind = "primary" | "subdomain" | "alias";
+export type DomainStatus = "pending" | "running" | "stopped" | "error" | "disabled";
+
+export interface Domain {
+  id: number;
+  owner_id: number;
+  name: string;
+  kind: DomainKind;
+  parent_id: number | null;
+  runtime: string;
+  runtime_version: string;
+  document_root: string;
+  start_command: string;
+  app_port: number;
+  ssl_enabled: boolean;
+  force_https: boolean;
+  memory_mb: number;
+  cpus: number;
+  env: Record<string, string>;
+  status: DomainStatus;
+  status_message: string;
+  container_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Runtime {
+  name: string;
+  label: string;
+  versions: string[] | null;
+  default: string;
+  needs_command: boolean;
+  default_port: number;
+  backend: string;
+}
+
+export interface Redirect {
+  id: number;
+  domain_id: number;
+  source_path: string;
+  target_url: string;
+  status_code: number;
+  created_at: string;
+}
+
+export interface FileEntry {
+  name: string;
+  path: string;
+  is_dir: boolean;
+  is_symlink: boolean;
+  size: number;
+  mode: string;
+  mod_time: string;
+}
+
+export interface APIKey {
+  id: number;
+  name: string;
+  prefix: string;
+  last_used_at: string | null;
+  expires_at: string | null;
+  created_at: string;
+}
+
+export interface SSHKey {
+  id: number;
+  name: string;
+  public_key: string;
+  fingerprint: string;
+  created_at: string;
+}
+
+export interface AuditEntry {
+  id: number;
+  user_id: number | null;
+  action: string;
+  target: string;
+  detail: string;
+  ip: string;
+  created_at: string;
+}
+
+export interface HostSample {
+  time: string;
+  cpu_percent: number;
+  load1: number;
+  load5: number;
+  load15: number;
+  mem_total: number;
+  mem_used: number;
+  swap_total: number;
+  swap_used: number;
+  disk_total: number;
+  disk_used: number;
+  net_rx_rate: number;
+  net_tx_rate: number;
+  uptime_secs: number;
+}
+
+export interface ContainerStats {
+  id: string;
+  name: string;
+  kind: string;
+  domain_id?: number;
+  state: string;
+  cpu_percent: number;
+  mem_usage: number;
+  mem_limit: number;
+  net_rx: number;
+  net_tx: number;
+  pids: number;
+}
+
+export interface SystemInfo {
+  version: string;
+  host: {
+    hostname: string;
+    os: string;
+    platform: string;
+    platform_version: string;
+    kernel: string;
+    arch: string;
+    cpus: number;
+    cpu_model: string;
+  };
+  docker?: { version: string; api_version: string; os: string; arch: string; kernel: string };
+  docker_error?: string;
+}
+
+export interface Health {
+  status: string;
+  version: string;
+  docker: boolean;
+}

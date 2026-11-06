@@ -496,6 +496,9 @@ func (s *Server) background(fn func(context.Context) error) {
 
 func (s *Server) deployAsync(d *db.Domain) {
 	if s.orch == nil {
+		if d.Kind != db.KindAlias {
+			_ = s.db.SetDomainStatus(s.baseCtx, d.ID, db.StatusError, "Docker is not available on this server", "")
+		}
 		return
 	}
 	if d.Kind == db.KindAlias {
