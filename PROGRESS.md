@@ -247,4 +247,6 @@ has been verified on the Linux test server. One commit per milestone.
   TLS, a wrong password refused, sending as another address of the domain refused, authenticated submission on 587
   delivered with `DKIM-Signature: d=mailcactus.com`; quota usage read from Dovecot. Mail tab tested in the UI on the LAN
   server (turn on, generated password, create, turn off removing only the mail records; the user's own MX was kept).
-  Pending: reverse DNS (PTR) at OVH and a delivery test to an external provider.
+  Reverse DNS of the IPv4 and IPv6 set to mail.mailcactus.com at OVH (1.1.1.1 and 8.8.8.8 answer it at once; the
+  host's own OVH resolver keeps the old PTR for its 24 h TTL, so the panel's PTR check turns green a day later).
+  mail-tester.com: 10/10 — SPF pass, DKIM pass (2048-bit, s=opx), DMARC pass, rDNS and HELO match, no blocklists.
