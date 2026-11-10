@@ -17,6 +17,7 @@ import (
 	"openplex.dev/openplex/internal/config"
 	"openplex.dev/openplex/internal/cron"
 	"openplex.dev/openplex/internal/db"
+	"openplex.dev/openplex/internal/firewall"
 	"openplex.dev/openplex/internal/monitor"
 	"openplex.dev/openplex/internal/secrets"
 )
@@ -39,7 +40,7 @@ func newHarness(t *testing.T) *harness {
 	store := db.OpenMemory(t)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	box, _ := secrets.New(cfg.Secret, "database-passwords")
-	srv := New(Options{Config: cfg, DB: store, Monitor: monitor.New(time.Second, 10, dir, log), Logger: log, BaseContext: context.Background(), Box: box, Cron: cron.New(store, nil, log)})
+	srv := New(Options{Config: cfg, DB: store, Monitor: monitor.New(time.Second, 10, dir, log), Logger: log, BaseContext: context.Background(), Box: box, Cron: cron.New(store, nil, log), Firewall: firewall.New(store, log, false)})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 	h := &harness{t: t, ts: ts, db: store, cfg: cfg, box: box}
@@ -438,5 +439,45 @@ func TestCronJobs(t *testing.T) {
 	}
 	if c := h.do("DELETE", jpath, carla, nil, nil); c != 204 {
 		t.Fatalf("delete: %d", c)
+	}
+}
+
+func TestFirewallGuards(t *testing.T) {
+	h := newHarness(t)
+	h.mkUser("carla", db.RoleCustomer, nil)
+	admin, carla := h.login("admin").AccessToken, h.login("carla").AccessToken
+	var st struct {
+		Available   bool   `json:"available"`
+		Unavailable string `json:"unavailable"`
+	}
+	if c := h.do("GET", "/firewall", admin, nil, &st); c != 200 || st.Available || st.Unavailable == "" {
+		t.Fatalf("status: %d %+v", c, st)
+	}
+	ssh := map[string]any{"protocol": "tcp", "ports": "22"}
+	var e apiError
+	if c := h.do("POST", "/firewall/apply", admin, map[string]any{"enabled": true, "rules": []any{map[string]any{"ports": "443"}}}, &e); c != 400 || e.Error != "lockout" {
+		t.Errorf("no SSH rule: %d %+v", c, e)
+	}
+	cases := []struct {
+		name, token, method, path string
+		body                      any
+		want                      int
+	}{
+		{"customer", carla, "GET", "/firewall", nil, 403},
+		{"customer apply", carla, "POST", "/firewall/apply", map[string]any{"enabled": false}, 403},
+		{"bad port", admin, "POST", "/firewall/apply", map[string]any{"enabled": true, "rules": []any{map[string]any{"ports": "22; flush ruleset"}}}, 400},
+		{"restricted SSH is fine", admin, "POST", "/firewall/apply", map[string]any{"enabled": true, "rules": []any{map[string]any{"ports": "22", "source": "203.0.113.0/24"}}}, 409},
+		{"unavailable", admin, "POST", "/firewall/apply", map[string]any{"enabled": true, "rules": []any{ssh}}, 409},
+		{"block own address", admin, "POST", "/firewall/blocks", map[string]any{"address": "127.0.0.1"}, 400},
+		{"block too broad", admin, "POST", "/firewall/blocks", map[string]any{"address": "0.0.0.0/0"}, 400},
+		{"block unavailable", admin, "POST", "/firewall/blocks", map[string]any{"address": "203.0.113.9"}, 409},
+		{"confirm nothing", admin, "POST", "/firewall/confirm", nil, 409},
+		{"unban bad ip", admin, "POST", "/fail2ban/unban", map[string]any{"jail": "sshd", "ip": "nope"}, 400},
+		{"customer fail2ban", carla, "GET", "/fail2ban", nil, 403},
+	}
+	for _, c := range cases {
+		if got := h.do(c.method, c.path, c.token, c.body, nil); got != c.want {
+			t.Errorf("%s: got %d, want %d", c.name, got, c.want)
+		}
 	}
 }

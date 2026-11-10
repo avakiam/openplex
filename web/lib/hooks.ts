@@ -20,7 +20,9 @@ import type {
   CronPreview,
   CronRun,
   Domain,
+  Fail2BanStatus,
   FileEntry,
+  FirewallStatus,
   HostSample,
   Redirect,
   Runtime,
@@ -51,6 +53,8 @@ export const keys = {
   info: ["system", "info"] as const,
   stats: ["system", "stats"] as const,
   containers: ["system", "containers"] as const,
+  firewall: ["firewall"] as const,
+  fail2ban: ["fail2ban"] as const,
 };
 
 /** Wraps useMutation with toast feedback and cache invalidation. */
@@ -219,3 +223,15 @@ export const useRunCron = (id: number) =>
     success: t("Task started"),
     invalidate: [keys.cron(id)],
   });
+
+// ---------- Firewall & Fail2Ban ----------
+
+export const useFirewall = () =>
+  useQuery({
+    queryKey: keys.firewall,
+    queryFn: () => api.get<FirewallStatus>("/firewall"),
+    // While changes wait for confirmation, poll so a rollback shows up.
+    refetchInterval: (q) => (q.state.data?.pending ? 3000 : 30_000),
+  });
+
+export const useFail2Ban = () => useQuery({ queryKey: keys.fail2ban, queryFn: () => api.get<Fail2BanStatus>("/fail2ban"), refetchInterval: 15_000 });

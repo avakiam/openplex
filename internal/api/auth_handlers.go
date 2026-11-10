@@ -68,6 +68,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		hash = u.PasswordHash
 	}
 	if !auth.VerifyPassword(hash, in.Password) || u.Disabled {
+		s.log.Warn("authentication failed", "ip", ip, "user", in.Username) // matched by the fail2ban openplex jail
 		s.audit(r, "auth.login_failed", in.Username, "")
 		writeErr(w, http.StatusUnauthorized, "invalid_credentials", "invalid username or password")
 		return
@@ -78,6 +79,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !auth.ValidateTOTP(u.TOTPSecret, in.TOTPCode) {
+			s.log.Warn("authentication failed", "ip", ip, "user", u.Username)
 			s.audit(r, "auth.totp_failed", u.Username, "")
 			writeErr(w, http.StatusUnauthorized, "totp_invalid", "invalid two-factor code")
 			return

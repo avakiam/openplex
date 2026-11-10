@@ -212,6 +212,31 @@ CREATE TABLE cron_runs (
 );
 CREATE INDEX cron_runs_job ON cron_runs(job_id, id);
 `,
+	// v7: host firewall (confirmed configuration) and blocked addresses.
+	`
+CREATE TABLE firewall_settings (
+	id         INTEGER PRIMARY KEY CHECK (id = 1),
+	enabled    INTEGER NOT NULL DEFAULT 0,
+	seeded     INTEGER NOT NULL DEFAULT 0,
+	updated_at TIMESTAMP NOT NULL
+);
+CREATE TABLE firewall_rules (
+	id         INTEGER PRIMARY KEY AUTOINCREMENT,
+	protocol   TEXT NOT NULL,
+	ports      TEXT NOT NULL DEFAULT '',
+	source     TEXT NOT NULL DEFAULT '',
+	comment    TEXT NOT NULL DEFAULT '',
+	position   INTEGER NOT NULL,
+	created_at TIMESTAMP NOT NULL
+);
+CREATE TABLE firewall_blocks (
+	id         INTEGER PRIMARY KEY AUTOINCREMENT,
+	address    TEXT NOT NULL UNIQUE,
+	comment    TEXT NOT NULL DEFAULT '',
+	expires_at TIMESTAMP,
+	created_at TIMESTAMP NOT NULL
+);
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

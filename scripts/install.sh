@@ -26,7 +26,7 @@ Usage: install.sh [options]
   --panel-domain HOST     serve the panel at https://HOST through the edge proxy
   --acme-email EMAIL      contact address for Let's Encrypt / ZeroSSL
   --listen ADDR           direct panel listen address (default: 127.0.0.1:7080)
-  --no-firewall           do not configure ufw
+  --no-firewall           leave the host firewall alone (no nftables rules, no Fail2Ban)
   -h, --help              show this help
 EOF
 }
@@ -84,7 +84,7 @@ export DEBIAN_FRONTEND=noninteractive
 # ---------- packages ----------
 log "Installing base packages"
 apt-get update -qq
-apt-get install -y -qq ca-certificates curl gnupg tar gzip iproute2 >/dev/null
+apt-get install -y -qq ca-certificates curl gnupg tar gzip iproute2 nftables >/dev/null
 
 # ---------- Docker Engine (official apt repository) ----------
 if ! command -v docker >/dev/null 2>&1; then
@@ -137,6 +137,7 @@ OPENPLEX_DATA_DIR=$DATA_DIR
 OPENPLEX_LISTEN=$LISTEN
 OPENPLEX_PANEL_DOMAIN=$PANEL_DOMAIN
 OPENPLEX_ACME_EMAIL=$ACME_EMAIL
+OPENPLEX_FIREWALL=$( [[ $FIREWALL -eq 1 ]] && echo true || echo false )
 EOF
   chmod 0640 "$ENV_FILE"
 else
@@ -144,6 +145,7 @@ else
   set_kv() { grep -q "^$1=" "$ENV_FILE" && sed -i "s|^$1=.*|$1=$2|" "$ENV_FILE" || echo "$1=$2" >> "$ENV_FILE"; }
   [[ -n "$PANEL_DOMAIN" ]] && set_kv OPENPLEX_PANEL_DOMAIN "$PANEL_DOMAIN"
   [[ -n "$ACME_EMAIL" ]] && set_kv OPENPLEX_ACME_EMAIL "$ACME_EMAIL"
+  [[ $FIREWALL -eq 0 ]] && set_kv OPENPLEX_FIREWALL false
   log "Kept existing $ENV_FILE"
 fi
 
@@ -168,7 +170,7 @@ TimeoutStopSec=30
 LimitNOFILE=65536
 
 # Hardening. openplexd runs as root because it manages the Docker engine,
-# file ownership of site directories and (later) host firewall rules.
+# file ownership of site directories and the host firewall (nftables).
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectHome=yes
@@ -194,17 +196,52 @@ systemctl daemon-reload
 systemctl enable openplexd >/dev/null 2>&1
 systemctl restart openplexd
 
-# ---------- firewall ----------
+# ---------- host firewall & Fail2Ban ----------
+# The host firewall is an nftables table (inet openplex) owned by openplexd and
+# edited in the panel (Firewall page). On a server where ufw is already active it
+# is imported but left off, so the existing setup keeps working unchanged.
 if [[ $FIREWALL -eq 1 ]]; then
-  log "Configuring ufw (SSH, HTTP, HTTPS, HTTP/3)"
-  apt-get install -y -qq ufw >/dev/null
-  SSH_PORTS=$(sshd -T 2>/dev/null | awk '$1=="port"{print $2}' || true)
-  [[ -z "$SSH_PORTS" ]] && SSH_PORTS=22
-  for p in $SSH_PORTS; do ufw allow "$p/tcp" comment 'ssh' >/dev/null; done
-  ufw allow 80/tcp comment 'openplex http' >/dev/null
-  ufw allow 443/tcp comment 'openplex https' >/dev/null
-  ufw allow 443/udp comment 'openplex http3' >/dev/null
-  ufw --force enable >/dev/null
+  if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -qiE '^(status|estado): (active|activo)'; then
+    log "ufw is active: keeping it. The panel imported its rules: turn on its firewall (Firewall page), then run 'ufw disable'."
+  else
+    log "Host firewall: managed by OpenPlex (SSH open, everything else closed; edit it on the Firewall page)"
+  fi
+  log "Installing Fail2Ban (SSH and panel login protection)"
+  apt-get install -y -qq fail2ban python3-systemd >/dev/null
+  install -d -m 0755 /etc/fail2ban/filter.d /etc/fail2ban/jail.d
+  cat > /etc/fail2ban/filter.d/openplex.conf <<'F2B'
+# Managed by the OpenPlex installer. Failed panel logins (openplexd JSON log).
+[Definition]
+failregex = "msg":"authentication failed","ip":"<ADDR>"
+journalmatch = _SYSTEMD_UNIT=openplexd.service
+F2B
+  cat > /etc/fail2ban/jail.d/openplex.local <<'F2B'
+# Managed by the OpenPlex installer; re-running it overwrites this file.
+# Put your own changes in another /etc/fail2ban/jail.d/*.local file.
+[DEFAULT]
+# A ban drops every packet from the address, websites included: the chain
+# hooks prerouting before Docker forwards traffic to the edge proxy.
+banaction = nftables[type=custom, table=f2b-openplex, chain=bans, chain_hook=prerouting, chain_priority=-300, blocktype=drop]
+banaction_allports = %(banaction)s
+ignoreip = 127.0.0.1/8 ::1
+bantime = 1h
+findtime = 10m
+maxretry = 5
+
+[sshd]
+enabled = true
+backend = systemd
+
+[openplex]
+enabled = true
+backend = systemd
+filter = openplex
+maxretry = 8
+F2B
+  systemctl enable fail2ban >/dev/null 2>&1
+  systemctl restart fail2ban
+else
+  log "Skipping host firewall and Fail2Ban (--no-firewall)"
 fi
 
 # ---------- wait for health ----------

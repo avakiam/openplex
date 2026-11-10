@@ -16,7 +16,7 @@ TimeoutStopSec=30
 LimitNOFILE=65536
 
 # Hardening. openplexd runs as root because it manages the Docker engine,
-# file ownership of site directories and (later) host firewall rules.
+# file ownership of site directories and the host firewall (nftables).
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectHome=yes

@@ -277,3 +277,65 @@ export interface CronInput {
   enabled?: boolean;
   timeout_sec?: number;
 }
+
+// ---------- Firewall & Fail2Ban ----------
+
+export type FirewallProtocol = "tcp" | "udp" | "both";
+
+export interface FirewallRule {
+  id?: number;
+  protocol: FirewallProtocol;
+  /** "22", "8000-8100" or "" (all ports from the source). */
+  ports: string;
+  /** "" = anywhere, an IP or a CIDR network. */
+  source: string;
+  comment: string;
+}
+
+export interface FirewallBlock {
+  id: number;
+  address: string;
+  comment: string;
+  expires_at: string | null;
+  created_at: string;
+}
+
+export interface FirewallPending {
+  enabled: boolean;
+  rules: FirewallRule[];
+  expires_at: string;
+}
+
+export interface FirewallStatus {
+  available: boolean;
+  unavailable?: string;
+  enabled: boolean;
+  rules: FirewallRule[];
+  pending: FirewallPending | null;
+  blocks: FirewallBlock[];
+  ssh_ports: number[];
+  ufw_active: boolean;
+  last_error: string;
+  applied_at: string | null;
+  your_ip: string;
+  confirm_seconds: number;
+  max_rules: number;
+  panel_port: number;
+  panel_direct: boolean;
+  via_panel_domain: boolean;
+}
+
+export interface Fail2BanJail {
+  name: string;
+  currently_failed: number;
+  total_failed: number;
+  currently_banned: number;
+  total_banned: number;
+  banned: string[];
+}
+
+export interface Fail2BanStatus {
+  installed: boolean;
+  running: boolean;
+  jails: Fail2BanJail[];
+}

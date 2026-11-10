@@ -89,8 +89,16 @@ has been verified on the Linux test server. One commit per milestone.
 - [ ] Records: A, AAAA, CNAME, MX, TXT, SRV, NS, CAA
 
 ## M10 — Security & cron
-- [ ] Firewall rules (nftables) CRUD + apply with safety rollback
-- [ ] Fail2Ban / CrowdSec status, jails, banned IPs, unban
+- [ ] Firewall rules (nftables) CRUD + apply with safety rollback — implemented: own table `inet openplex` replaced
+      atomically (`nft -f`); input chain (policy drop, SSH/ICMP/ND/established always handled) only when on; blocked
+      addresses in a prerouting chain at priority raw so they also stop website visitors (Docker-forwarded); applied
+      changes roll back after 60 s unless kept; refuses rule sets that close SSH, cut an open SSH session or the
+      requester's direct panel access, and blocks of the requester or of an address with an open SSH/panel session;
+      timed blocks expire; table re-applied at start and repaired if flushed; first start imports ufw rules (left off
+      while ufw is active). Live: apply + automatic rollback verified; **"Keep" and blocks still to be checked live**
+- [ ] Fail2Ban status, jails, banned IPs, unban — implemented: installer sets up Fail2Ban (sshd + `openplex` jail on
+      failed panel logins from the journal; bans drop all traffic in a prerouting nftables chain); Firewall page tab with
+      jail counters and unban. Live: jails running, filter matches a failed login; **a real ban + unban still to be checked**
 - [x] Scheduled tasks per website: 5-field cron / @daily…, server time zone, run as the site user inside its
       container (static sites: throwaway tools container), time limit kills the whole process tree, no overlap,
       4 at a time, missed runs skipped, run now, last 50 runs with output, 20 per site, audited; Cron tab in the UI
@@ -123,7 +131,8 @@ has been verified on the Linux test server. One commit per milestone.
       (overview/actions, settings, env vars, redirects, aliases & subdomains, live logs),
       file manager with Monaco (self-hosted, no CDN), users, API/SSH keys, account (password, 2FA + QR), audit log
 - [x] Views: terminal (xterm.js), databases, backups
-- [ ] Views for upcoming modules: mail, DNS, security, cron
+- [x] Views: Firewall (rules with apply/keep/undo, blocked addresses, Fail2Ban), scheduled tasks
+- [ ] Views for upcoming modules: mail, DNS
 - [x] Interface languages: English, Spanish, Catalan — browser detection, switcher in the header and on
       the login page, per-user preference stored on the account (`users.locale`, `PATCH /auth/me`, set by
       managers too), locale-aware numbers/dates, fixed API error messages translated; the build fails on a
@@ -189,3 +198,10 @@ has been verified on the Linux test server. One commit per milestone.
   removed; an every-minute task fired at :00 on two consecutive minutes; a failing Laravel task showed
   "Failed" with its real output in the UI. A Node app that exits at start went to "error" ("keeps crashing")
   within a minute; unknown Host → 404, known sites unaffected; after deleting site 4 the next site got id 5.
+- 2026-11-10 — Firewall + Fail2Ban on the LAN server (v0.8.0, migration v7): the installer kept ufw (active), installed
+  Fail2Ban 1.1.0 with the `sshd` and `openplex` jails; first start imported ufw's 7 allow rules with the OpenPlex
+  firewall off. Turning it on without port 3000 from the panel (Spanish UI): nftables 1.1.6 accepted the table, a test
+  client in a network namespace saw 3000 closed while 22, 8734 and the websites on 80 stayed reachable, and a new SSH
+  session got in; left unconfirmed, the previous rules came back on their own ~60 s later and 3000 answered again.
+  `fail2ban-regex` matched a failed panel login in the journal (127.0.0.1 is ignored, as configured).
+  Still to check live: "Keep the new rules", blocking an address (incl. a website visit) and a real Fail2Ban ban/unban.

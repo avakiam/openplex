@@ -25,6 +25,7 @@ type Config struct {
 	AccessTTL    time.Duration
 	RefreshTTL   time.Duration
 	EnableDocker bool
+	Firewall     bool // manage the host firewall (nftables)
 
 	Secret []byte // HMAC key for JWTs, loaded from DataDir/secret.key
 }
@@ -53,6 +54,7 @@ func Load(args []string) (*Config, error) {
 	fsFlags.StringVar(&c.DockerHost, "docker-host", env("OPENPLEX_DOCKER_HOST", ""), "Docker Engine endpoint (default: environment / unix socket)")
 	fsFlags.BoolVar(&c.Dev, "dev", envBool("OPENPLEX_DEV", false), "development mode (text logs, permissive CORS)")
 	fsFlags.BoolVar(&c.EnableDocker, "docker", envBool("OPENPLEX_DOCKER", true), "enable the Docker orchestrator")
+	fsFlags.BoolVar(&c.Firewall, "firewall", envBool("OPENPLEX_FIREWALL", true), "manage the host firewall (nftables table inet openplex)")
 	fsFlags.DurationVar(&c.AccessTTL, "access-ttl", 15*time.Minute, "access token lifetime")
 	fsFlags.DurationVar(&c.RefreshTTL, "refresh-ttl", 30*24*time.Hour, "refresh token lifetime")
 	if err := fsFlags.Parse(args); err != nil {

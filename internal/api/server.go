@@ -18,23 +18,25 @@ import (
 	"openplex.dev/openplex/internal/cron"
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/docker"
+	"openplex.dev/openplex/internal/firewall"
 	"openplex.dev/openplex/internal/monitor"
 	"openplex.dev/openplex/internal/secrets"
 )
 
 // Server holds API dependencies.
 type Server struct {
-	cfg     *config.Config
-	db      *db.DB
-	orch    *docker.Orchestrator // nil when Docker is disabled/unavailable
-	mon     *monitor.Sampler
-	signer  *auth.Signer
-	box     *secrets.Box
-	backups *backup.Manager // nil without Docker
-	cron    *cron.Manager
-	log     *slog.Logger
-	ui      http.Handler
-	version string
+	cfg      *config.Config
+	db       *db.DB
+	orch     *docker.Orchestrator // nil when Docker is disabled/unavailable
+	mon      *monitor.Sampler
+	signer   *auth.Signer
+	box      *secrets.Box
+	backups  *backup.Manager // nil without Docker
+	cron     *cron.Manager
+	firewall *firewall.Manager
+	log      *slog.Logger
+	ui       http.Handler
+	version  string
 
 	loginLimiter *limiter
 	tickets      ticketStore
@@ -56,6 +58,7 @@ type Options struct {
 	Box          *secrets.Box    // encrypts recoverable secrets (database passwords)
 	Backups      *backup.Manager // nil when Docker is unavailable
 	Cron         *cron.Manager
+	Firewall     *firewall.Manager
 }
 
 // New builds the API server.
@@ -66,6 +69,7 @@ func New(o Options) *Server {
 		box:          o.Box,
 		backups:      o.Backups,
 		cron:         o.Cron,
+		firewall:     o.Firewall,
 		loginLimiter: newLimiter(10, 5*time.Minute),
 		baseCtx:      o.BaseContext,
 	}
@@ -175,6 +179,14 @@ func (s *Server) Handler() http.Handler {
 				r.Post("/backups/run", s.handleRunBackup)
 				r.Get("/backups/runs", s.handleListBackupRuns)
 				r.Get("/backups/panel-snapshots", s.handlePanelSnapshots)
+				r.Get("/firewall", s.handleGetFirewall)
+				r.Post("/firewall/apply", s.handleApplyFirewall)
+				r.Post("/firewall/confirm", s.handleConfirmFirewall)
+				r.Post("/firewall/revert", s.handleRevertFirewall)
+				r.Post("/firewall/blocks", s.handleCreateFirewallBlock)
+				r.Delete("/firewall/blocks/{id}", s.handleDeleteFirewallBlock)
+				r.Get("/fail2ban", s.handleGetFail2Ban)
+				r.Post("/fail2ban/unban", s.handleFail2BanUnban)
 			})
 		})
 

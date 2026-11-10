@@ -22,6 +22,7 @@ import (
 	"openplex.dev/openplex/internal/cron"
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/docker"
+	"openplex.dev/openplex/internal/firewall"
 	"openplex.dev/openplex/internal/monitor"
 	"openplex.dev/openplex/internal/secrets"
 	"openplex.dev/openplex/internal/ui"
@@ -146,9 +147,13 @@ func run(args []string) error {
 	workers.Add(1)
 	go func() { defer workers.Done(); crons.Run(ctx) }()
 
+	fw := firewall.New(store, log, cfg.Firewall)
+	workers.Add(1)
+	go func() { defer workers.Done(); fw.Run(ctx) }()
+
 	srv := api.New(api.Options{
 		Config: cfg, DB: store, Orchestrator: orch, Monitor: mon, Logger: log,
-		UI: ui.Handler(), Version: version, BaseContext: ctx, Box: box, Backups: backups, Cron: crons,
+		UI: ui.Handler(), Version: version, BaseContext: ctx, Box: box, Backups: backups, Cron: crons, Firewall: fw,
 	})
 	httpSrv := &http.Server{
 		Handler:           srv.Handler(),
