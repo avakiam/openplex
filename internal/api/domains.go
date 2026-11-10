@@ -254,6 +254,11 @@ func (s *Server) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	s.audit(r, "domain.created", d.Name, d.Kind)
+	if s.dns != nil {
+		if err := s.dns.DomainCreated(ctx, d); err != nil {
+			s.log.Warn("dns records for new website", "domain", d.Name, "err", err)
+		}
+	}
 	s.deployAsync(d)
 	writeJSON(w, http.StatusCreated, d)
 }
@@ -331,6 +336,9 @@ func (s *Server) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, "domain.deleted", d.Name, fmt.Sprintf("purge=%v", purge))
+	if s.dns != nil {
+		s.dns.Changed() // the zone and subdomain records went with the row
+	}
 	if s.orch != nil {
 		s.background(func(ctx context.Context) error {
 			for _, c := range append(children, d) {

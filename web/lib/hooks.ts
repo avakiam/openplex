@@ -19,6 +19,8 @@ import type {
   CronList,
   CronPreview,
   CronRun,
+  DNSOverview,
+  DNSZoneDetail,
   Domain,
   Fail2BanStatus,
   FileEntry,
@@ -55,6 +57,8 @@ export const keys = {
   containers: ["system", "containers"] as const,
   firewall: ["firewall"] as const,
   fail2ban: ["fail2ban"] as const,
+  dns: ["dns"] as const,
+  zone: (id: number) => ["domains", id, "dns"] as const,
 };
 
 /** Wraps useMutation with toast feedback and cache invalidation. */
@@ -235,3 +239,10 @@ export const useFirewall = () =>
   });
 
 export const useFail2Ban = () => useQuery({ queryKey: keys.fail2ban, queryFn: () => api.get<Fail2BanStatus>("/fail2ban"), refetchInterval: 15_000 });
+
+// ---------- DNS ----------
+
+export const useDNS = () => useQuery({ queryKey: keys.dns, queryFn: () => api.get<DNSOverview>("/dns"), refetchInterval: 30_000 });
+
+export const useZone = (id: number, enabled = true) =>
+  useQuery({ queryKey: keys.zone(id), queryFn: () => api.get<DNSZoneDetail>(`/domains/${id}/dns`), enabled: enabled && id > 0, retry: false });

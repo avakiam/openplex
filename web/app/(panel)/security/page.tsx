@@ -117,7 +117,7 @@ function RulesTab({ st }: { st: FirewallStatus }) {
           </label>
           <div className="flex gap-2 rounded-md bg-muted/60 p-3 text-sm text-muted-foreground">
             <Globe className="mt-0.5 size-4 shrink-0" />
-            <span>{t("Web traffic (ports 80 and 443) always reaches your websites and does not need a rule. To stop a visitor, block their address.")}</span>
+            <span>{t("Web traffic (ports 80 and 443) and DNS (port 53) are always let in and need no rule. To stop a visitor, block their address.")}</span>
           </div>
           {st.ufw_active && (
             <div className="flex gap-2 rounded-md border border-warning/40 bg-warning/8 p-3 text-sm">

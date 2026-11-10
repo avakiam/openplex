@@ -17,6 +17,7 @@ import (
 	"openplex.dev/openplex/internal/config"
 	"openplex.dev/openplex/internal/cron"
 	"openplex.dev/openplex/internal/db"
+	"openplex.dev/openplex/internal/dns"
 	"openplex.dev/openplex/internal/firewall"
 	"openplex.dev/openplex/internal/monitor"
 	"openplex.dev/openplex/internal/secrets"
@@ -40,7 +41,7 @@ func newHarness(t *testing.T) *harness {
 	store := db.OpenMemory(t)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	box, _ := secrets.New(cfg.Secret, "database-passwords")
-	srv := New(Options{Config: cfg, DB: store, Monitor: monitor.New(time.Second, 10, dir, log), Logger: log, BaseContext: context.Background(), Box: box, Cron: cron.New(store, nil, log), Firewall: firewall.New(store, log, false)})
+	srv := New(Options{Config: cfg, DB: store, Monitor: monitor.New(time.Second, 10, dir, log), Logger: log, BaseContext: context.Background(), Box: box, Cron: cron.New(store, nil, log), Firewall: firewall.New(store, log, false), DNS: dns.New(store, nil, dir, "http://127.0.0.1:1", log)})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 	h := &harness{t: t, ts: ts, db: store, cfg: cfg, box: box}
@@ -479,5 +480,71 @@ func TestFirewallGuards(t *testing.T) {
 		if got := h.do(c.method, c.path, c.token, c.body, nil); got != c.want {
 			t.Errorf("%s: got %d, want %d", c.name, got, c.want)
 		}
+	}
+}
+
+func TestDNSZones(t *testing.T) {
+	h := newHarness(t)
+	h.mkUser("carla", db.RoleCustomer, nil)
+	h.mkUser("dani", db.RoleCustomer, nil)
+	admin, carla, dani := h.login("admin").AccessToken, h.login("carla").AccessToken, h.login("dani").AccessToken
+	if c := h.do("PUT", "/dns/settings", admin, map[string]any{"ns1": "ns1.example.com", "ns2": "ns2.example.com", "ipv4": "203.0.113.10"}, nil); c != 200 {
+		t.Fatalf("settings: %d", c)
+	}
+	var site, sub db.Domain
+	if c := h.do("POST", "/domains", carla, map[string]any{"name": "example.com"}, &site); c != 201 {
+		t.Fatalf("create site: %d", c)
+	}
+	if c := h.do("POST", "/domains", carla, map[string]any{"name": "blog.example.com", "kind": "subdomain", "parent_id": site.ID}, &sub); c != 201 {
+		t.Fatalf("create subdomain: %d", c)
+	}
+	base := "/domains/" + itoa(site.ID) + "/dns"
+	var zone struct {
+		Records     []db.DNSRecord `json:"records"`
+		Nameservers []string       `json:"nameservers"`
+	}
+	if c := h.do("GET", base, carla, nil, &zone); c != 200 {
+		t.Fatalf("get zone: %d", c)
+	}
+	have := map[string]bool{}
+	for _, r := range zone.Records {
+		have[r.Name+" "+r.Type+" "+r.Content] = true
+	}
+	for _, want := range []string{"@ A 203.0.113.10", "www CNAME example.com", "blog A 203.0.113.10"} {
+		if !have[want] {
+			t.Errorf("missing default record %q in %+v", want, zone.Records)
+		}
+	}
+	var mx db.DNSRecord
+	if c := h.do("POST", base+"/records", carla, map[string]any{"name": "@", "type": "MX", "content": "mail.example.com", "priority": 10}, &mx); c != 201 || mx.ID == 0 {
+		t.Fatalf("create MX: %d", c)
+	}
+	cases := []struct {
+		name, token, method, path string
+		body                      any
+		want                      int
+	}{
+		{"foreign zone", dani, "GET", base, nil, 404},
+		{"foreign record edit", dani, "PATCH", base + "/records/" + itoa(mx.ID), map[string]any{"name": "@", "type": "MX", "content": "evil.net", "priority": 1}, 404},
+		{"subdomain has no zone", carla, "GET", "/domains/" + itoa(sub.ID) + "/dns", nil, 400},
+		{"A next to CNAME", carla, "POST", base + "/records", map[string]any{"name": "www", "type": "A", "content": "203.0.113.11"}, 400},
+		{"apex NS", carla, "POST", base + "/records", map[string]any{"name": "@", "type": "NS", "content": "ns.evil.net"}, 400},
+		{"bad IP", carla, "POST", base + "/records", map[string]any{"name": "x", "type": "A", "content": "999.1.1.1"}, 400},
+		{"edit MX", carla, "PATCH", base + "/records/" + itoa(mx.ID), map[string]any{"name": "@", "type": "MX", "content": "mx.example.com", "priority": 5}, 200},
+		{"customer settings", carla, "PUT", "/dns/settings", map[string]any{"ns1": "a.b.c"}, 403},
+		{"customer status", carla, "GET", "/dns", nil, 403},
+		{"enable without address", admin, "PUT", "/dns/settings", map[string]any{"enabled": true, "ns1": "ns1.example.com", "ns2": "ns2.example.com"}, 400},
+		{"delete MX", carla, "DELETE", base + "/records/" + itoa(mx.ID), nil, 204},
+	}
+	for _, c := range cases {
+		if got := h.do(c.method, c.path, c.token, c.body, nil); got != c.want {
+			t.Errorf("%s: got %d, want %d", c.name, got, c.want)
+		}
+	}
+	if c := h.do("DELETE", "/domains/"+itoa(site.ID), carla, nil, nil); c != 204 && c != 200 && c != 202 {
+		t.Fatalf("delete site: %d", c)
+	}
+	if zs, _ := h.db.ListDNSZones(context.Background()); len(zs) != 0 {
+		t.Errorf("zone left after deleting the website: %+v", zs)
 	}
 }

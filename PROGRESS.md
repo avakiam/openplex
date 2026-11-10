@@ -84,9 +84,17 @@ has been verified on the Linux test server. One commit per milestone.
 - [ ] Webmail one-click login
 
 ## M9 — DNS
-- [ ] PowerDNS container (gsqlite3 backend) + API key
-- [ ] Zones CRUD synced from panel state; default records on domain create
-- [ ] Records: A, AAAA, CNAME, MX, TXT, SRV, NS, CAA
+- [x] PowerDNS 5.0.8 container (gsqlite3 in a volume, API on 127.0.0.1:7082 with a generated key), only while
+      the admin turns it on; port 53 published on the host's own addresses (systemd-resolved keeps 127.0.0.53);
+      recreated when image, addresses or key change; not an open resolver, version hidden
+- [x] Zones live in the panel DB (so panel backups include them) and are pushed to PowerDNS (create, diff → PATCH,
+      remove zones no longer in the panel; resync on change and every 10 min; SOA serial only moves on real
+      changes). A zone per website and alias with A/AAAA + www; subdomain websites add their records to the enclosing
+      zone and take them away when deleted; apex NS, SOA and in-zone nameserver glue come from the DNS settings;
+      changing the server address moves the records that used the old one
+- [x] Records: A, AAAA, CNAME, MX, TXT, SRV, NS (sub-delegation), CAA — validated (CNAME exclusivity, host names,
+      TXT quoting/splitting, SRV/CAA syntax, TTL 60 s–7 d, 500 per zone), owners edit their own zones, audited;
+      DNS tab per website, admin DNS page with nameservers, registrar/glue instructions and live delegation check
 
 ## M10 — Security & cron
 - [x] Firewall rules (nftables) CRUD + apply with safety rollback — implemented: own table `inet openplex` replaced
@@ -132,7 +140,8 @@ has been verified on the Linux test server. One commit per milestone.
       file manager with Monaco (self-hosted, no CDN), users, API/SSH keys, account (password, 2FA + QR), audit log
 - [x] Views: terminal (xterm.js), databases, backups
 - [x] Views: Firewall (rules with apply/keep/undo, blocked addresses, Fail2Ban), scheduled tasks
-- [ ] Views for upcoming modules: mail, DNS
+- [x] Views: DNS (admin page + DNS tab per website)
+- [ ] Views for upcoming modules: mail
 - [x] Interface languages: English, Spanish, Catalan — browser detection, switcher in the header and on
       the login page, per-user preference stored on the account (`users.locale`, `PATCH /auth/me`, set by
       managers too), locale-aware numbers/dates, fixed API error messages translated; the build fails on a

@@ -21,6 +21,7 @@ import (
 	"openplex.dev/openplex/internal/config"
 	"openplex.dev/openplex/internal/cron"
 	"openplex.dev/openplex/internal/db"
+	"openplex.dev/openplex/internal/dns"
 	"openplex.dev/openplex/internal/docker"
 	"openplex.dev/openplex/internal/firewall"
 	"openplex.dev/openplex/internal/monitor"
@@ -147,13 +148,21 @@ func run(args []string) error {
 	workers.Add(1)
 	go func() { defer workers.Done(); crons.Run(ctx) }()
 
+	var dnsSrv dns.Server // a nil *Orchestrator must not become a non-nil interface
+	if orch != nil {
+		dnsSrv = orch
+	}
+	dnsMgr := dns.New(store, dnsSrv, cfg.DataDir, docker.DNSAPIURL(), log)
+	workers.Add(1)
+	go func() { defer workers.Done(); dnsMgr.Run(ctx) }()
+
 	fw := firewall.New(store, log, cfg.Firewall)
 	workers.Add(1)
 	go func() { defer workers.Done(); fw.Run(ctx) }()
 
 	srv := api.New(api.Options{
 		Config: cfg, DB: store, Orchestrator: orch, Monitor: mon, Logger: log,
-		UI: ui.Handler(), Version: version, BaseContext: ctx, Box: box, Backups: backups, Cron: crons, Firewall: fw,
+		UI: ui.Handler(), Version: version, BaseContext: ctx, Box: box, Backups: backups, Cron: crons, Firewall: fw, DNS: dnsMgr,
 	})
 	httpSrv := &http.Server{
 		Handler:           srv.Handler(),

@@ -339,3 +339,65 @@ export interface Fail2BanStatus {
   running: boolean;
   jails: Fail2BanJail[];
 }
+
+// ---------- DNS ----------
+
+export type DNSType = "A" | "AAAA" | "CNAME" | "MX" | "TXT" | "SRV" | "NS" | "CAA";
+
+export interface DNSRecord {
+  id: number;
+  zone_id: number;
+  domain_id: number | null;
+  /** Relative to the zone; "@" is the domain itself. */
+  name: string;
+  type: DNSType;
+  content: string;
+  priority: number;
+  ttl: number;
+}
+
+export interface DNSZone {
+  id: number;
+  domain_id: number;
+  name: string;
+  updated_at: string;
+}
+
+export interface DNSDelegation {
+  status: "ok" | "partial" | "other" | "none";
+  servers: string[];
+  checked_at: string;
+}
+
+export interface DNSZoneDetail {
+  zone: DNSZone;
+  records: DNSRecord[];
+  delegation: DNSDelegation;
+  nameservers: string[];
+  server_enabled: boolean;
+  server_running: boolean;
+  types: DNSType[];
+  max_records: number;
+}
+
+export interface DNSSettings {
+  enabled: boolean;
+  ns1: string;
+  ns2: string;
+  ipv4: string;
+  ipv6: string;
+  hostmaster: string;
+}
+
+export interface DNSStatus extends DNSSettings {
+  available: boolean;
+  running: boolean;
+  last_error: string;
+  last_sync: string | null;
+  listen: string[];
+}
+
+export interface DNSOverview {
+  status: DNSStatus;
+  zones: (DNSZone & { records: number; delegation: DNSDelegation })[];
+}

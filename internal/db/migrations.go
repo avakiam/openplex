@@ -237,6 +237,40 @@ CREATE TABLE firewall_blocks (
 	created_at TIMESTAMP NOT NULL
 );
 `,
+	// v8: authoritative DNS (zones synced to PowerDNS).
+	`
+CREATE TABLE dns_settings (
+	id          INTEGER PRIMARY KEY CHECK (id = 1),
+	enabled     INTEGER NOT NULL DEFAULT 0,
+	ns1         TEXT NOT NULL DEFAULT '',
+	ns2         TEXT NOT NULL DEFAULT '',
+	ipv4        TEXT NOT NULL DEFAULT '',
+	ipv6        TEXT NOT NULL DEFAULT '',
+	hostmaster  TEXT NOT NULL DEFAULT '',
+	updated_at  TIMESTAMP NOT NULL
+);
+CREATE TABLE dns_zones (
+	id         INTEGER PRIMARY KEY AUTOINCREMENT,
+	domain_id  INTEGER NOT NULL UNIQUE REFERENCES domains(id) ON DELETE CASCADE,
+	name       TEXT NOT NULL UNIQUE COLLATE NOCASE,
+	created_at TIMESTAMP NOT NULL,
+	updated_at TIMESTAMP NOT NULL
+);
+CREATE TABLE dns_records (
+	id         INTEGER PRIMARY KEY AUTOINCREMENT,
+	zone_id    INTEGER NOT NULL REFERENCES dns_zones(id) ON DELETE CASCADE,
+	-- set when the record belongs to a subdomain website: removed with it
+	domain_id  INTEGER REFERENCES domains(id) ON DELETE CASCADE,
+	name       TEXT NOT NULL,
+	type       TEXT NOT NULL,
+	content    TEXT NOT NULL,
+	priority   INTEGER NOT NULL DEFAULT 0,
+	ttl        INTEGER NOT NULL DEFAULT 3600,
+	created_at TIMESTAMP NOT NULL,
+	updated_at TIMESTAMP NOT NULL
+);
+CREATE INDEX dns_records_zone ON dns_records(zone_id, name, type);
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

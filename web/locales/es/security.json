@@ -10,7 +10,7 @@
   "Firewall off": "Firewall desactivado",
   "Incoming connections are refused unless a rule below allows them.": "Se rechazan las conexiones entrantes salvo que una de las reglas de abajo las permita.",
   "Every port of the server is reachable. Blocked addresses still apply.": "Todos los puertos del servidor están accesibles. Las direcciones bloqueadas se siguen aplicando.",
-  "Web traffic (ports 80 and 443) always reaches your websites and does not need a rule. To stop a visitor, block their address.": "El tráfico web (puertos 80 y 443) siempre llega a tus webs y no necesita regla. Para frenar a un visitante, bloquea su dirección.",
+  "Web traffic (ports 80 and 443) and DNS (port 53) are always let in and need no rule. To stop a visitor, block their address.": "El tráfico web (puertos 80 y 443) y el DNS (puerto 53) siempre pasan y no necesitan regla. Para frenar a un visitante, bloquea su dirección.",
   "ufw is also active on this server. Its rules were imported here; while both are on, a port must be allowed in both. Once this firewall is on and working, turn ufw off with:": "ufw también está activo en este servidor. Sus reglas se han importado aquí; mientras los dos estén activos, un puerto tiene que estar permitido en ambos. Cuando este firewall esté activado y funcionando, desactiva ufw con:",
   "Allowed incoming connections": "Conexiones entrantes permitidas",
   "SSH on this server listens on port {ports}.": "En este servidor, SSH escucha en el puerto {ports}.",

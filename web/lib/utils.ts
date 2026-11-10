@@ -29,8 +29,8 @@ export function duration(secs: number) {
   const m = Math.floor((secs % 3600) / 60);
   // English keeps the compact "3d 4h"; Spanish and Catalan use spaced SI-style symbols ("3 d 4 h", "5 min").
   const [sd, sh, sm] = getLocale() === "en" ? ["d", "h", "m"] : [" d", " h", " min"];
-  if (d > 0) return `${d}${sd} ${h}${sh}`;
-  if (h > 0) return `${h}${sh} ${m}${sm}`;
+  if (d > 0) return h > 0 ? `${d}${sd} ${h}${sh}` : `${d}${sd}`;
+  if (h > 0) return m > 0 ? `${h}${sh} ${m}${sm}` : `${h}${sh}`;
   return `${m}${sm}`;
 }
 

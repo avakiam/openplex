@@ -17,6 +17,7 @@ import (
 	"openplex.dev/openplex/internal/config"
 	"openplex.dev/openplex/internal/cron"
 	"openplex.dev/openplex/internal/db"
+	"openplex.dev/openplex/internal/dns"
 	"openplex.dev/openplex/internal/docker"
 	"openplex.dev/openplex/internal/firewall"
 	"openplex.dev/openplex/internal/monitor"
@@ -34,6 +35,7 @@ type Server struct {
 	backups  *backup.Manager // nil without Docker
 	cron     *cron.Manager
 	firewall *firewall.Manager
+	dns      *dns.Manager
 	log      *slog.Logger
 	ui       http.Handler
 	version  string
@@ -59,6 +61,7 @@ type Options struct {
 	Backups      *backup.Manager // nil when Docker is unavailable
 	Cron         *cron.Manager
 	Firewall     *firewall.Manager
+	DNS          *dns.Manager
 }
 
 // New builds the API server.
@@ -70,6 +73,7 @@ func New(o Options) *Server {
 		backups:      o.Backups,
 		cron:         o.Cron,
 		firewall:     o.Firewall,
+		dns:          o.DNS,
 		loginLimiter: newLimiter(10, 5*time.Minute),
 		baseCtx:      o.BaseContext,
 	}
@@ -141,6 +145,10 @@ func (s *Server) Handler() http.Handler {
 				r.Delete("/cron/{jid}", s.handleDeleteCron)
 				r.Post("/cron/{jid}/run", s.handleRunCron)
 				r.Get("/cron/{jid}/runs", s.handleListCronRuns)
+				r.Get("/dns", s.handleGetZone)
+				r.Post("/dns/records", s.handleCreateRecord)
+				r.Patch("/dns/records/{rid}", s.handleUpdateRecord)
+				r.Delete("/dns/records/{rid}", s.handleDeleteRecord)
 
 				r.Get("/files", s.handleListFiles)
 				r.Get("/files/content", s.handleReadFile)
@@ -186,6 +194,8 @@ func (s *Server) Handler() http.Handler {
 				r.Post("/firewall/blocks", s.handleCreateFirewallBlock)
 				r.Delete("/firewall/blocks/{id}", s.handleDeleteFirewallBlock)
 				r.Get("/fail2ban", s.handleGetFail2Ban)
+				r.Get("/dns", s.handleGetDNS)
+				r.Put("/dns/settings", s.handlePutDNSSettings)
 				r.Post("/fail2ban/unban", s.handleFail2BanUnban)
 			})
 		})

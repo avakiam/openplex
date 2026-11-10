@@ -1,5 +1,5 @@
 "use client";
-import { Activity, Archive, Database, Globe, KeyRound, LayoutDashboard, LogOut, Menu, Moon, ScrollText, Shield, Sun, UserCog, Users } from "lucide-react";
+import { Activity, Archive, Database, Globe, KeyRound, LayoutDashboard, LogOut, Menu, Moon, Network, ScrollText, Shield, Sun, UserCog, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -28,6 +28,7 @@ const nav: NavItem[] = [
   { href: "/users/", label: tk("Users"), icon: Users, show: canManageUsers },
   { href: "/keys/", label: tk("API & SSH keys"), icon: KeyRound },
   { href: "/backups/", label: tk("Backups"), icon: Archive, show: isAdmin },
+  { href: "/dns/", label: "DNS", icon: Network, show: isAdmin },
   { href: "/security/", label: tk("Firewall"), icon: Shield, show: isAdmin },
   { href: "/audit/", label: tk("Audit log"), icon: ScrollText, show: isAdmin },
   { href: "/account/", label: tk("Account & security"), icon: UserCog },
