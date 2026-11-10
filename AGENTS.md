@@ -35,11 +35,15 @@ Every change is owned by exactly one role. When a task spans roles, the Architec
 5. **Everything we create in Docker carries labels** `openplex.managed=true` and
    `openplex.kind=<edge|site|db|mail|dns>` (+ `openplex.domain_id` where relevant).
    OpenPlex must never touch unlabelled containers.
-6. **Tenant isolation.** One container per site; site containers join only `openplex_edge` and
-   the internal (no-internet) `openplex_db` network. Shared MariaDB/PostgreSQL servers isolate
-   tenants by per-database users (`<owner>_<name>`, grants only on their own DB, Postgres
-   `REVOKE CONNECT … FROM PUBLIC`); Redis gets one container per instance. Memory/CPU limits are
-   always set. Containers run with `no-new-privileges` and dropped capabilities where the image allows.
+6. **Tenant isolation.** One container per site, running as the site's uid. Each account has its
+   own network `openplex_u<id>` (a /24 from `OPENPLEX_TENANT_NETWORKS`) holding its site, shell and
+   Redis containers; the edge and the shared MariaDB/PostgreSQL servers join every account network,
+   nothing else does. The edge never mounts tenant files: static and PHP sites serve their own files
+   on :8080 (`openplex/static`, Caddy inside the PHP image; PHP-FPM only on 127.0.0.1). Anything the
+   panel (root) does inside a tenant directory goes through `os.Root`. Shared MariaDB/PostgreSQL
+   servers isolate tenants by per-database users (`<owner>_<name>`, grants on the escaped name only,
+   Postgres `REVOKE CONNECT … FROM PUBLIC`); Redis gets one container per instance. Memory/CPU limits
+   are always set (admins only). Containers run with `no-new-privileges` and dropped capabilities.
 7. **RBAC is enforced in the API layer**, never in the UI. Every handler that takes an ID
    resolves ownership through `api.authorize*` helpers before acting.
 8. **Secrets** (passwords, API keys, refresh tokens) are stored hashed (bcrypt for passwords,

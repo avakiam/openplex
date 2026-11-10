@@ -1,0 +1,141 @@
+# Installation, upgrades and recovery
+
+**English** · [Español](../es/installation.md) · [Català](../ca/installation.md)
+
+## Before you start
+
+- A fresh server with **Ubuntu 22.04+** or **Debian 12+** (amd64 or arm64),
+  root access and a public IP address. Other services must not use ports 80
+  and 443.
+- 2 GB of RAM or more is recommended; 1 GB works for a few small websites
+  without mail.
+- A host name for the panel (for example `panel.example.com`) with an A
+  (and, if you have IPv6, AAAA) record pointing at the server. Let's Encrypt
+  needs it to issue the panel's certificate.
+- If you will host mail: a provider that allows outgoing traffic on port 25,
+  and a reverse DNS (PTR) record of the server's IP set to the mail host name.
+
+## Install
+
+```bash
+curl -fsSL https://get.openplex.dev | sudo bash -s -- \
+  --panel-domain panel.example.com --acme-email you@example.com
+```
+
+The installer is unattended and safe to run again. It:
+
+1. installs Docker Engine from Docker's official repository (if missing),
+   nftables and Fail2Ban;
+2. downloads `openplexd`, checks its SHA-256 checksum and installs it in
+   `/usr/local/bin`;
+3. writes `/etc/openplex/openplex.env` and the `openplexd` systemd service;
+4. starts the service, which creates the admin account, the edge proxy and
+   the firewall rules.
+
+### Options
+
+| Option | Meaning |
+|---|---|
+| `--panel-domain HOST` | Serve the panel at `https://HOST` through the edge proxy |
+| `--acme-email EMAIL` | Contact address for Let's Encrypt / ZeroSSL |
+| `--version VERSION` | Install this release instead of the latest |
+| `--binary PATH` | Install a local `openplexd` binary instead of downloading one |
+| `--listen ADDR` | Direct panel address (default `127.0.0.1:7080`, only reachable from the server) |
+| `--no-firewall` | Leave the host firewall alone (no nftables rules, no Fail2Ban) |
+
+## First sign-in
+
+Open `https://panel.example.com` and sign in as **`admin`**. The password is
+in `/var/lib/openplex/initial-admin-password`:
+
+```bash
+sudo cat /var/lib/openplex/initial-admin-password
+```
+
+Change it under your profile and turn on two-factor authentication. The file
+is deleted automatically once that password is changed. If you ever lose the
+admin password:
+
+```bash
+sudo openplexd reset-password admin
+```
+
+## Ports
+
+| Port | Used by |
+|---|---|
+| 22 | SSH (always allowed by the firewall) |
+| 80, 443 (TCP), 443 (UDP) | Websites, panel and webmail (edge proxy) |
+| 25, 465, 587, 143, 993, 110, 995, 4190 | Mail, when mail is turned on |
+| 53 (TCP/UDP) | DNS, when the DNS server is turned on |
+
+The firewall is managed from **Firewall** in the panel. It is left off when
+`ufw` is active, so they don't fight over the rules.
+
+## Configuration
+
+Settings live in `/etc/openplex/openplex.env` (`KEY=value`, restart the
+service after a change). The most useful ones:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `OPENPLEX_PANEL_DOMAIN` | — | Panel host name |
+| `OPENPLEX_ACME_EMAIL` | — | Certificate contact address |
+| `OPENPLEX_DATA_DIR` | `/var/lib/openplex` | All state: database, sites, keys, certificates |
+| `OPENPLEX_LISTEN` | `127.0.0.1:7080` | Direct panel address |
+| `OPENPLEX_FIREWALL` | `true` | Manage the host firewall |
+| `OPENPLEX_CAPTCHA` | `true` | `false` turns the login captcha off (e.g. after entering a wrong key) |
+| `OPENPLEX_TENANT_NETWORKS` | `10.213.0.0/16` | Address pool for the private network of each account (one /24 each) |
+
+## Managing the service
+
+```bash
+systemctl status openplexd
+journalctl -u openplexd -f
+sudo systemctl restart openplexd
+```
+
+## Upgrades
+
+Run the installer again (with the same options). It replaces the binary and
+keeps all data; at start the daemon migrates its database and updates the
+containers it manages. Take a backup first.
+
+## Backups and rebuilding a lost server
+
+Set up backups under **Backups**: a local folder or an S3 bucket, a schedule,
+and how many copies to keep. **Keep the recovery key shown there somewhere
+safe and off the server**: without it the backups can't be read.
+
+To rebuild a server that is gone:
+
+1. Install OpenPlex on the new server with the same options.
+2. Restore the panel from the backup repository:
+
+   ```bash
+   sudo systemctl stop openplexd
+   sudo OPENPLEX_RECOVERY_KEY='…' openplexd restore-panel --repo s3:https://s3.example.com/bucket/openplex
+   sudo systemctl start openplexd
+   ```
+
+   For S3, also set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. For a
+   local or mounted repository, pass its path to `--repo`.
+
+3. At start OpenPlex restores the websites, databases, mail and webmail from
+   the same backup run. Point your DNS at the new IP if it changed (zones
+   hosted by OpenPlex are updated automatically).
+
+`openplexd restore-panel --help` lists every option (`--snapshot`,
+`--ipv4`, `--ipv6`, `--force`…).
+
+## Uninstall
+
+```bash
+sudo systemctl disable --now openplexd
+sudo docker rm -f $(sudo docker ps -aq --filter label=openplex.managed=true)
+sudo docker volume rm openplex-mail-data openplex-webmail-db
+sudo docker network prune -f --filter label=openplex.managed=true
+sudo rm -rf /var/lib/openplex /etc/openplex /usr/local/bin/openplexd /etc/systemd/system/openplexd.service
+```
+
+This deletes every website, database and mailbox on the server.

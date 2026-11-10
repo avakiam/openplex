@@ -57,6 +57,7 @@ internal/captcha/      login captcha verification (Turnstile, hCaptcha, reCAPTCH
 internal/backup/ terminal/   (see PROGRESS.md for status)
 internal/ui/          go:embed of the built dashboard (dist/)
 web/                  Next.js App Router dashboard (static export)
+docs/{en,es,ca}/      user documentation (README.md / README.es.md / README.ca.md at the root)
 scripts/install.sh    unattended installer      deploy/   systemd unit, sample config
 ```
 

@@ -208,6 +208,12 @@ has been verified on the Linux test server. One commit per milestone.
 ## M14 — Installer & packaging
 - [x] `scripts/install.sh`: unattended Ubuntu/Debian install (Docker, user, dirs, binary, systemd, firewall)
 - [x] `deploy/openplexd.service` (hardened systemd unit)
+- [x] Licence and public docs: core AGPL-3.0-only (`LICENSE`) + OpenPlex Extension Exception draft
+      (`LICENSE-EXCEPTION.md`, to be reviewed by a lawyer), `TRADEMARKS.md`, `SECURITY.md`, `CONTRIBUTING.md`
+      (no code contributions yet; CLA when opened), README and `docs/` (installation, hosting providers,
+      licensing) in en/es/ca
+- [ ] Image mode for providers (prepare a template without initialising; first boot generates secrets),
+      one-time sign-in link, signed releases + update channel, published API reference
 - [ ] Release build (`linux/amd64`, `linux/arm64`) + checksums
 - [x] Verified end-to-end on the Linux test server and on a clean public VPS
 

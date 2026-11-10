@@ -1,0 +1,143 @@
+# Instal·lació, actualitzacions i recuperació
+
+[English](../en/installation.md) · [Español](../es/installation.md) · **Català**
+
+## Abans de començar
+
+- Un servidor net amb **Ubuntu 22.04+** o **Debian 12+** (amd64 o arm64),
+  accés root i una IP pública. Cap altre servei ha de fer servir els ports 80
+  i 443.
+- Es recomanen 2 GB de RAM o més; amb 1 GB funcionen uns quants webs petits
+  sense correu.
+- Un nom per al tauler (per exemple `panel.example.com`) amb un registre A (i
+  AAAA si tens IPv6) que apunti al servidor. Let's Encrypt el necessita per
+  emetre el certificat del tauler.
+- Si allotjaràs correu: un proveïdor que permeti trànsit sortint pel port 25,
+  i el DNS invers (PTR) de la IP del servidor apuntant al nom del servidor de
+  correu.
+
+## Instal·lar
+
+```bash
+curl -fsSL https://get.openplex.dev | sudo bash -s -- \
+  --panel-domain panel.example.com --acme-email tu@example.com
+```
+
+L'instal·lador no fa preguntes i es pot tornar a executar sense risc:
+
+1. instal·la Docker Engine des del repositori oficial de Docker (si no hi és),
+   nftables i Fail2Ban;
+2. baixa `openplexd`, en comprova la suma SHA-256 i l'instal·la a
+   `/usr/local/bin`;
+3. escriu `/etc/openplex/openplex.env` i el servei systemd `openplexd`;
+4. engega el servei, que crea el compte d'administrador, el proxy i les
+   regles del tallafocs.
+
+### Opcions
+
+| Opció | Què fa |
+|---|---|
+| `--panel-domain HOST` | Serveix el tauler a `https://HOST` a través del proxy |
+| `--acme-email EMAIL` | Adreça de contacte per a Let's Encrypt / ZeroSSL |
+| `--version VERSIÓ` | Instal·la aquesta versió en lloc de l'última |
+| `--binary RUTA` | Instal·la un binari `openplexd` local en lloc de baixar-lo |
+| `--listen ADR` | Adreça directa del tauler (per defecte `127.0.0.1:7080`, només accessible des del servidor) |
+| `--no-firewall` | No toca el tallafocs del servidor (sense regles nftables ni Fail2Ban) |
+
+## Primer accés
+
+Obre `https://panel.example.com` i entra com a **`admin`**. La contrasenya és
+a `/var/lib/openplex/initial-admin-password`:
+
+```bash
+sudo cat /var/lib/openplex/initial-admin-password
+```
+
+Canvia-la des del teu perfil i activa la verificació en dos passos. El fitxer
+s'esborra sol quan canvies aquesta contrasenya. Si mai perds la contrasenya
+de l'administrador:
+
+```bash
+sudo openplexd reset-password admin
+```
+
+## Ports
+
+| Port | Ús |
+|---|---|
+| 22 | SSH (el tallafocs sempre el permet) |
+| 80, 443 (TCP), 443 (UDP) | Webs, tauler i webmail (proxy) |
+| 25, 465, 587, 143, 993, 110, 995, 4190 | Correu, si està activat |
+| 53 (TCP/UDP) | DNS, si el servidor DNS està activat |
+
+El tallafocs es gestiona a **Tallafocs** dins del tauler. Es queda apagat si
+`ufw` està actiu, perquè no es trepitgin les regles.
+
+## Configuració
+
+Els paràmetres són a `/etc/openplex/openplex.env` (`CLAU=valor`; reinicia el
+servei després de canviar-los). Els més útils:
+
+| Variable | Per defecte | Què fa |
+|---|---|---|
+| `OPENPLEX_PANEL_DOMAIN` | — | Nom del tauler |
+| `OPENPLEX_ACME_EMAIL` | — | Adreça de contacte dels certificats |
+| `OPENPLEX_DATA_DIR` | `/var/lib/openplex` | Tot l'estat: base de dades, webs, claus, certificats |
+| `OPENPLEX_LISTEN` | `127.0.0.1:7080` | Adreça directa del tauler |
+| `OPENPLEX_FIREWALL` | `true` | Gestionar el tallafocs del servidor |
+| `OPENPLEX_CAPTCHA` | `true` | `false` desactiva el captcha de l'inici de sessió (per exemple després de posar una clau errònia) |
+| `OPENPLEX_TENANT_NETWORKS` | `10.213.0.0/16` | Rang d'adreces per a la xarxa privada de cada compte (una /24 cadascuna) |
+
+## Gestionar el servei
+
+```bash
+systemctl status openplexd
+journalctl -u openplexd -f
+sudo systemctl restart openplexd
+```
+
+## Actualitzar
+
+Torna a executar l'instal·lador (amb les mateixes opcions). Substitueix el
+binari i conserva totes les dades; en engegar, el servei migra la seva base
+de dades i actualitza els contenidors que gestiona. Fes una còpia abans.
+
+## Còpies de seguretat i reconstruir un servidor perdut
+
+Configura les còpies a **Còpies de seguretat**: una carpeta local o un bucket
+S3, una programació i quantes còpies cal conservar. **Desa la clau de
+recuperació que hi apareix en un lloc segur i fora del servidor**: sense ella
+no es poden llegir les còpies.
+
+Per reconstruir un servidor que ja no existeix:
+
+1. Instal·la OpenPlex al servidor nou amb les mateixes opcions.
+2. Restaura el tauler des del repositori de còpies:
+
+   ```bash
+   sudo systemctl stop openplexd
+   sudo OPENPLEX_RECOVERY_KEY='…' openplexd restore-panel --repo s3:https://s3.example.com/bucket/openplex
+   sudo systemctl start openplexd
+   ```
+
+   Amb S3, defineix també `AWS_ACCESS_KEY_ID` i `AWS_SECRET_ACCESS_KEY`. Si el
+   repositori és local o està muntat, passa'n la ruta a `--repo`.
+
+3. En engegar, OpenPlex restaura els webs, les bases de dades, el correu i el
+   webmail de la mateixa còpia. Apunta el teu DNS a la IP nova si ha canviat
+   (les zones allotjades a OpenPlex s'actualitzen soles).
+
+`openplexd restore-panel --help` mostra totes les opcions (`--snapshot`,
+`--ipv4`, `--ipv6`, `--force`…).
+
+## Desinstal·lar
+
+```bash
+sudo systemctl disable --now openplexd
+sudo docker rm -f $(sudo docker ps -aq --filter label=openplex.managed=true)
+sudo docker volume rm openplex-mail-data openplex-webmail-db
+sudo docker network prune -f --filter label=openplex.managed=true
+sudo rm -rf /var/lib/openplex /etc/openplex /usr/local/bin/openplexd /etc/systemd/system/openplexd.service
+```
+
+Això esborra tots els webs, bases de dades i bústies del servidor.
