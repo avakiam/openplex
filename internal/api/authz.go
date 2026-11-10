@@ -2,8 +2,10 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"slices"
+	"strings"
 
 	"openplex.dev/openplex/internal/db"
 )
@@ -12,6 +14,9 @@ import (
 //   admin    → every user and resource
 //   reseller → itself and the customers it created (parent_id = reseller)
 //   customer → itself only
+// On top of that, an access grant lets a user work on one website (some of
+// its areas, optionally read-only, aliases included) or one database owned by
+// someone else. Deleting the resource itself stays with its owner.
 
 // visibleOwnerIDs returns the user IDs whose resources u may access (nil = all).
 func (s *Server) visibleOwnerIDs(ctx context.Context, u *db.User) ([]int64, error) {
@@ -72,11 +77,93 @@ func (s *Server) loadDomain(w http.ResponseWriter, r *http.Request) *db.Domain {
 		s.fail(w, r, err)
 		return nil
 	}
-	if !allowed {
+	if allowed {
+		return d
+	}
+	g, err := s.siteGrant(r.Context(), actor(r).ID, d)
+	if err != nil {
+		s.fail(w, r, err)
+		return nil
+	}
+	if g == nil {
 		writeErr(w, http.StatusNotFound, "not_found", "resource not found")
 		return nil
 	}
+	area, write := siteArea(r)
+	switch {
+	case area == areaOwner:
+		writeErr(w, http.StatusForbidden, "forbidden", "only the owner of this website can do this")
+		return nil
+	case area != "" && !g.Has(area):
+		writeErr(w, http.StatusForbidden, "forbidden", "you don't have access to this part of the website")
+		return nil
+	case write && g.ReadOnly:
+		writeErr(w, http.StatusForbidden, "forbidden", "you have read-only access to this website")
+		return nil
+	}
 	return d
+}
+
+// siteGrant is u's grant on website d, or on the website d is an alias of.
+func (s *Server) siteGrant(ctx context.Context, userID int64, d *db.Domain) (*db.AccessGrant, error) {
+	ids := []int64{d.ID}
+	if d.Kind == db.KindAlias && d.ParentID != nil {
+		ids = append(ids, *d.ParentID)
+	}
+	for _, id := range ids {
+		g, err := s.db.FindGrant(ctx, userID, db.GrantSite, id)
+		if err == nil {
+			return g, nil
+		}
+		if !errors.Is(err, db.ErrNotFound) {
+			return nil, err
+		}
+	}
+	return nil, nil
+}
+
+// areaOwner marks requests only the owner may make through a grant (none).
+const areaOwner = "owner"
+
+// siteArea maps a request under /api/v1/domains/{id} to the website area it
+// touches ("" = any grant may see it) and whether it changes anything. The
+// web terminal counts as a change: it is a shell.
+func siteArea(r *http.Request) (area string, write bool) {
+	write = r.Method != http.MethodGet && r.Method != http.MethodHead
+	rest, ok := strings.CutPrefix(r.URL.Path, "/api/v1/domains/")
+	if !ok {
+		return areaOwner, write
+	}
+	parts := strings.SplitN(rest, "/", 3)
+	seg := ""
+	if len(parts) > 1 {
+		seg = parts[1]
+	}
+	switch seg {
+	case "":
+		switch r.Method {
+		case http.MethodDelete:
+			return areaOwner, true
+		case http.MethodGet, http.MethodHead:
+			return "", false
+		}
+		return db.AreaSite, true
+	case "stats":
+		return "", write
+	case "actions", "logs", "redirects", "cron":
+		return db.AreaSite, write
+	case "files":
+		return db.AreaFiles, write
+	case "terminal":
+		return db.AreaFiles, true
+	case "dns":
+		return db.AreaDNS, write
+	case "mail":
+		return db.AreaMail, write
+	case "backups":
+		return db.AreaBackups, write
+	}
+	return areaOwner, write
 }
 
 // loadManagedUser resolves {id} into a user the actor may manage.

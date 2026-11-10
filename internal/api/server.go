@@ -120,6 +120,9 @@ func (s *Server) Handler() http.Handler {
 			r.Delete("/users/{id}", s.handleDeleteUser)
 			r.Post("/users/{id}/password", s.handleSetUserPassword)
 			r.Post("/users/{id}/2fa/reset", s.handleResetUserTOTP)
+			r.Get("/users/{id}/access", s.handleListAccess)
+			r.Put("/users/{id}/access", s.handlePutAccess)
+			r.Delete("/users/{id}/access/{gid}", s.handleDeleteAccess)
 
 			r.Get("/api-keys", s.handleListAPIKeys)
 			r.Post("/api-keys", s.handleCreateAPIKey)

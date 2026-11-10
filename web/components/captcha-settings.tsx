@@ -47,23 +47,20 @@ function Form({ cur }: { cur: CaptchaSettings }) {
   const [reset, setReset] = useState(0);
   const settledKey = useSettled(siteKey.trim());
   const p = providers.find((x) => x.id === provider);
-  const changed =
-    provider !== cur.provider || siteKey.trim() !== cur.site_key || secret !== "" || (panel && !cur.panel) || (webmail && !cur.webmail);
+  const changed = provider !== cur.provider || siteKey.trim() !== cur.site_key || secret !== "" || (panel && !cur.panel) || (webmail && !cur.webmail);
   const needsTest = !!provider && (panel || webmail) && changed;
 
-  const save = useAction(
-    () => api.put<CaptchaSettings>("/captcha", { provider, site_key: siteKey, secret, panel, webmail, test_token: token }),
-    {
-      success: t("Captcha settings saved"),
-      invalidate: [keys.captcha],
-      onSuccess: () => setSecret(""),
-      onError: () => setReset((n) => n + 1),
-    },
-  );
+  const save = useAction(() => api.put<CaptchaSettings>("/captcha", { provider, site_key: siteKey, secret, panel, webmail, test_token: token }), {
+    success: t("Captcha settings saved"),
+    invalidate: [keys.captcha],
+    onSuccess: () => setSecret(""),
+    onError: () => setReset((n) => n + 1),
+  });
 
-  const hosts = [typeof window !== "undefined" ? window.location.hostname : "", mail?.status.webmail_url ? new URL(mail.status.webmail_url).hostname : ""].filter(
-    Boolean,
-  );
+  const hosts = [
+    typeof window !== "undefined" ? window.location.hostname : "",
+    mail?.status.webmail_url ? new URL(mail.status.webmail_url).hostname : "",
+  ].filter(Boolean);
 
   return (
     <form
@@ -92,11 +89,7 @@ function Form({ cur }: { cur: CaptchaSettings }) {
               <a className="inline-flex items-center gap-1 font-medium text-foreground hover:underline" href={p.console} target="_blank" rel="noreferrer">
                 {t("Get the keys")} <ExternalLink className="size-3" />
               </a>
-              {hosts.length > 0 && (
-                <span className="block">
-                  {t("Allow these host names for the key: {hosts}.", { hosts: hosts.join(", ") })}
-                </span>
-              )}
+              {hosts.length > 0 && <span className="block">{t("Allow these host names for the key: {hosts}.", { hosts: hosts.join(", ") })}</span>}
             </span>
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -153,10 +146,7 @@ export function CaptchaSettingsCard() {
   const { data, isLoading, error } = useCaptcha();
   return (
     <Card>
-      <CardHeader
-        title={t("Anti-robot check (captcha)")}
-        description={t("Stops bots from guessing passwords on the panel and webmail sign-in pages.")}
-      />
+      <CardHeader title={t("Anti-robot check (captcha)")} description={t("Stops bots from guessing passwords on the panel and webmail sign-in pages.")} />
       <CardBody className="grid gap-4">
         {isLoading ? (
           <Spinner />

@@ -605,3 +605,136 @@ func TestMail(t *testing.T) {
 		}
 	}
 }
+
+func TestAccessGrants(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+	res := h.mkUser("reseller", db.RoleReseller, nil)
+	owner := h.mkUser("owner", db.RoleCustomer, &res.ID)
+	dev := h.mkUser("dev", db.RoleCustomer, &res.ID)
+	other := h.mkUser("other", db.RoleCustomer, nil)
+	adminTok, rTok, oTok, dTok, xTok := h.login("admin").AccessToken, h.login("reseller").AccessToken, h.login("owner").AccessToken, h.login("dev").AccessToken, h.login("other").AccessToken
+
+	var site db.Domain
+	if c := h.do("POST", "/domains", oTok, map[string]any{"name": "shop.example"}, &site); c != 201 {
+		t.Fatalf("create site: %d", c)
+	}
+	var alias db.Domain
+	if c := h.do("POST", "/domains", oTok, map[string]any{"name": "shop-alias.example", "kind": "alias", "parent_id": site.ID}, &alias); c != 201 {
+		t.Fatalf("create alias: %d", c)
+	}
+	enc, _ := h.box.Seal("S3cretPassw0rdS3cretPass")
+	dbase := &db.Database{OwnerID: owner.ID, Engine: "postgres", Name: "owner_shop", Username: "owner_shop", PasswordEnc: enc, Status: "running"}
+	if err := h.db.CreateDatabase(ctx, dbase); err != nil {
+		t.Fatal(err)
+	}
+	base := "/domains/" + itoa(site.ID)
+	if c := h.do("GET", base, dTok, nil, nil); c != 404 {
+		t.Fatalf("site visible before sharing: %d", c)
+	}
+
+	// Who may share: the owner cannot hand out access to other users, a
+	// reseller can (its customers, its customers' sites), nobody to an admin.
+	grant := map[string]any{"kind": "site", "resource_id": site.ID, "areas": []string{"mail", "files"}}
+	if c := h.do("PUT", "/users/"+itoa(dev.ID)+"/access", oTok, grant, nil); c != 404 {
+		t.Fatalf("customer sharing with another user: %d", c)
+	}
+	if c := h.do("PUT", "/users/"+itoa(other.ID)+"/access", rTok, grant, nil); c != 404 {
+		t.Fatalf("reseller sharing with a foreign user: %d", c)
+	}
+	if c := h.do("PUT", "/users/1/access", adminTok, grant, nil); c != 400 {
+		t.Fatalf("sharing with an admin: %d", c)
+	}
+	if c := h.do("PUT", "/users/"+itoa(dev.ID)+"/access", rTok, map[string]any{"kind": "site", "resource_id": site.ID, "areas": []string{"everything"}}, nil); c != 400 {
+		t.Fatalf("unknown area: %d", c)
+	}
+	var g db.AccessGrant
+	if c := h.do("PUT", "/users/"+itoa(dev.ID)+"/access", rTok, grant, &g); c != 200 || g.ResourceName != "shop.example" || len(g.Areas) != 2 {
+		t.Fatalf("share site: %d %+v", c, g)
+	}
+
+	// The grantee sees the website and its alias, marked as shared.
+	var list []map[string]any
+	h.do("GET", "/domains", dTok, nil, &list)
+	if len(list) != 2 || list[0]["access"] == nil {
+		t.Fatalf("grantee domain list: %+v", list)
+	}
+	checks := []struct {
+		method, path string
+		want         int
+	}{
+		{"GET", base, 200},
+		{"GET", base + "/stats", 503}, // past the access check; no Docker in tests
+		{"GET", base + "/mail", 200},
+		{"GET", base + "/files", 200},
+		{"GET", "/domains/" + itoa(alias.ID), 200},
+		{"GET", base + "/dns", 403},              // not granted
+		{"GET", base + "/redirects", 403},        // site settings not granted
+		{"PATCH", base, 403},                     // settings
+		{"DELETE", base, 403},                    // never through a grant
+		{"POST", base + "/actions/restart", 403}, // site settings
+		{"GET", base + "/backups", 403},
+	}
+	for _, c := range checks {
+		if got := h.do(c.method, c.path, dTok, map[string]any{}, nil); got != c.want {
+			t.Errorf("%s %s = %d, want %d", c.method, c.path, got, c.want)
+		}
+	}
+
+	// Read-only: views work, changes and the terminal don't.
+	grant["read_only"] = true
+	if c := h.do("PUT", "/users/"+itoa(dev.ID)+"/access", rTok, grant, nil); c != 200 {
+		t.Fatalf("make read-only: %d", c)
+	}
+	if c := h.do("GET", base+"/mail", dTok, nil, nil); c != 200 {
+		t.Errorf("read-only view: %d", c)
+	}
+	if c := h.do("POST", base+"/files/mkdir", dTok, map[string]any{"path": "x"}, nil); c != 403 {
+		t.Errorf("read-only change: %d", c)
+	}
+	if c := h.do("GET", base+"/terminal/ws", dTok, nil, nil); c != 403 {
+		t.Errorf("read-only terminal: %d", c)
+	}
+
+	// Databases: open, but not deletable.
+	if c := h.do("PUT", "/users/"+itoa(dev.ID)+"/access", rTok, map[string]any{"kind": "database", "resource_id": dbase.ID}, nil); c != 200 {
+		t.Fatalf("share database: %d", c)
+	}
+	var dbs []map[string]any
+	h.do("GET", "/databases", dTok, nil, &dbs)
+	if len(dbs) != 1 || dbs[0]["shared"] != true {
+		t.Fatalf("grantee databases: %+v", dbs)
+	}
+	if c := h.do("GET", "/databases/"+itoa(dbase.ID)+"/credentials", dTok, nil, nil); c != 200 {
+		t.Errorf("shared credentials: %d", c)
+	}
+	if c := h.do("DELETE", "/databases/"+itoa(dbase.ID), dTok, nil, nil); c != 403 {
+		t.Errorf("shared delete: %d", c)
+	}
+	if c := h.do("GET", "/databases/"+itoa(dbase.ID), xTok, nil, nil); c != 404 {
+		t.Errorf("stranger sees database: %d", c)
+	}
+
+	// Revoking closes it again; deleting the site drops its grants.
+	var grants []db.AccessGrant
+	h.do("GET", "/users/"+itoa(dev.ID)+"/access", rTok, nil, &grants)
+	if len(grants) != 2 {
+		t.Fatalf("grants = %+v", grants)
+	}
+	for _, x := range grants {
+		if x.Kind == "database" {
+			if c := h.do("DELETE", "/users/"+itoa(dev.ID)+"/access/"+itoa(x.ID), rTok, nil, nil); c != 204 {
+				t.Fatalf("revoke: %d", c)
+			}
+		}
+	}
+	if c := h.do("GET", "/databases/"+itoa(dbase.ID), dTok, nil, nil); c != 404 {
+		t.Errorf("revoked database still open: %d", c)
+	}
+	if err := h.db.DeleteDomain(ctx, site.ID); err != nil {
+		t.Fatal(err)
+	}
+	if gs, _ := h.db.ListUserGrants(ctx, dev.ID); len(gs) != 0 {
+		t.Errorf("grants left after deleting the site: %+v", gs)
+	}
+}

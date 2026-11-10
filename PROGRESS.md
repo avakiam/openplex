@@ -33,9 +33,11 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] Endpoints: `/auth/login|refresh|logout|me`, `/auth/2fa/*`, `/users`, `/api-keys`, `/ssh-keys`
 - [x] Login rate limiting
 - [x] Audit log writes for security-relevant actions + `/audit` endpoint (admin)
-- [ ] Fine-grained access: the admin creates accounts and grants per-area permissions on chosen websites (e.g. a
-      client who only manages the mail of one domain, or only its hosting files/databases, or read-only); roles as
-      permission presets, enforced by the API (UI hides what is not granted)
+- [x] Access grants: a user may work on another account's website — chosen areas (website settings, files +
+      terminal, DNS, mail, backups), optionally read-only (no changes, no terminal), aliases included — or database
+      (credentials, backups, not deletion). Presets: full, web developer, mail only, DNS only. Granted by admins, or
+      by resellers to their customers on resources they manage; deleting the resource stays with its owner.
+      Enforced centrally in the website/database loaders; the dashboard marks shared items and hides the rest
 
 ## M4 — Docker orchestrator (`internal/docker`, `internal/ssl`)
 - [x] Engine client + ping, managed labels
@@ -287,3 +289,8 @@ has been verified on the Linux test server. One commit per milestone.
   the database exists with its user. Found and fixed on the way: restore took a lock on the read-only repository
   (now --no-lock), a fresh MariaDB had no user for the restored database (reconcile now provisions), restored
   webmail/mail files lost their mode (now kept). Rehearsal environment and copies deleted afterwards.
+- 2026-11-10 — Access grants on the LAN server (v0.14.0, migration v11). Created a test customer, shared node.lan.test
+  (files + mail) and, from the Users page dialog, php.lan.test (web developer preset, read-only). As that customer:
+  both sites listed as "shared with you"; node.lan.test shows only Overview, Files, Mail and Terminal with no
+  actions; php.lan.test shows its areas without terminal or actions; the API answered 403 for DNS, redirects,
+  settings and deletion and 403 for /audit. Test account deleted afterwards (its grants went with it).

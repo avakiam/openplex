@@ -347,6 +347,7 @@ export default function DatabasesPage() {
                     >
                       {d.name}
                     </button>
+                    {d.shared && <Badge className="ml-2">{t("Shared with you")}</Badge>}
                   </Td>
                   <Td>
                     <Badge tone={engineTone[d.engine]}>{d.engine_label}</Badge>
@@ -396,10 +397,14 @@ export default function DatabasesPage() {
                         <DropdownItem disabled={d.status !== "running"} onSelect={() => setBackups(d)}>
                           <Archive /> {t("Backups")}
                         </DropdownItem>
-                        <DropdownSeparator />
-                        <DropdownItem destructive disabled={d.status === "pending"} onSelect={() => setDel(d)}>
-                          <Trash2 /> {t("Delete")}
-                        </DropdownItem>
+                        {!d.shared && (
+                          <>
+                            <DropdownSeparator />
+                            <DropdownItem destructive disabled={d.status === "pending"} onSelect={() => setDel(d)}>
+                              <Trash2 /> {t("Delete")}
+                            </DropdownItem>
+                          </>
+                        )}
                       </DropdownContent>
                     </Dropdown>
                   </Td>

@@ -16,6 +16,7 @@ import {
   Rocket,
   ScrollText,
   Settings2,
+  Share2,
   Square,
   SquareTerminal,
   Trash2,
@@ -70,7 +71,7 @@ const WebTerminal = dynamic(() => import("@/components/web-terminal").then((m) =
 });
 import { keys, useAction, useDomain, useDomainStats, useDomains, useRedirects, useRuntimes } from "@/lib/hooks";
 import { fmtNumber, tk, tServer, useT } from "@/lib/i18n";
-import type { Domain } from "@/lib/types";
+import { type Domain, type SiteArea, siteAccess } from "@/lib/types";
 import { bytes, dateTime, pct } from "@/lib/utils";
 
 const KIND_LABELS: Record<string, string> = {
@@ -94,6 +95,7 @@ function Overview({ d }: { d: Domain }) {
     onSuccess: () => router.replace("/domains/"),
   });
   const scheme = d.ssl_enabled ? "https" : "http";
+  const acc = siteAccess(d);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -128,31 +130,35 @@ function Overview({ d }: { d: Domain }) {
         </CardBody>
       </Card>
       <div className="grid content-start gap-4">
-        <Card>
-          <CardHeader title={t("Actions")} />
-          <CardBody className="grid gap-2">
-            <Button variant="outline" loading={action.isPending && action.variables === "deploy"} onClick={() => action.mutate("deploy")}>
-              <Rocket /> {t("Redeploy")}
-            </Button>
-            {d.status === "stopped" ? (
-              <Button variant="outline" onClick={() => action.mutate("start")}>
-                <Play /> {t("Start")}
+        {acc.can("site") && !acc.readOnly && (
+          <Card>
+            <CardHeader title={t("Actions")} />
+            <CardBody className="grid gap-2">
+              <Button variant="outline" loading={action.isPending && action.variables === "deploy"} onClick={() => action.mutate("deploy")}>
+                <Rocket /> {t("Redeploy")}
               </Button>
-            ) : (
-              <Button variant="outline" onClick={() => action.mutate("stop")}>
-                <Square /> {t("Stop (maintenance page)")}
-              </Button>
-            )}
-            {hasContainer && (
-              <Button variant="outline" onClick={() => action.mutate("restart")}>
-                <RotateCw /> {t("Restart container")}
-              </Button>
-            )}
-            <Button variant="outline" className="text-destructive" onClick={() => setDel(true)}>
-              <Trash2 /> {t("Delete website")}
-            </Button>
-          </CardBody>
-        </Card>
+              {d.status === "stopped" ? (
+                <Button variant="outline" onClick={() => action.mutate("start")}>
+                  <Play /> {t("Start")}
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={() => action.mutate("stop")}>
+                  <Square /> {t("Stop (maintenance page)")}
+                </Button>
+              )}
+              {hasContainer && (
+                <Button variant="outline" onClick={() => action.mutate("restart")}>
+                  <RotateCw /> {t("Restart container")}
+                </Button>
+              )}
+              {acc.owner && (
+                <Button variant="outline" className="text-destructive" onClick={() => setDel(true)}>
+                  <Trash2 /> {t("Delete website")}
+                </Button>
+              )}
+            </CardBody>
+          </Card>
+        )}
         {hasContainer && (
           <Card>
             <CardHeader title={t("Container")} />
@@ -574,6 +580,7 @@ function DomainView() {
   const [tab, setTab] = useState("overview");
   const [logKind, setLogKind] = useState<"access" | "error">("access");
   const { user } = useAuth();
+  const acc = d ? siteAccess(d) : null;
 
   if (isLoading)
     return (
@@ -581,7 +588,8 @@ function DomainView() {
         <Spinner />
       </div>
     );
-  if (error || !d) return <ErrorBox error={error ?? new Error(t("Website not found"))} />;
+  if (error || !d || !acc) return <ErrorBox error={error ?? new Error(t("Website not found"))} />;
+  const areaNames: Record<SiteArea, string> = { site: t("Website settings"), files: t("Files"), dns: "DNS", mail: t("Mail"), backups: t("Backups") };
 
   return (
     <>
@@ -593,43 +601,71 @@ function DomainView() {
         description={d.kind === "subdomain" ? t("Subdomain") : t("Website")}
         actions={<StatusBadge status={d.status} title={tServer(d.status_message)} />}
       />
+      {d.access && (
+        <div className="mb-4 flex gap-2 rounded-md border bg-muted/40 p-3 text-sm">
+          <Share2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          <span>
+            {d.access.read_only
+              ? t("Shared with you, read-only: {areas}.", { areas: d.access.areas.map((a) => areaNames[a]).join(", ") })
+              : t("Shared with you: {areas}.", { areas: d.access.areas.map((a) => areaNames[a]).join(", ") })}
+          </span>
+        </div>
+      )}
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-4">
           <TabsTrigger value="overview">
             <Gauge /> {t("Overview")}
           </TabsTrigger>
-          <TabsTrigger value="files">
-            <FolderOpen /> {t("Files")}
-          </TabsTrigger>
-          <TabsTrigger value="settings">
-            <Settings2 /> {t("Settings")}
-          </TabsTrigger>
-          <TabsTrigger value="redirects">
-            <Link2 /> {t("Redirects")}
-          </TabsTrigger>
-          <TabsTrigger value="aliases">
-            <Plus /> {t("Aliases")}
-          </TabsTrigger>
-          <TabsTrigger value="mail">
-            <Mail /> {t("Mail")}
-          </TabsTrigger>
-          <TabsTrigger value="dns">
-            <Network /> DNS
-          </TabsTrigger>
-          <TabsTrigger value="terminal">
-            <SquareTerminal /> {t("Terminal")}
-          </TabsTrigger>
-          {d.kind !== "alias" && (
+          {acc.can("files") && (
+            <TabsTrigger value="files">
+              <FolderOpen /> {t("Files")}
+            </TabsTrigger>
+          )}
+          {acc.can("site") && (
+            <TabsTrigger value="settings">
+              <Settings2 /> {t("Settings")}
+            </TabsTrigger>
+          )}
+          {acc.can("site") && (
+            <TabsTrigger value="redirects">
+              <Link2 /> {t("Redirects")}
+            </TabsTrigger>
+          )}
+          {acc.owner && (
+            <TabsTrigger value="aliases">
+              <Plus /> {t("Aliases")}
+            </TabsTrigger>
+          )}
+          {acc.can("mail") && (
+            <TabsTrigger value="mail">
+              <Mail /> {t("Mail")}
+            </TabsTrigger>
+          )}
+          {acc.can("dns") && (
+            <TabsTrigger value="dns">
+              <Network /> DNS
+            </TabsTrigger>
+          )}
+          {acc.can("files") && !acc.readOnly && (
+            <TabsTrigger value="terminal">
+              <SquareTerminal /> {t("Terminal")}
+            </TabsTrigger>
+          )}
+          {d.kind !== "alias" && acc.can("site") && (
             <TabsTrigger value="cron">
               <CalendarClock /> {t("Scheduled tasks")}
             </TabsTrigger>
           )}
-          <TabsTrigger value="logs">
-            <ScrollText /> {t("Logs")}
-          </TabsTrigger>
-          <TabsTrigger value="backups">
-            <Archive /> {t("Backups")}
-          </TabsTrigger>
+          {acc.can("site") && (
+            <TabsTrigger value="logs">
+              <ScrollText /> {t("Logs")}
+            </TabsTrigger>
+          )}
+          {acc.can("backups") && (
+            <TabsTrigger value="backups">
+              <Archive /> {t("Backups")}
+            </TabsTrigger>
+          )}
         </TabsList>
         <TabsContent value="overview">
           <Overview d={d} />

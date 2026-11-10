@@ -1,7 +1,8 @@
 "use client";
-import { KeyRound, MoreHorizontal, Plus, ShieldOff, Trash2, UserCheck, UserX, Users } from "lucide-react";
+import { KeyRound, MoreHorizontal, Plus, Share2, ShieldOff, Trash2, UserCheck, UserX, Users } from "lucide-react";
 import { useState } from "react";
 
+import { AccessDialog } from "@/components/access-dialog";
 import { roleLabels } from "@/components/status";
 import {
   Badge,
@@ -148,6 +149,7 @@ export default function UsersPage() {
   const [edit, setEdit] = useState<User | undefined>();
   const [pw, setPw] = useState<User | null>(null);
   const [del, setDel] = useState<User | null>(null);
+  const [access, setAccess] = useState<User | null>(null);
   const inv = { invalidate: [keys.users] };
   const toggle = useAction((u: User) => api.patch(`/users/${u.id}`, { disabled: !u.disabled }), { success: t("Updated"), ...inv });
   const reset2fa = useAction((u: User) => api.post(`/users/${u.id}/2fa/reset`), { success: t("Two-factor authentication reset"), ...inv });
@@ -194,6 +196,7 @@ export default function UsersPage() {
                         {u.id !== me?.id && (
                           <>
                             <DropdownItem onSelect={() => setPw(u)}><KeyRound /> {t("Set password")}</DropdownItem>
+                            {u.role !== "admin" && <DropdownItem onSelect={() => setAccess(u)}><Share2 /> {t("Access to websites and databases")}</DropdownItem>}
                             {u.totp_enabled && <DropdownItem onSelect={() => reset2fa.mutate(u)}><ShieldOff /> {t("Reset 2FA")}</DropdownItem>}
                             <DropdownItem onSelect={() => toggle.mutate(u)}>{u.disabled ? <><UserCheck /> {t("Reactivate")}</> : <><UserX /> {t("Suspend")}</>}</DropdownItem>
                             <DropdownSeparator />
@@ -212,6 +215,7 @@ export default function UsersPage() {
       <UserDialog open={create} onOpenChange={setCreate} />
       <UserDialog open={!!edit} onOpenChange={(o) => !o && setEdit(undefined)} edit={edit} key={edit?.id ?? "none"} />
       <PasswordDialog user={pw} onClose={() => setPw(null)} />
+      <AccessDialog user={access} onClose={() => setAccess(null)} />
       <Confirm open={!!del} onOpenChange={(o) => !o && setDel(null)} title={t("Delete {username}?", { username: del?.username ?? "" })} description={t("Users who still own websites or customers cannot be deleted — remove or reassign those first.")} loading={remove.isPending} onConfirm={() => remove.mutate(del!)} />
     </>
   );

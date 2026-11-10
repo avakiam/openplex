@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { api } from "./api";
 import { t } from "./i18n";
 import type {
+  AccessGrant,
   APIKey,
   BackupRun,
   BackupSettings,
@@ -53,6 +54,7 @@ export const keys = {
   backupSettings: ["backups", "settings"] as const,
   backupRuns: ["backups", "runs"] as const,
   itemBackups: (base: string) => ["backups", "item", base] as const,
+  userAccess: (id: number) => ["users", id, "access"] as const,
   sshKeys: ["ssh-keys"] as const,
   audit: ["audit"] as const,
   info: ["system", "info"] as const,
@@ -145,6 +147,8 @@ export const useDomainStats = (id: number, enabled: boolean) =>
 
 export const useEngines = () => useQuery({ queryKey: keys.engines, queryFn: () => api.get<DatabaseEngine[]>("/database-engines"), staleTime: Infinity });
 
+export const useUserAccess = (id: number, enabled = true) =>
+  useQuery({ queryKey: keys.userAccess(id), queryFn: () => api.get<AccessGrant[]>(`/users/${id}/access`), enabled });
 export const useDatabases = () =>
   useQuery({
     queryKey: keys.databases,

@@ -129,12 +129,7 @@ func (s *Server) handleListRuntimes(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListDomains(w http.ResponseWriter, r *http.Request) {
-	ids, err := s.visibleOwnerIDs(r.Context(), actor(r))
-	if err != nil {
-		s.fail(w, r, err)
-		return
-	}
-	ds, err := s.db.ListDomains(r.Context(), db.DomainFilter{OwnerIDs: ids, Kind: r.URL.Query().Get("kind")})
+	ds, err := s.visibleDomains(r.Context(), actor(r), r.URL.Query().Get("kind"))
 	if err != nil {
 		s.fail(w, r, err)
 		return
@@ -144,7 +139,7 @@ func (s *Server) handleListDomains(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleGetDomain(w http.ResponseWriter, r *http.Request) {
 	if d := s.loadDomain(w, r); d != nil {
-		writeJSON(w, http.StatusOK, d)
+		writeJSON(w, http.StatusOK, domainView{Domain: d, Access: s.domainAccess(r, d)})
 	}
 }
 

@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -31,9 +32,10 @@ func dbPrefix(username string) string {
 
 type databaseView struct {
 	*db.Database
-	Host  string `json:"host"`
-	Port  int    `json:"port"`
-	Label string `json:"engine_label"`
+	Host   string `json:"host"`
+	Port   int    `json:"port"`
+	Label  string `json:"engine_label"`
+	Shared bool   `json:"shared"` // owned by someone else, opened by a grant
 }
 
 func viewOf(d *db.Database) databaseView {
@@ -51,8 +53,25 @@ func (s *Server) loadDatabase(w http.ResponseWriter, r *http.Request) *db.Databa
 		s.fail(w, r, err)
 		return nil
 	}
-	if ok, err := s.canAccessOwner(r.Context(), actor(r), d.OwnerID); err != nil || !ok {
+	ok, err = s.canAccessOwner(r.Context(), actor(r), d.OwnerID)
+	if err != nil {
+		s.fail(w, r, err)
+		return nil
+	}
+	if ok {
+		return d
+	}
+	// A grant opens the database (credentials, backups) but not its deletion.
+	if _, err := s.db.FindGrant(r.Context(), actor(r).ID, db.GrantDatabase, d.ID); err != nil {
+		if !errors.Is(err, db.ErrNotFound) {
+			s.fail(w, r, err)
+			return nil
+		}
 		writeErr(w, http.StatusNotFound, "not_found", "resource not found")
+		return nil
+	}
+	if r.Method == http.MethodDelete {
+		writeErr(w, http.StatusForbidden, "forbidden", "only the owner of this database can delete it")
 		return nil
 	}
 	return d
@@ -75,30 +94,22 @@ func (s *Server) handleListEngines(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListDatabases(w http.ResponseWriter, r *http.Request) {
-	ids, err := s.visibleOwnerIDs(r.Context(), actor(r))
-	if err != nil {
-		s.fail(w, r, err)
-		return
-	}
-	list, err := s.db.ListDatabases(r.Context(), ids)
+	list, shared, err := s.visibleDatabases(r.Context(), actor(r))
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
 	out := make([]databaseView, 0, len(list))
 	for _, d := range list {
-		out = append(out, viewOf(d))
+		v := viewOf(d)
+		v.Shared = shared[d.ID]
+		out = append(out, v)
 	}
 	writeJSON(w, http.StatusOK, out)
 }
 
 func (s *Server) handleDatabaseSizes(w http.ResponseWriter, r *http.Request) {
-	ids, err := s.visibleOwnerIDs(r.Context(), actor(r))
-	if err != nil {
-		s.fail(w, r, err)
-		return
-	}
-	list, err := s.db.ListDatabases(r.Context(), ids)
+	list, _, err := s.visibleDatabases(r.Context(), actor(r))
 	if err != nil {
 		s.fail(w, r, err)
 		return

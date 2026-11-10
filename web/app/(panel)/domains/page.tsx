@@ -21,7 +21,9 @@ const KIND_LABELS: Record<string, string> = {
 
 function runtimeLabel(d: Domain) {
   if (d.kind === "alias") return "—";
-  return d.runtime === "static" ? t("Static") : `${d.runtime === "php" ? "PHP" : d.runtime === "node" ? "Node.js" : d.runtime === "python" ? "Python" : "Go"} ${d.runtime_version}`;
+  return d.runtime === "static"
+    ? t("Static")
+    : `${d.runtime === "php" ? "PHP" : d.runtime === "node" ? "Node.js" : d.runtime === "python" ? "Python" : "Go"} ${d.runtime_version}`;
 }
 
 function DomainsList() {
@@ -64,10 +66,16 @@ function DomainsList() {
             <Spinner />
           </div>
         ) : error ? (
-          <div className="p-4"><ErrorBox error={error} /></div>
+          <div className="p-4">
+            <ErrorBox error={error} />
+          </div>
         ) : rows.length === 0 ? (
           <Empty icon={Globe} title={q ? t("No matching domains") : t("No websites yet")}>
-            {!q && <Button className="mt-3" onClick={() => setOpen(true)}><Plus /> {t("Add your first website")}</Button>}
+            {!q && (
+              <Button className="mt-3" onClick={() => setOpen(true)}>
+                <Plus /> {t("Add your first website")}
+              </Button>
+            )}
           </Empty>
         ) : (
           <Table>
@@ -91,15 +99,20 @@ function DomainsList() {
                         {d.name}
                       </Link>
                       {d.kind !== "primary" && <Badge className="ml-2">{t(KIND_LABELS[d.kind] ?? d.kind)}</Badge>}
+                      {d.access && <Badge className="ml-2">{t("Shared with you")}</Badge>}
                     </Td>
                     <Td className="text-muted-foreground">{runtimeLabel(d)}</Td>
                     <Td>
                       {d.kind === "alias" ? (
                         <span className="text-muted-foreground">{t("inherited")}</span>
                       ) : d.ssl_enabled ? (
-                        <span className="inline-flex items-center gap-1 text-success"><Lock className="size-3.5" /> {t("On")}</span>
+                        <span className="inline-flex items-center gap-1 text-success">
+                          <Lock className="size-3.5" /> {t("On")}
+                        </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-muted-foreground"><LockOpen className="size-3.5" /> {t("Off")}</span>
+                        <span className="inline-flex items-center gap-1 text-muted-foreground">
+                          <LockOpen className="size-3.5" /> {t("Off")}
+                        </span>
                       )}
                     </Td>
                     <Td>

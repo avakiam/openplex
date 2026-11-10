@@ -321,6 +321,28 @@ CREATE TABLE captcha_settings (
 	updated_at TIMESTAMP NOT NULL
 );
 `,
+	// v11: access grants — a user may work on someone else's website (some
+	// areas, optionally read-only) or database.
+	`
+CREATE TABLE access_grants (
+	id          INTEGER PRIMARY KEY AUTOINCREMENT,
+	user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	kind        TEXT NOT NULL CHECK (kind IN ('site', 'database')),
+	resource_id INTEGER NOT NULL,
+	areas       TEXT NOT NULL DEFAULT '',
+	read_only   INTEGER NOT NULL DEFAULT 0,
+	created_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+	created_at  TIMESTAMP NOT NULL,
+	UNIQUE (user_id, kind, resource_id)
+);
+CREATE INDEX access_grants_resource ON access_grants(kind, resource_id);
+CREATE TRIGGER access_grants_site_gone AFTER DELETE ON domains BEGIN
+	DELETE FROM access_grants WHERE kind = 'site' AND resource_id = OLD.id;
+END;
+CREATE TRIGGER access_grants_database_gone AFTER DELETE ON databases BEGIN
+	DELETE FROM access_grants WHERE kind = 'database' AND resource_id = OLD.id;
+END;
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

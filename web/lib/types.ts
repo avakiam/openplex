@@ -42,6 +42,31 @@ export interface Domain {
   container_id: string;
   created_at: string;
   updated_at: string;
+  /** Set when the website is shared with the caller (absent = full access). */
+  access?: { areas: SiteArea[]; read_only: boolean };
+}
+
+export type SiteArea = "site" | "files" | "dns" | "mail" | "backups";
+
+export interface AccessGrant {
+  id: number;
+  user_id: number;
+  kind: "site" | "database";
+  resource_id: number;
+  areas: SiteArea[];
+  read_only: boolean;
+  created_at: string;
+  resource_name: string;
+}
+
+/** What the caller may do on a website. */
+export function siteAccess(d: Domain) {
+  const a = d.access;
+  return {
+    owner: !a,
+    readOnly: !!a?.read_only,
+    can: (area: SiteArea) => !a || a.areas.includes(area),
+  };
 }
 
 export interface Runtime {
@@ -177,6 +202,8 @@ export interface Database {
   status: "pending" | "running" | "error";
   status_message: string;
   created_at: string;
+  /** Owned by another account and shared with the caller. */
+  shared?: boolean;
 }
 
 export interface DatabaseCredentials {

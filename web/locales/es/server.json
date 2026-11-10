@@ -196,5 +196,15 @@
   "turn the mailbox on to open its webmail": "Activa el buzón para abrir su webmail",
   "the webmail is off": "El webmail está desactivado",
   "mail is off for this website": "El correo está desactivado para este sitio web",
-  "invalid mailbox": "Buzón no válido"
+  "invalid mailbox": "Buzón no válido",
+  "only the owner of this website can do this": "Solo el propietario de esta web puede hacerlo",
+  "you don't have access to this part of the website": "No tienes acceso a esta parte de la web",
+  "you have read-only access to this website": "Tienes acceso de solo lectura a esta web",
+  "only the owner of this database can delete it": "Solo el propietario de esta base de datos puede borrarla",
+  "administrators already have access to everything": "Los administradores ya tienen acceso a todo",
+  "you cannot share something with yourself": "No puedes compartir algo contigo mismo",
+  "share the website the alias belongs to": "Comparte la web a la que pertenece el alias",
+  "choose what the user may manage on this website": "Elige qué puede gestionar el usuario en esta web",
+  "kind must be site or database": "El tipo debe ser una web o una base de datos",
+  "this user already owns it": "Este usuario ya es el propietario"
 }

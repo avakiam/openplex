@@ -196,5 +196,15 @@
   "turn the mailbox on to open its webmail": "Activa la bústia per obrir-ne el webmail",
   "the webmail is off": "El webmail està desactivat",
   "mail is off for this website": "El correu està desactivat per a aquest lloc web",
-  "invalid mailbox": "Bústia no vàlida"
+  "invalid mailbox": "Bústia no vàlida",
+  "only the owner of this website can do this": "Només el propietari d'aquest web ho pot fer",
+  "you don't have access to this part of the website": "No tens accés a aquesta part del web",
+  "you have read-only access to this website": "Tens accés de només lectura a aquest web",
+  "only the owner of this database can delete it": "Només el propietari d'aquesta base de dades la pot esborrar",
+  "administrators already have access to everything": "Els administradors ja tenen accés a tot",
+  "you cannot share something with yourself": "No pots compartir res amb tu mateix",
+  "share the website the alias belongs to": "Comparteix el web al qual pertany l'àlies",
+  "choose what the user may manage on this website": "Tria què pot gestionar l'usuari en aquest web",
+  "kind must be site or database": "El tipus ha de ser un web o una base de dades",
+  "this user already owns it": "Aquest usuari ja n'és el propietari"
 }

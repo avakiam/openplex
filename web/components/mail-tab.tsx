@@ -201,22 +201,20 @@ export function MailTab({ domain: d }: { domain: Domain }) {
     ...inv,
     onSuccess: () => setDelBox(null),
   });
-  const openWebmail = useAction(
-    async (b: Mailbox) => {
-      // Opened before the request so pop-up blockers allow it.
-      const tab = window.open("about:blank", "_blank");
-      try {
-        const { url } = await api.post<{ url: string }>(`/domains/${d.id}/mail/mailboxes/${b.id}/webmail`);
-        if (tab) {
-          tab.opener = null;
-          tab.location.href = url;
-        } else window.location.href = url;
-      } catch (e) {
-        tab?.close();
-        throw e;
-      }
-    },
-  );
+  const openWebmail = useAction(async (b: Mailbox) => {
+    // Opened before the request so pop-up blockers allow it.
+    const tab = window.open("about:blank", "_blank");
+    try {
+      const { url } = await api.post<{ url: string }>(`/domains/${d.id}/mail/mailboxes/${b.id}/webmail`);
+      if (tab) {
+        tab.opener = null;
+        tab.location.href = url;
+      } else window.location.href = url;
+    } catch (e) {
+      tab?.close();
+      throw e;
+    }
+  });
   const removeAlias = useAction((a: MailAlias) => api.del(`/domains/${d.id}/mail/aliases/${a.id}`), {
     success: t("Forwarding deleted"),
     ...inv,
@@ -369,9 +367,7 @@ export function MailTab({ domain: d }: { domain: Domain }) {
           <ItemBackups
             base={`/domains/${d.id}/mail`}
             label={d.name}
-            warning={t(
-              "Messages that are in the backup but missing now are put back. Nothing received since is removed and nothing is duplicated.",
-            )}
+            warning={t("Messages that are in the backup but missing now are put back. Nothing received since is removed and nothing is duplicated.")}
             targets={data.mailboxes.map((b) => ({ value: b.local_part, label: b.address }))}
           />
         </CardBody>
