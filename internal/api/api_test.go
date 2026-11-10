@@ -342,3 +342,35 @@ func TestTerminalGuards(t *testing.T) {
 		t.Fatalf("no docker: %d", c)
 	}
 }
+
+func TestUserLocale(t *testing.T) {
+	h := newHarness(t)
+	carla := h.mkUser("carla", db.RoleCustomer, nil)
+	adm, cust := h.login("admin").AccessToken, h.login("carla").AccessToken
+	cases := []struct {
+		name, token, method, path string
+		body                      map[string]any
+		want                      int
+	}{
+		{"customer sets own language", cust, "PATCH", "/auth/me", map[string]any{"locale": "ca"}, 200},
+		{"unknown language rejected", cust, "PATCH", "/auth/me", map[string]any{"locale": "xx"}, 400},
+		{"back to browser default", cust, "PATCH", "/auth/me", map[string]any{"locale": ""}, 200},
+		{"admin sets a customer's language", adm, "PATCH", "/users/" + itoa(carla.ID), map[string]any{"locale": "es"}, 200},
+		{"admin creates user with language", adm, "POST", "/users", map[string]any{"username": "joan", "password": "password123", "locale": "ca"}, 201},
+		{"create with unknown language", adm, "POST", "/users", map[string]any{"username": "pere", "password": "password123", "locale": "fr"}, 400},
+	}
+	for _, c := range cases {
+		if got := h.do(c.method, c.path, c.token, c.body, nil); got != c.want {
+			t.Errorf("%s: got %d, want %d", c.name, got, c.want)
+		}
+	}
+	var me db.User
+	h.do("GET", "/auth/me", cust, nil, &me)
+	if me.Locale != "es" {
+		t.Fatalf("locale = %q, want es", me.Locale)
+	}
+	// The login response carries the stored language so the UI can switch at once.
+	if tr := h.login("carla"); tr.User.Locale != "es" {
+		t.Fatalf("login user locale = %q", tr.User.Locale)
+	}
+}

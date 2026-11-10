@@ -78,6 +78,12 @@ Runtime data dir (default `/var/lib/openplex`): `openplex.db`, `secret.key`,
 - Data fetching only via TanStack Query hooks in `web/lib/api/*`; one hook file per resource.
 - API client attaches the access token and transparently refreshes on 401.
 - No business rules in the UI; the API is authoritative for RBAC and validation.
+- i18n (en / es / ca): every visible string goes through `t("English text", { vars })` from
+  `web/lib/i18n.tsx` (`useT()` in components, `tk()` to mark module-level constants). Keys are the
+  English source; translations live in `web/locales/{es,ca}/<area>.json` (plural forms as objects,
+  English plurals in `web/locales/en`). `npm run build` runs `scripts/check-i18n.mjs` and fails on a
+  missing translation. API error messages stay English in Go; fixed ones are translated in
+  `web/locales/*/server.json`. Code, comments and commits are always English.
 
 ## Context-saving rules for agents
 

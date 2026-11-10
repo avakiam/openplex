@@ -6,6 +6,9 @@ import { Button, Dialog, DialogContent, ErrorBox, Field, Input, Select, Switch }
 import { api } from "@/lib/api";
 import { canManageUsers, useAuth } from "@/lib/auth";
 import { keys, useAction, useDomains, useRuntimes, useUsers } from "@/lib/hooks";
+import { tServer, useT } from "@/lib/i18n";
+
+import { roleLabels } from "./status";
 import type { Domain, DomainKind } from "@/lib/types";
 
 export function CreateDomainDialog({
@@ -19,6 +22,7 @@ export function CreateDomainDialog({
   defaultKind?: DomainKind;
   defaultParent?: Domain;
 }) {
+  const { t } = useT();
   const router = useRouter();
   const { user } = useAuth();
   const runtimes = useRuntimes();
@@ -69,7 +73,7 @@ export function CreateDomainDialog({
             }),
       }),
     {
-      success: "Website created — deploying now",
+      success: t("Website created — deploying now"),
       invalidate: [keys.domains],
       onSuccess: (d) => {
         onOpenChange(false);
@@ -80,7 +84,7 @@ export function CreateDomainDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="Add a website or domain" description="OpenPlex provisions the container, routing and HTTPS certificate automatically.">
+      <DialogContent title={t("Add a website or domain")} description={t("OpenPlex provisions the container, routing and HTTPS certificate automatically.")}>
         <form
           className="grid gap-4"
           onSubmit={(e) => {
@@ -88,17 +92,17 @@ export function CreateDomainDialog({
             create.mutate(undefined);
           }}
         >
-          <Field label="Type">
+          <Field label={t("Type")}>
             <Select value={kind} onChange={(e) => setKind(e.target.value as DomainKind)}>
-              <option value="primary">Website (new domain)</option>
-              <option value="subdomain">Subdomain of an existing domain</option>
-              <option value="alias">Alias (extra hostname for an existing website)</option>
+              <option value="primary">{t("Website (new domain)")}</option>
+              <option value="subdomain">{t("Subdomain of an existing domain")}</option>
+              <option value="alias">{t("Alias (extra hostname for an existing website)")}</option>
             </Select>
           </Field>
           {kind !== "primary" && (
-            <Field label={kind === "subdomain" ? "Parent domain" : "Serve the same content as"}>
+            <Field label={kind === "subdomain" ? t("Parent domain") : t("Serve the same content as")}>
               <Select required value={parentId} onChange={(e) => setParentId(e.target.value ? Number(e.target.value) : "")}>
-                <option value="">Choose…</option>
+                <option value="">{t("Choose…")}</option>
                 {parents.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -107,18 +111,25 @@ export function CreateDomainDialog({
               </Select>
             </Field>
           )}
-          <Field label="Hostname" hint={kind === "alias" ? "e.g. www.example.com" : "e.g. example.com — point its DNS A/AAAA record at this server"}>
+          <Field
+            label={t("Hostname")}
+            hint={
+              kind === "alias"
+                ? t("e.g. {example}", { example: "www.example.com" })
+                : t("e.g. {example} — point its DNS A/AAAA record at this server", { example: "example.com" })
+            }
+          >
             <Input required placeholder="example.com" value={name} onChange={(e) => setName(e.target.value.toLowerCase())} autoFocus />
           </Field>
           {kind === "primary" && canManageUsers(user) && (
-            <Field label="Owner">
+            <Field label={t("Owner")}>
               <Select value={ownerId} onChange={(e) => setOwnerId(e.target.value ? Number(e.target.value) : "")}>
-                <option value="">Me ({user?.username})</option>
+                <option value="">{t("Me ({name})", { name: user?.username ?? "" })}</option>
                 {(users.data ?? [])
                   .filter((u) => u.id !== user?.id)
                   .map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.username} ({u.role})
+                      {u.username} ({t(roleLabels[u.role])})
                     </option>
                   ))}
               </Select>
@@ -127,17 +138,17 @@ export function CreateDomainDialog({
           {kind !== "alias" && (
             <>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Runtime">
+                <Field label={t("Runtime")}>
                   <Select value={runtime} onChange={(e) => setRuntime(e.target.value)}>
                     {(runtimes.data ?? []).map((r) => (
                       <option key={r.name} value={r.name}>
-                        {r.label}
+                        {tServer(r.label)}
                       </option>
                     ))}
                   </Select>
                 </Field>
                 {rt?.versions && (
-                  <Field label="Version">
+                  <Field label={t("Version")}>
                     <Select value={version} onChange={(e) => setVersion(e.target.value)}>
                       {rt.versions.map((v) => (
                         <option key={v}>{v}</option>
@@ -148,18 +159,24 @@ export function CreateDomainDialog({
               </div>
               {rt?.needs_command && (
                 <div className="grid grid-cols-[1fr_7rem] gap-3">
-                  <Field label="Start command" hint="Runs in the site folder; listen on $PORT.">
-                    <Input required className="font-mono" placeholder={runtime === "node" ? "npm start" : runtime === "python" ? "python app.py" : "go run ."} value={command} onChange={(e) => setCommand(e.target.value)} />
+                  <Field label={t("Start command")} hint={t("Runs in the site folder; listen on $PORT.")}>
+                    <Input
+                      required
+                      className="font-mono"
+                      placeholder={runtime === "node" ? "npm start" : runtime === "python" ? "python app.py" : "go run ."}
+                      value={command}
+                      onChange={(e) => setCommand(e.target.value)}
+                    />
                   </Field>
-                  <Field label="Port">
+                  <Field label={t("Port")}>
                     <Input required type="number" min={1024} max={65535} value={port} onChange={(e) => setPort(e.target.value)} />
                   </Field>
                 </div>
               )}
               <label className="flex items-center justify-between gap-4 rounded-md border px-3 py-2.5">
                 <span>
-                  <span className="block text-sm font-medium">HTTPS with automatic certificate</span>
-                  <span className="block text-xs text-muted-foreground">Let&apos;s Encrypt / ZeroSSL, HTTP redirected to HTTPS.</span>
+                  <span className="block text-sm font-medium">{t("HTTPS with automatic certificate")}</span>
+                  <span className="block text-xs text-muted-foreground">{t("Let's Encrypt / ZeroSSL, HTTP redirected to HTTPS.")}</span>
                 </span>
                 <Switch checked={ssl} onCheckedChange={setSsl} />
               </label>
@@ -168,10 +185,10 @@ export function CreateDomainDialog({
           <ErrorBox error={create.error} />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button type="submit" loading={create.isPending}>
-              Create
+              {t("Create")}
             </Button>
           </div>
         </form>

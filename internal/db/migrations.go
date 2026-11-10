@@ -163,6 +163,8 @@ CREATE TABLE backup_runs (
 );
 CREATE INDEX backup_runs_started ON backup_runs(started_at);
 `,
+	// v4: per-user interface language ('' = follow the browser).
+	`ALTER TABLE users ADD COLUMN locale TEXT NOT NULL DEFAULT '';`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

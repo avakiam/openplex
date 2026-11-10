@@ -1,6 +1,7 @@
 // Thin fetch client for /api/v1. The access token lives only in memory; the
 // refresh token is an httpOnly cookie scoped to /api/v1/auth, so a page reload
 // silently re-establishes the session via POST /auth/refresh.
+import { t, tServer } from "./i18n";
 import type { User } from "./types";
 
 export const API = "/api/v1";
@@ -53,7 +54,7 @@ function adopt(t: TokenResponse): Session {
 
 async function parseError(res: Response): Promise<ApiError> {
   let code = "http_" + res.status;
-  let message = res.statusText || "Request failed";
+  let message = res.statusText || t("Request failed");
   try {
     const body = await res.json();
     code = body.error ?? code;
@@ -61,7 +62,7 @@ async function parseError(res: Response): Promise<ApiError> {
   } catch {
     /* non-JSON error body */
   }
-  return new ApiError(res.status, code, message);
+  return new ApiError(res.status, code, tServer(message));
 }
 
 /** Exchanges the refresh cookie for a new access token (deduplicated). */
@@ -122,7 +123,7 @@ export async function request<T>(method: string, path: string, body?: unknown, i
   let res = await send(await token());
   if (res.status === 401) {
     const s = await refresh();
-    if (!s) throw new ApiError(401, "unauthorized", "Your session has expired");
+    if (!s) throw new ApiError(401, "unauthorized", t("Your session has expired"));
     res = await send(s.accessToken);
   }
   if (!res.ok) throw await parseError(res);

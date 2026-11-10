@@ -46,6 +46,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		ParentID   *int64 `json:"parent_id"`
 		MaxDomains int    `json:"max_domains"`
 		MaxDBs     int    `json:"max_databases"`
+		Locale     string `json:"locale"`
 	}
 	if !decode(w, r, &in) {
 		return
@@ -61,6 +62,10 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	if !db.ValidRole(in.Role) {
 		badRequest(w, "role must be admin, reseller or customer")
+		return
+	}
+	if !db.ValidLocale(in.Locale) {
+		badRequest(w, "unsupported language")
 		return
 	}
 	if in.MaxDomains < 0 || in.MaxDBs < 0 {
@@ -95,7 +100,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
-	u := &db.User{Username: in.Username, Email: strings.TrimSpace(in.Email), PasswordHash: hash, Role: in.Role, ParentID: in.ParentID, MaxDomains: in.MaxDomains, MaxDatabases: in.MaxDBs}
+	u := &db.User{Username: in.Username, Email: strings.TrimSpace(in.Email), PasswordHash: hash, Role: in.Role, ParentID: in.ParentID, MaxDomains: in.MaxDomains, MaxDatabases: in.MaxDBs, Locale: in.Locale}
 	if err := s.db.CreateUser(r.Context(), u); err != nil {
 		s.fail(w, r, err)
 		return
@@ -122,6 +127,7 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		Disabled   *bool   `json:"disabled"`
 		MaxDomains *int    `json:"max_domains"`
 		MaxDBs     *int    `json:"max_databases"`
+		Locale     *string `json:"locale"`
 	}
 	if !decode(w, r, &in) {
 		return
@@ -130,6 +136,13 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	self := a.ID == u.ID
 	if in.Email != nil {
 		u.Email = strings.TrimSpace(*in.Email)
+	}
+	if in.Locale != nil {
+		if !db.ValidLocale(*in.Locale) {
+			badRequest(w, "unsupported language")
+			return
+		}
+		u.Locale = *in.Locale
 	}
 	if in.Role != nil || in.ParentID != nil {
 		if a.Role != db.RoleAdmin || self {

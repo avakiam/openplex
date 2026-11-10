@@ -19,7 +19,7 @@ Every change is owned by exactly one role. When a task spans roles, the Architec
 | **Architect** | `AGENTS.md`, `PROGRESS.md`, package boundaries, DB schema, API contracts, cross-cutting decisions | ADR-style notes in `docs/adr/`, migration plans, interface definitions |
 | **Core-Go-Daemon** | `cmd/openplexd`, `internal/{api,auth,config,db,files,monitor,terminal,backup}` | Handlers, repositories, migrations, middleware, tests |
 | **Docker-Orchestrator** | `internal/{docker,ssl,dns,mail}`, container images/templates, edge (Caddy) config | Provisioning code, image pins, Caddyfile templates, reconciliation loops |
-| **NextJS-UI** | `web/` | App Router pages, shadcn/ui components, TanStack Query hooks, xterm.js/Monaco integration |
+| **NextJS-UI** | `web/` | App Router pages, shadcn/ui components, TanStack Query hooks, xterm.js/Monaco integration, i18n catalogues (en/es/ca) |
 | **SecOps-QA** | `scripts/`, `deploy/`, security review, test plans | `install.sh`, systemd units, firewall rules, threat reviews, integration tests on the real server |
 
 ## 2. Architecture rules (non-negotiable)

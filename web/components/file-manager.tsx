@@ -23,6 +23,7 @@ import { toast } from "sonner";
 
 import { api, download, request } from "@/lib/api";
 import { keys, useAction, useFiles } from "@/lib/hooks";
+import { useT } from "@/lib/i18n";
 import type { FileEntry } from "@/lib/types";
 import { ago, bytes, cn } from "@/lib/utils";
 
@@ -59,6 +60,7 @@ type Prompt =
   | { kind: "compress"; entries: FileEntry[] };
 
 export function FileManager({ domainId }: { domainId: number }) {
+  const { t } = useT();
   const [dir, setDir] = useState(".");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [prompt, setPrompt] = useState<Prompt | null>(null);
@@ -94,7 +96,7 @@ export function FileManager({ domainId }: { domainId: number }) {
   };
 
   const save = useAction(() => api.put(`${base}/content`, { path: editing!.path, content: editing!.content }), {
-    success: "Saved",
+    success: t("Saved"),
     ...inv,
     onSuccess: () => setEditing((e) => (e ? { ...e, dirty: false } : e)),
   });
@@ -106,10 +108,10 @@ export function FileManager({ domainId }: { domainId: number }) {
     setUploading(true);
     try {
       await request(`POST`, `${base}/upload?path=${encodeURIComponent(dir)}`, fd);
-      toast.success(`Uploaded ${list.length} file${list.length > 1 ? "s" : ""}`);
+      toast.success(t("Uploaded {count} files", { count: list.length }));
       files.refetch();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Upload failed");
+      toast.error(e instanceof Error ? e.message : t("Upload failed"));
     } finally {
       setUploading(false);
       if (uploadRef.current) uploadRef.current.value = "";
@@ -141,19 +143,19 @@ export function FileManager({ domainId }: { domainId: number }) {
         <div className="flex items-center gap-2 border-b px-3 py-2">
           <FileIcon className="size-4 text-muted-foreground" />
           <span className="truncate font-mono text-sm">{editing.path}</span>
-          {editing.dirty && <span className="size-2 rounded-full bg-warning" title="Unsaved changes" />}
+          {editing.dirty && <span className="size-2 rounded-full bg-warning" title={t("Unsaved changes")} />}
           <div className="ml-auto flex gap-2">
             <Button size="sm" loading={save.isPending} disabled={!editing.dirty} onClick={() => save.mutate(undefined)}>
-              <Save /> Save
+              <Save /> {t("Save")}
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={() => {
-                if (!editing.dirty || confirm("Discard unsaved changes?")) setEditing(null);
+                if (!editing.dirty || confirm(t("Discard unsaved changes?"))) setEditing(null);
               }}
             >
-              <X /> Close
+              <X /> {t("Close")}
             </Button>
           </div>
         </div>
@@ -179,7 +181,7 @@ export function FileManager({ domainId }: { domainId: number }) {
     >
       <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
         <nav className="flex min-w-0 flex-1 items-center gap-1 text-sm">
-          <button className="rounded p-1 hover:bg-muted" onClick={() => setDir(".")} aria-label="Site root">
+          <button className="rounded p-1 hover:bg-muted" onClick={() => setDir(".")} aria-label={t("Site root")}>
             <Home className="size-4" />
           </button>
           {crumbs.map((c, i) => (
@@ -194,24 +196,24 @@ export function FileManager({ domainId }: { domainId: number }) {
         {sel.length > 0 && (
           <>
             <Button size="sm" variant="outline" onClick={() => { setValue("archive.tar.gz"); setPrompt({ kind: "compress", entries: sel }); }}>
-              <Archive /> Compress ({sel.length})
+              <Archive /> {t("Compress ({count})", { count: sel.length })}
             </Button>
             <Button size="sm" variant="outline" className="text-destructive" onClick={() => setToDelete(sel)}>
-              <Trash2 /> Delete ({sel.length})
+              <Trash2 /> {t("Delete ({count})", { count: sel.length })}
             </Button>
           </>
         )}
         <Button size="sm" variant="outline" onClick={() => { setValue(""); setPrompt({ kind: "mkdir" }); }}>
-          <FolderPlus /> New folder
+          <FolderPlus /> {t("New folder")}
         </Button>
         <Button size="sm" variant="outline" onClick={() => { setValue("index.html"); setPrompt({ kind: "rename", entry: { path: "", name: "" } as FileEntry }); }}>
-          <Pencil /> New file
+          <Pencil /> {t("New file")}
         </Button>
         <Button size="sm" loading={uploading} onClick={() => uploadRef.current?.click()}>
-          <Upload /> Upload
+          <Upload /> {t("Upload")}
         </Button>
         <input ref={uploadRef} type="file" multiple hidden onChange={(e) => upload(e.target.files)} />
-        <Button size="icon" variant="ghost" onClick={() => files.refetch()} aria-label="Refresh">
+        <Button size="icon" variant="ghost" onClick={() => files.refetch()} aria-label={t("Refresh")}>
           <RefreshCw className={cn(files.isFetching && "animate-spin")} />
         </Button>
       </div>
@@ -221,7 +223,7 @@ export function FileManager({ domainId }: { domainId: number }) {
       ) : files.error ? (
         <div className="p-4"><ErrorBox error={files.error} /></div>
       ) : entries.length === 0 ? (
-        <Empty icon={Folder} title="This folder is empty">Drop files here or use Upload.</Empty>
+        <Empty icon={Folder} title={t("This folder is empty")}>{t("Drop files here or use Upload.")}</Empty>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -230,15 +232,15 @@ export function FileManager({ domainId }: { domainId: number }) {
                 <th className="w-10 border-b px-3 py-2">
                   <input
                     type="checkbox"
-                    aria-label="Select all"
+                    aria-label={t("Select all")}
                     checked={sel.length === entries.length}
                     onChange={(e) => setSelected(e.target.checked ? new Set(entries.map((x) => x.path)) : new Set())}
                   />
                 </th>
-                <th className="border-b px-2 py-2 font-medium">Name</th>
-                <th className="border-b px-2 py-2 text-right font-medium">Size</th>
-                <th className="hidden border-b px-2 py-2 font-medium sm:table-cell">Permissions</th>
-                <th className="hidden border-b px-2 py-2 font-medium md:table-cell">Modified</th>
+                <th className="border-b px-2 py-2 font-medium">{t("Name")}</th>
+                <th className="border-b px-2 py-2 text-right font-medium">{t("Size")}</th>
+                <th className="hidden border-b px-2 py-2 font-medium sm:table-cell">{t("Permissions")}</th>
+                <th className="hidden border-b px-2 py-2 font-medium md:table-cell">{t("Modified")}</th>
                 <th className="w-10 border-b px-2 py-2" />
               </tr>
             </thead>
@@ -246,7 +248,7 @@ export function FileManager({ domainId }: { domainId: number }) {
               {entries.map((e) => (
                 <tr key={e.path} className={cn("hover:bg-muted/40", selected.has(e.path) && "bg-accent/50")}>
                   <td className="border-b px-3 py-2">
-                    <input type="checkbox" aria-label={`Select ${e.name}`} checked={selected.has(e.path)} onChange={() => toggle(e.path)} />
+                    <input type="checkbox" aria-label={t("Select {name}", { name: e.name })} checked={selected.has(e.path)} onChange={() => toggle(e.path)} />
                   </td>
                   <td className="border-b px-2 py-2">
                     <button className="flex items-center gap-2 text-left hover:underline" onClick={() => open(e)}>
@@ -265,34 +267,34 @@ export function FileManager({ domainId }: { domainId: number }) {
                   <td className="hidden border-b px-2 py-2 text-muted-foreground md:table-cell">{ago(e.mod_time)}</td>
                   <td className="border-b px-2 py-1">
                     <Dropdown>
-                      <DropdownTrigger className="rounded p-1.5 hover:bg-muted" aria-label={`Actions for ${e.name}`}>
+                      <DropdownTrigger className="rounded p-1.5 hover:bg-muted" aria-label={t("Actions for {name}", { name: e.name })}>
                         <MoreHorizontal className="size-4" />
                       </DropdownTrigger>
                       <DropdownContent>
                         {!e.is_dir && (
                           <DropdownItem onSelect={() => open(e)}>
-                            <Pencil /> Edit
+                            <Pencil /> {t("Edit")}
                           </DropdownItem>
                         )}
                         {!e.is_dir && (
                           <DropdownItem onSelect={() => download(`${base}/download?path=${encodeURIComponent(e.path)}`, e.name).catch((err: Error) => toast.error(err.message))}>
-                            <Download /> Download
+                            <Download /> {t("Download")}
                           </DropdownItem>
                         )}
                         {isArchive(e.name) && (
                           <DropdownItem onSelect={() => op.mutate({ op: "extract", body: { path: e.path } })}>
-                            <FileArchive /> Extract here
+                            <FileArchive /> {t("Extract here")}
                           </DropdownItem>
                         )}
                         <DropdownItem onSelect={() => { setValue(e.name); setPrompt({ kind: "rename", entry: e }); }}>
-                          <Pencil /> Rename
+                          <Pencil /> {t("Rename")}
                         </DropdownItem>
                         <DropdownItem onSelect={() => { setValue(e.mode); setPrompt({ kind: "chmod", entry: e }); }}>
-                          <Shield /> Permissions
+                          <Shield /> {t("Permissions")}
                         </DropdownItem>
                         <DropdownSeparator />
                         <DropdownItem destructive onSelect={() => setToDelete([e])}>
-                          <Trash2 /> Delete
+                          <Trash2 /> {t("Delete")}
                         </DropdownItem>
                       </DropdownContent>
                     </Dropdown>
@@ -309,14 +311,14 @@ export function FileManager({ domainId }: { domainId: number }) {
           <DialogContent
             title={
               prompt.kind === "mkdir"
-                ? "New folder"
+                ? t("New folder")
                 : prompt.kind === "chmod"
-                  ? `Permissions of ${prompt.entry.name}`
+                  ? t("Permissions of {name}", { name: prompt.entry.name })
                   : prompt.kind === "compress"
-                    ? "Compress to archive"
+                    ? t("Compress to archive")
                     : prompt.entry.path
-                      ? `Rename ${prompt.entry.name}`
-                      : "New file"
+                      ? t("Rename {name}", { name: prompt.entry.name })
+                      : t("New file")
             }
           >
             <form
@@ -340,15 +342,15 @@ export function FileManager({ domainId }: { domainId: number }) {
               }}
             >
               <Field
-                label={prompt.kind === "chmod" ? "Mode (octal)" : prompt.kind === "compress" ? "Archive name" : "Name"}
-                hint={prompt.kind === "chmod" ? "e.g. 0644 for files, 0755 for folders and scripts" : undefined}
+                label={prompt.kind === "chmod" ? t("Mode (octal)") : prompt.kind === "compress" ? t("Archive name") : t("Name")}
+                hint={prompt.kind === "chmod" ? t("e.g. 0644 for files, 0755 for folders and scripts") : undefined}
               >
                 <Input autoFocus required className={prompt.kind === "chmod" ? "font-mono" : ""} value={value} onChange={(e) => setValue(e.target.value)} pattern={prompt.kind === "chmod" ? "0?[0-7]{3}" : undefined} />
               </Field>
               <ErrorBox error={op.error} />
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setPrompt(null)}>Cancel</Button>
-                <Button type="submit" loading={op.isPending}>Save</Button>
+                <Button type="button" variant="outline" onClick={() => setPrompt(null)}>{t("Cancel")}</Button>
+                <Button type="submit" loading={op.isPending}>{t("Save")}</Button>
               </div>
             </form>
           </DialogContent>
@@ -358,8 +360,8 @@ export function FileManager({ domainId }: { domainId: number }) {
       <Confirm
         open={!!toDelete}
         onOpenChange={(o) => !o && setToDelete(null)}
-        title={`Delete ${toDelete?.length === 1 ? toDelete[0].name : `${toDelete?.length} items`}?`}
-        description="Folders are deleted with everything inside them. This cannot be undone."
+        title={toDelete?.length === 1 ? t("Delete {name}?", { name: toDelete[0].name }) : t("Delete {count} items?", { count: toDelete?.length ?? 0 })}
+        description={t("Folders are deleted with everything inside them. This cannot be undone.")}
         loading={op.isPending}
         onConfirm={() => op.mutate({ op: "delete", body: { paths: toDelete!.map((e) => e.path) } })}
       />

@@ -9,6 +9,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Loader2, X } from "lucide-react";
 import * as React from "react";
 
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 // ---------- Button ----------
@@ -208,6 +209,7 @@ export function DialogContent({
   children: React.ReactNode;
   className?: string;
 }) {
+  const { t } = useT();
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
@@ -230,7 +232,7 @@ export function DialogContent({
         {children}
         <DialogPrimitive.Close className="absolute right-4 top-4 rounded p-1 text-muted-foreground hover:bg-muted">
           <X className="size-4" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">{t("Close")}</span>
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
@@ -243,7 +245,7 @@ export function Confirm({
   onOpenChange,
   title,
   description,
-  confirmLabel = "Delete",
+  confirmLabel,
   onConfirm,
   loading,
   children,
@@ -257,16 +259,17 @@ export function Confirm({
   loading?: boolean;
   children?: React.ReactNode;
 }) {
+  const { t } = useT();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent title={title} description={description}>
         {children}
         <div className="mt-6 flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button variant="destructive" loading={loading} onClick={onConfirm}>
-            {confirmLabel}
+            {confirmLabel ?? t("Delete")}
           </Button>
         </div>
       </DialogContent>

@@ -4,6 +4,7 @@
 // direct end labels, crosshair + tooltip on hover, table fallback via <details>.
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { getLocale, useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export interface Series {
@@ -33,6 +34,7 @@ function niceMax(v: number) {
 }
 
 export function TimeChart({ times, series, format, max, height = 180, title, className }: Props) {
+  const { t } = useT();
   const ref = useRef<SVGSVGElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<number | null>(null);
@@ -67,7 +69,7 @@ export function TimeChart({ times, series, format, max, height = 180, title, cla
     setHover(Math.max(0, Math.min(n - 1, i)));
   };
 
-  const fmtTime = (t: number) => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const fmtTime = (t: number) => new Date(t).toLocaleTimeString(getLocale(), { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   const hi = hover ?? n - 1;
 
   return (
@@ -155,12 +157,12 @@ export function TimeChart({ times, series, format, max, height = 180, title, cla
         </div>
       )}
       <details className="mt-1 text-xs text-muted-foreground">
-        <summary className="cursor-pointer select-none">Show data table</summary>
+        <summary className="cursor-pointer select-none">{t("Show data table")}</summary>
         <div className="mt-2 max-h-48 overflow-y-auto">
           <table className="w-full">
             <thead>
               <tr>
-                <th className="py-1 text-left font-medium">Time</th>
+                <th className="py-1 text-left font-medium">{t("Time")}</th>
                 {series.map((s) => (
                   <th key={s.key} className="py-1 text-right font-medium">
                     {s.label}

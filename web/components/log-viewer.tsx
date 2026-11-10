@@ -3,6 +3,7 @@ import { Pause, Play, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { openSocket } from "@/lib/api";
+import { fmtNumber, getLocale, t, tServer, useT } from "@/lib/i18n";
 
 import { Badge, Button } from "./ui";
 
@@ -22,8 +23,8 @@ function format(line: string, kind: "access" | "error") {
   try {
     const l = JSON.parse(line) as AccessLine;
     const r = l.request ?? {};
-    const time = l.ts ? new Date(l.ts * 1000).toLocaleTimeString() : "";
-    const ms = l.duration ? `${(l.duration * 1000).toFixed(1)}ms` : "";
+    const time = l.ts ? new Date(l.ts * 1000).toLocaleTimeString(getLocale()) : "";
+    const ms = l.duration ? `${fmtNumber(l.duration * 1000, 1)} ms` : "";
     const tone = (l.status ?? 0) >= 500 ? "text-destructive" : (l.status ?? 0) >= 400 ? "text-warning" : "";
     return { text: `${time}  ${r.client_ip ?? r.remote_ip ?? ""}  ${r.method ?? ""} ${r.uri ?? ""}  ${l.status ?? ""}  ${l.size ?? 0}B  ${ms}`, tone };
   } catch {
@@ -32,6 +33,7 @@ function format(line: string, kind: "access" | "error") {
 }
 
 export function LogViewer({ domainId, kind }: { domainId: number; kind: "access" | "error" }) {
+  useT();
   const [lines, setLines] = useState<string[]>([]);
   const [state, setState] = useState<"connecting" | "live" | "closed">("connecting");
   const [paused, setPaused] = useState(false);
@@ -52,7 +54,7 @@ export function LogViewer({ domainId, kind }: { domainId: number; kind: "access"
         ws = await openSocket(`/domains/${domainId}/logs/ws?type=${kind}`);
       } catch (e) {
         setState("closed");
-        setNote(e instanceof Error ? e.message : "connection failed");
+        setNote(e instanceof Error ? e.message : t("connection failed"));
         return;
       }
       if (closed) return ws.close();
@@ -65,7 +67,7 @@ export function LogViewer({ domainId, kind }: { domainId: number; kind: "access"
       };
       ws.onclose = (ev) => {
         setState("closed");
-        if (ev.reason) setNote(ev.reason);
+        if (ev.reason) setNote(tServer(ev.reason));
       };
     })();
     return () => {
@@ -83,22 +85,22 @@ export function LogViewer({ domainId, kind }: { domainId: number; kind: "access"
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <Badge tone={state === "live" ? "success" : state === "connecting" ? "info" : "neutral"}>
-          {state === "live" ? "Streaming" : state === "connecting" ? "Connecting…" : "Disconnected"}
+          {state === "live" ? t("Streaming") : state === "connecting" ? t("Connecting…") : t("Disconnected")}
         </Badge>
         {note && <span className="text-xs text-muted-foreground">{note}</span>}
         <div className="ml-auto flex gap-1">
           <Button size="sm" variant="outline" onClick={() => setPaused((p) => !p)}>
-            {paused ? <Play /> : <Pause />} {paused ? "Resume" : "Pause"}
+            {paused ? <Play /> : <Pause />} {paused ? t("Resume") : t("Pause")}
           </Button>
           <Button size="sm" variant="outline" onClick={() => setLines([])}>
-            <Trash2 /> Clear
+            <Trash2 /> {t("Clear")}
           </Button>
         </div>
       </div>
       <div ref={boxRef} className="h-[28rem] overflow-auto rounded-md border bg-zinc-950 p-3 font-mono text-xs leading-relaxed text-zinc-200">
         {lines.length === 0 ? (
           <span className="text-zinc-500">
-            {kind === "access" ? "Waiting for requests… (visit the site to see traffic here)" : "No output yet."}
+            {kind === "access" ? t("Waiting for requests… (visit the site to see traffic here)") : t("No output yet.")}
           </span>
         ) : (
           lines.map((l, i) => {

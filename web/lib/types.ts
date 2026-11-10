@@ -12,6 +12,8 @@ export interface User {
   disabled: boolean;
   max_domains: number;
   max_databases: number;
+  /** "" = follow the browser */
+  locale: "" | "en" | "es" | "ca";
   created_at: string;
   updated_at: string;
 }

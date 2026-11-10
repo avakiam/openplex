@@ -169,6 +169,33 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, actor(r))
 }
 
+// handleUpdateMe changes the caller's own preferences (any role).
+func (s *Server) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Locale *string `json:"locale"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	u, err := s.db.GetUser(r.Context(), actor(r).ID)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	if in.Locale != nil {
+		if !db.ValidLocale(*in.Locale) {
+			badRequest(w, "unsupported language")
+			return
+		}
+		u.Locale = *in.Locale
+	}
+	if err := s.db.UpdateUser(r.Context(), u); err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, u)
+}
+
 func (s *Server) handleChangeOwnPassword(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		CurrentPassword string `json:"current_password"`

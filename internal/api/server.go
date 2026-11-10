@@ -85,6 +85,7 @@ func (s *Server) Handler() http.Handler {
 			r.Use(s.authenticate)
 
 			r.Get("/auth/me", s.handleMe)
+			r.Patch("/auth/me", s.handleUpdateMe)
 			r.Post("/auth/password", s.handleChangeOwnPassword)
 			r.Post("/auth/2fa/setup", s.handleTOTPSetup)
 			r.Post("/auth/2fa/enable", s.handleTOTPEnable)

@@ -20,9 +20,12 @@ import { useEffect, useState } from "react";
 
 import { logout } from "@/lib/api";
 import { canManageUsers, isAdmin, useAuth } from "@/lib/auth";
+import { tk, useT } from "@/lib/i18n";
 import type { User } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+import { LanguageSelect } from "./language-select";
+import { roleLabels } from "./status";
 import { Badge, Dropdown, DropdownContent, DropdownItem, DropdownSeparator, DropdownTrigger, Spinner } from "./ui";
 
 interface NavItem {
@@ -33,14 +36,14 @@ interface NavItem {
 }
 
 const nav: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/domains/", label: "Websites & Domains", icon: Globe },
-  { href: "/databases/", label: "Databases", icon: Database },
-  { href: "/users/", label: "Users", icon: Users, show: canManageUsers },
-  { href: "/keys/", label: "API & SSH keys", icon: KeyRound },
-  { href: "/backups/", label: "Backups", icon: Archive, show: isAdmin },
-  { href: "/audit/", label: "Audit log", icon: ScrollText, show: isAdmin },
-  { href: "/account/", label: "Account & security", icon: UserCog },
+  { href: "/", label: tk("Dashboard"), icon: LayoutDashboard },
+  { href: "/domains/", label: tk("Websites & Domains"), icon: Globe },
+  { href: "/databases/", label: tk("Databases"), icon: Database },
+  { href: "/users/", label: tk("Users"), icon: Users, show: canManageUsers },
+  { href: "/keys/", label: tk("API & SSH keys"), icon: KeyRound },
+  { href: "/backups/", label: tk("Backups"), icon: Archive, show: isAdmin },
+  { href: "/audit/", label: tk("Audit log"), icon: ScrollText, show: isAdmin },
+  { href: "/account/", label: tk("Account & security"), icon: UserCog },
 ];
 
 export function Logo({ className }: { className?: string }) {
@@ -71,6 +74,7 @@ function useTheme() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, ready } = useAuth();
+  const { t } = useT();
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -115,7 +119,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               >
                 <n.icon className="size-4" />
-                {n.label}
+                {t(n.label)}
               </Link>
             ))}
         </nav>
@@ -127,17 +131,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-card/90 px-4 backdrop-blur sm:px-6">
-          <button className="rounded p-1.5 hover:bg-muted lg:hidden" onClick={() => setOpen(true)} aria-label="Open menu">
+          <button className="rounded p-1.5 hover:bg-muted lg:hidden" onClick={() => setOpen(true)} aria-label={t("Open menu")}>
             <Menu className="size-5" />
           </button>
           <div className="lg:hidden">
             <Logo />
           </div>
           <div className="ml-auto flex items-center gap-1">
+            <LanguageSelect />
             <button
               onClick={toggle}
               className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-              aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
+              aria-label={dark ? t("Switch to light theme") : t("Switch to dark theme")}
             >
               {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
             </button>
@@ -147,11 +152,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {user.username.slice(0, 2)}
                 </span>
                 <span className="hidden font-medium sm:inline">{user.username}</span>
-                <Badge className="hidden capitalize sm:inline-flex">{user.role}</Badge>
+                <Badge className="hidden sm:inline-flex">{t(roleLabels[user.role])}</Badge>
               </DropdownTrigger>
               <DropdownContent>
                 <DropdownItem onSelect={() => router.push("/account/")}>
-                  <UserCog /> Account & security
+                  <UserCog /> {t("Account & security")}
                 </DropdownItem>
                 <DropdownSeparator />
                 <DropdownItem
@@ -161,7 +166,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     router.replace("/login/");
                   }}
                 >
-                  <LogOut /> Sign out
+                  <LogOut /> {t("Sign out")}
                 </DropdownItem>
               </DropdownContent>
             </Dropdown>

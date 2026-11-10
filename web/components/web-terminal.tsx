@@ -8,6 +8,7 @@ import { Maximize2, Minimize2, Plug, RotateCw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { openSocket } from "@/lib/api";
+import { t, tServer, useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 import { Badge, Button, Switch } from "./ui";
@@ -26,6 +27,7 @@ const theme = {
 };
 
 export function WebTerminal({ domainId, canRoot }: { domainId: number; canRoot: boolean }) {
+  useT();
   const host = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
@@ -91,7 +93,7 @@ export function WebTerminal({ domainId, canRoot }: { domainId: number; canRoot: 
         ws = await openSocket(`/domains/${domainId}/terminal/ws?cols=${term.cols}&rows=${term.rows}${root ? "&root=1" : ""}`);
       } catch (e) {
         setState("closed");
-        setReason(e instanceof Error ? e.message : "connection failed");
+        setReason(e instanceof Error ? e.message : t("connection failed"));
         return;
       }
       if (closed) return ws.close();
@@ -107,7 +109,7 @@ export function WebTerminal({ domainId, canRoot }: { domainId: number; canRoot: 
       ws.onclose = (ev) => {
         setState("closed");
         setReason(ev.reason || "disconnected");
-        term.write(`\r\n\x1b[2m[${ev.reason || "connection closed"}]\x1b[0m\r\n`);
+        term.write(`\r\n\x1b[2m[${ev.reason ? tServer(ev.reason) : t("connection closed")}]\x1b[0m\r\n`);
       };
     })();
     return () => {
@@ -129,19 +131,19 @@ export function WebTerminal({ domainId, canRoot }: { domainId: number; canRoot: 
     <div className={cn("flex flex-col gap-2", full && "fixed inset-0 z-50 bg-background p-3")}>
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={state === "open" ? "success" : state === "connecting" ? "info" : "neutral"}>
-          <Plug className="size-3" /> {state === "open" ? "Connected" : state === "connecting" ? "Connecting…" : "Disconnected"}
+          <Plug className="size-3" /> {state === "open" ? t("Connected") : state === "connecting" ? t("Connecting…") : t("Disconnected")}
         </Badge>
-        {state === "closed" && reason && <span className="text-xs text-muted-foreground">{reason}</span>}
+        {state === "closed" && reason && <span className="text-xs text-muted-foreground">{tServer(reason)}</span>}
         <div className="ml-auto flex items-center gap-3">
           {canRoot && (
-            <label className="flex items-center gap-2 text-xs text-muted-foreground" title="Administrators only">
+            <label className="flex items-center gap-2 text-xs text-muted-foreground" title={t("Administrators only")}>
               <Switch checked={root} onCheckedChange={setRoot} /> root
             </label>
           )}
           <Button size="sm" variant="outline" onClick={() => setSession((n) => n + 1)}>
-            <RotateCw /> {state === "closed" ? "Reconnect" : "Restart"}
+            <RotateCw /> {state === "closed" ? t("Reconnect") : t("Restart")}
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setFull((f) => !f)} aria-label={full ? "Exit full screen" : "Full screen"}>
+          <Button size="sm" variant="outline" onClick={() => setFull((f) => !f)} aria-label={full ? t("Exit full screen") : t("Full screen")}>
             {full ? <Minimize2 /> : <Maximize2 />}
           </Button>
         </div>
@@ -152,7 +154,7 @@ export function WebTerminal({ domainId, canRoot }: { domainId: number; canRoot: 
         onClick={() => termRef.current?.focus()}
       />
       <p className="text-xs text-muted-foreground">
-        Runs as the website&apos;s own user in its environment. Idle sessions close after 30 minutes. {full && "Shift+Esc exits full screen."}
+        {t("Runs as the website's own user in its environment. Idle sessions close after 30 minutes.")} {full && t("Shift+Esc exits full screen.")}
       </p>
     </div>
   );

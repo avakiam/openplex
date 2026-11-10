@@ -1,0 +1,6 @@
+{
+  "In {count} days": {
+    "one": "In {count} day",
+    "other": "In {count} days"
+  }
+}

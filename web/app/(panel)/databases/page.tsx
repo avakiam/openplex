@@ -29,6 +29,8 @@ import {
 } from "@/components/ui";
 import { api } from "@/lib/api";
 import { canManageUsers, useAuth } from "@/lib/auth";
+import { useT } from "@/lib/i18n";
+import { roleLabels } from "@/components/status";
 import { keys, useAction, useDatabaseSizes, useDatabases, useEngines, useUsers } from "@/lib/hooks";
 import type { Database, DatabaseCredentials, Engine } from "@/lib/types";
 import { bytes } from "@/lib/utils";
@@ -63,6 +65,7 @@ function openAdminer(c: DatabaseCredentials) {
 }
 
 function CopyRow({ label, value, secret }: { label: string; value: string; secret?: boolean }) {
+  const { t } = useT();
   const [shown, setShown] = useState(!secret);
   const [done, setDone] = useState(false);
   return (
@@ -70,7 +73,7 @@ function CopyRow({ label, value, secret }: { label: string; value: string; secre
       <div className="flex gap-2">
         <Input readOnly className="font-mono text-xs" type={shown ? "text" : "password"} value={value} onFocus={(e) => e.target.select()} />
         {secret && (
-          <Button type="button" size="icon" variant="outline" aria-label={shown ? "Hide" : "Show"} onClick={() => setShown((s) => !s)}>
+          <Button type="button" size="icon" variant="outline" aria-label={shown ? t("Hide") : t("Show")} onClick={() => setShown((s) => !s)}>
             {shown ? <EyeOff /> : <Eye />}
           </Button>
         )}
@@ -78,11 +81,14 @@ function CopyRow({ label, value, secret }: { label: string; value: string; secre
           type="button"
           size="icon"
           variant="outline"
-          aria-label={`Copy ${label}`}
+          aria-label={t("Copy {label}", { label })}
           onClick={() =>
             navigator.clipboard.writeText(value).then(
-              () => { setDone(true); setTimeout(() => setDone(false), 1500); },
-              () => toast.error("Copy failed — select the text manually"),
+              () => {
+                setDone(true);
+                setTimeout(() => setDone(false), 1500);
+              },
+              () => toast.error(t("Copy failed — select the text manually")),
             )
           }
         >
@@ -94,6 +100,7 @@ function CopyRow({ label, value, secret }: { label: string; value: string; secre
 }
 
 function CredentialsDialog({ db, onClose }: { db: Database | null; onClose: () => void }) {
+  const { t } = useT();
   const [creds, setCreds] = useState<DatabaseCredentials | null>(null);
   const [loading, setLoading] = useState(false);
   const id = db?.id;
@@ -112,31 +119,45 @@ function CredentialsDialog({ db, onClose }: { db: Database | null; onClose: () =
     };
   }, [id]);
   const rotate = useAction(() => api.post<{ password: string }>(`/databases/${db!.id}/rotate-password`), {
-    success: "Password rotated — update your application's configuration",
-    onSuccess: (r) => setCreds((c) => (c ? { ...c, password: r.password, url: c.url.replace(c.password, r.password) } : c)),
+    success: t("Password rotated — update your application's configuration"),
+    onSuccess: (r) =>
+      setCreds((c) =>
+        c
+          ? {
+              ...c,
+              password: r.password,
+              url: c.url.replace(c.password, r.password),
+            }
+          : c,
+      ),
   });
   return (
     <Dialog open={!!db} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent title={`Connect to ${db?.name ?? ""}`} description="Use these settings from your website's code. The host is only reachable from your sites, not from the internet.">
+      <DialogContent
+        title={t("Connect to {name}", { name: db?.name ?? "" })}
+        description={t("Use these settings from your website's code. The host is only reachable from your sites, not from the internet.")}
+      >
         {loading || !creds ? (
-          <div className="flex justify-center py-8"><Spinner /></div>
+          <div className="flex justify-center py-8">
+            <Spinner />
+          </div>
         ) : (
           <div className="grid gap-3">
             <div className="grid grid-cols-[1fr_6rem] gap-3">
-              <CopyRow label="Host" value={creds.host} />
-              <CopyRow label="Port" value={String(creds.port)} />
+              <CopyRow label={t("Host")} value={creds.host} />
+              <CopyRow label={t("Port")} value={String(creds.port)} />
             </div>
-            {db?.engine !== "redis" && <CopyRow label="Database" value={creds.database} />}
-            {db?.engine !== "redis" && <CopyRow label="Username" value={creds.username} />}
-            <CopyRow label="Password" value={creds.password} secret />
-            <CopyRow label="Connection URL" value={creds.url} secret />
+            {db?.engine !== "redis" && <CopyRow label={t("Database")} value={creds.database} />}
+            {db?.engine !== "redis" && <CopyRow label={t("Username")} value={creds.username} />}
+            <CopyRow label={t("Password")} value={creds.password} secret />
+            <CopyRow label={t("Connection URL")} value={creds.url} secret />
             <div className="mt-3 flex flex-wrap justify-between gap-2">
               <Button variant="outline" loading={rotate.isPending} onClick={() => rotate.mutate(undefined)}>
-                <KeyRound /> Rotate password
+                <KeyRound /> {t("Rotate password")}
               </Button>
               {db?.engine !== "redis" && (
                 <Button onClick={() => openAdminer(creds)}>
-                  <SquareArrowOutUpRight /> Open in Adminer
+                  <SquareArrowOutUpRight /> {t("Open in Adminer")}
                 </Button>
               )}
             </div>
@@ -148,6 +169,7 @@ function CredentialsDialog({ db, onClose }: { db: Database | null; onClose: () =
 }
 
 function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const { t } = useT();
   const { user } = useAuth();
   const engines = useEngines();
   const users = useUsers();
@@ -156,14 +178,32 @@ function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
   const [ownerId, setOwnerId] = useState<number | "">("");
   const owner = ownerId === "" ? user : users.data?.find((u) => u.id === ownerId);
   const create = useAction(
-    () => api.post<Database>("/databases", { engine, name, owner_id: ownerId === "" ? undefined : ownerId }),
-    { success: "Database is being created", invalidate: [keys.databases], onSuccess: () => { onOpenChange(false); setName(""); } },
+    () =>
+      api.post<Database>("/databases", {
+        engine,
+        name,
+        owner_id: ownerId === "" ? undefined : ownerId,
+      }),
+    {
+      success: t("Database is being created"),
+      invalidate: [keys.databases],
+      onSuccess: () => {
+        onOpenChange(false);
+        setName("");
+      },
+    },
   );
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="New database" description="A user with a strong generated password is created and granted access to this database only.">
-        <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); create.mutate(undefined); }}>
-          <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Engine">
+      <DialogContent title={t("New database")} description={t("A user with a strong generated password is created and granted access to this database only.")}>
+        <form
+          className="grid gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            create.mutate(undefined);
+          }}
+        >
+          <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t("Engine")}>
             {(engines.data ?? []).map((en) => (
               <button
                 key={en.name}
@@ -179,14 +219,30 @@ function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
             ))}
           </div>
           {canManageUsers(user) && (
-            <Field label="Owner">
+            <Field label={t("Owner")}>
               <Select value={ownerId} onChange={(e) => setOwnerId(e.target.value ? Number(e.target.value) : "")}>
-                <option value="">Me ({user?.username})</option>
-                {(users.data ?? []).filter((u) => u.id !== user?.id).map((u) => <option key={u.id} value={u.id}>{u.username} ({u.role})</option>)}
+                <option value="">{t("Me ({name})", { name: user?.username ?? "" })}</option>
+                {(users.data ?? [])
+                  .filter((u) => u.id !== user?.id)
+                  .map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.username} ({t(roleLabels[u.role])})
+                    </option>
+                  ))}
               </Select>
             </Field>
           )}
-          <Field label={engine === "redis" ? "Instance name" : "Database name"} hint={<>Full name: <code>{prefixFor(owner?.username ?? "")}_{name || "…"}</code></>}>
+          <Field
+            label={engine === "redis" ? t("Instance name") : t("Database name")}
+            hint={
+              <>
+                {t("Full name:")}{" "}
+                <code>
+                  {prefixFor(owner?.username ?? "")}_{name || "…"}
+                </code>
+              </>
+            }
+          >
             <div className="flex items-center rounded-md border border-input bg-card focus-within:outline-2 focus-within:outline-ring">
               <span className="pl-3 font-mono text-sm text-muted-foreground">{prefixFor(owner?.username ?? "")}_</span>
               <input
@@ -200,11 +256,17 @@ function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
               />
             </div>
           </Field>
-          {engine === "redis" && <p className="text-xs text-muted-foreground">Each Redis instance runs in its own container (96 MB, LRU eviction, AOF persistence).</p>}
+          {engine === "redis" && (
+            <p className="text-xs text-muted-foreground">{t("Each Redis instance runs in its own container (96 MB, LRU eviction, AOF persistence).")}</p>
+          )}
           <ErrorBox error={create.error} />
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" loading={create.isPending}>Create</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              {t("Cancel")}
+            </Button>
+            <Button type="submit" loading={create.isPending}>
+              {t("Create")}
+            </Button>
           </div>
         </form>
       </DialogContent>
@@ -212,9 +274,14 @@ function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
   );
 }
 
-const engineTone = { mariadb: "info", postgres: "info", redis: "warning" } as const;
+const engineTone = {
+  mariadb: "info",
+  postgres: "info",
+  redis: "warning",
+} as const;
 
 export default function DatabasesPage() {
+  const { t } = useT();
   const { user } = useAuth();
   const { data, isLoading, error } = useDatabases();
   const sizes = useDatabaseSizes(!!data?.length);
@@ -223,31 +290,49 @@ export default function DatabasesPage() {
   const [connect, setConnect] = useState<Database | null>(null);
   const [del, setDel] = useState<Database | null>(null);
   const [backups, setBackups] = useState<Database | null>(null);
-  const remove = useAction((id: number) => api.del(`/databases/${id}`), { success: "Database is being deleted", invalidate: [keys.databases], onSuccess: () => setDel(null) });
+  const remove = useAction((id: number) => api.del(`/databases/${id}`), {
+    success: t("Database is being deleted"),
+    invalidate: [keys.databases],
+    onSuccess: () => setDel(null),
+  });
   const owner = (id: number) => users.data?.find((u) => u.id === id)?.username ?? `#${id}`;
 
   return (
     <>
       <PageHeader
-        title="Databases"
-        description="MariaDB, PostgreSQL and Redis, reachable only from your websites."
-        actions={<Button onClick={() => setCreate(true)}><Plus /> New database</Button>}
+        title={t("Databases")}
+        description={t("MariaDB, PostgreSQL and Redis, reachable only from your websites.")}
+        actions={
+          <Button onClick={() => setCreate(true)}>
+            <Plus /> {t("New database")}
+          </Button>
+        }
       />
       <Card>
         {isLoading ? (
-          <div className="flex justify-center py-14"><Spinner /></div>
+          <div className="flex justify-center py-14">
+            <Spinner />
+          </div>
         ) : error ? (
-          <div className="p-4"><ErrorBox error={error} /></div>
+          <div className="p-4">
+            <ErrorBox error={error} />
+          </div>
         ) : !data?.length ? (
-          <Empty icon={DbIcon} title="No databases yet">
-            <Button className="mt-3" onClick={() => setCreate(true)}><Plus /> Create your first database</Button>
+          <Empty icon={DbIcon} title={t("No databases yet")}>
+            <Button className="mt-3" onClick={() => setCreate(true)}>
+              <Plus /> {t("Create your first database")}
+            </Button>
           </Empty>
         ) : (
           <Table>
             <thead>
               <tr>
-                <Th>Name</Th><Th>Engine</Th><Th>Host</Th><Th className="text-right">Size</Th><Th>Status</Th>
-                {canManageUsers(user) && <Th>Owner</Th>}
+                <Th>{t("Name")}</Th>
+                <Th>{t("Engine")}</Th>
+                <Th>{t("Host")}</Th>
+                <Th className="text-right">{t("Size")}</Th>
+                <Th>{t("Status")}</Th>
+                {canManageUsers(user) && <Th>{t("Owner")}</Th>}
                 <Th className="w-12" />
               </tr>
             </thead>
@@ -255,40 +340,66 @@ export default function DatabasesPage() {
               {data.map((d) => (
                 <tr key={d.id} className="hover:bg-muted/40">
                   <Td>
-                    <button className="font-mono font-medium hover:underline disabled:no-underline" disabled={d.status !== "running"} onClick={() => setConnect(d)}>
+                    <button
+                      className="font-mono font-medium hover:underline disabled:no-underline"
+                      disabled={d.status !== "running"}
+                      onClick={() => setConnect(d)}
+                    >
                       {d.name}
                     </button>
                   </Td>
-                  <Td><Badge tone={engineTone[d.engine]}>{d.engine_label}</Badge></Td>
-                  <Td className="font-mono text-xs text-muted-foreground">{d.host}:{d.port}</Td>
+                  <Td>
+                    <Badge tone={engineTone[d.engine]}>{d.engine_label}</Badge>
+                  </Td>
+                  <Td className="font-mono text-xs text-muted-foreground">
+                    {d.host}:{d.port}
+                  </Td>
                   <Td className="tabular text-right text-muted-foreground">{sizes.data?.[d.id] !== undefined ? bytes(sizes.data[d.id]) : "—"}</Td>
                   <Td>
                     {d.status === "running" ? (
-                      <Badge tone="success">Ready</Badge>
+                      <Badge tone="success">{t("Ready")}</Badge>
                     ) : d.status === "pending" ? (
-                      <Badge tone="info"><Loader2 className="size-3 animate-spin" /> {d.status_message === "deleting" ? "Deleting" : "Creating"}</Badge>
+                      <Badge tone="info">
+                        <Loader2 className="size-3 animate-spin" /> {d.status_message === "deleting" ? t("Deleting") : t("Creating")}
+                      </Badge>
                     ) : (
-                      <Badge tone="danger" title={d.status_message}>Error</Badge>
+                      <Badge tone="danger" title={d.status_message}>
+                        {t("Error")}
+                      </Badge>
                     )}
-                    {d.status === "error" && <p className="mt-1 max-w-xs truncate text-xs text-destructive" title={d.status_message}>{d.status_message}</p>}
+                    {d.status === "error" && (
+                      <p className="mt-1 max-w-xs truncate text-xs text-destructive" title={d.status_message}>
+                        {d.status_message}
+                      </p>
+                    )}
                   </Td>
                   {canManageUsers(user) && <Td className="text-muted-foreground">{owner(d.owner_id)}</Td>}
                   <Td>
                     <Dropdown>
-                      <DropdownTrigger className="rounded p-1.5 hover:bg-muted" aria-label={`Actions for ${d.name}`}><MoreHorizontal className="size-4" /></DropdownTrigger>
+                      <DropdownTrigger className="rounded p-1.5 hover:bg-muted" aria-label={t("Actions for {name}", { name: d.name })}>
+                        <MoreHorizontal className="size-4" />
+                      </DropdownTrigger>
                       <DropdownContent>
-                        <DropdownItem disabled={d.status !== "running"} onSelect={() => setConnect(d)}><KeyRound /> Connection details</DropdownItem>
+                        <DropdownItem disabled={d.status !== "running"} onSelect={() => setConnect(d)}>
+                          <KeyRound /> {t("Connection details")}
+                        </DropdownItem>
                         {d.engine !== "redis" && (
                           <DropdownItem
                             disabled={d.status !== "running"}
-                            onSelect={() => api.get<DatabaseCredentials>(`/databases/${d.id}/credentials`).then(openAdminer, (e: Error) => toast.error(e.message))}
+                            onSelect={() =>
+                              api.get<DatabaseCredentials>(`/databases/${d.id}/credentials`).then(openAdminer, (e: Error) => toast.error(e.message))
+                            }
                           >
-                            <SquareArrowOutUpRight /> Open in Adminer
+                            <SquareArrowOutUpRight /> {t("Open in Adminer")}
                           </DropdownItem>
                         )}
-                        <DropdownItem disabled={d.status !== "running"} onSelect={() => setBackups(d)}><Archive /> Backups</DropdownItem>
+                        <DropdownItem disabled={d.status !== "running"} onSelect={() => setBackups(d)}>
+                          <Archive /> {t("Backups")}
+                        </DropdownItem>
                         <DropdownSeparator />
-                        <DropdownItem destructive disabled={d.status === "pending"} onSelect={() => setDel(d)}><Trash2 /> Delete</DropdownItem>
+                        <DropdownItem destructive disabled={d.status === "pending"} onSelect={() => setDel(d)}>
+                          <Trash2 /> {t("Delete")}
+                        </DropdownItem>
                       </DropdownContent>
                     </Dropdown>
                   </Td>
@@ -301,12 +412,14 @@ export default function DatabasesPage() {
       <CreateDialog open={create} onOpenChange={setCreate} />
       <CredentialsDialog db={connect} onClose={() => setConnect(null)} />
       <Dialog open={!!backups} onOpenChange={(o) => !o && setBackups(null)}>
-        <DialogContent title={`Backups of ${backups?.name ?? ""}`} className="max-w-2xl">
+        <DialogContent title={t("Backups of {name}", { name: backups?.name ?? "" })} className="max-w-2xl">
           {backups && (
             <ItemBackups
               base={`/databases/${backups.id}`}
               label={backups.name}
-              warning="The database is replaced with the backup: changes made since then are lost. Applications using it may see errors while it is being restored."
+              warning={t(
+                "The database is replaced with the backup: changes made since then are lost. Applications using it may see errors while it is being restored.",
+              )}
             />
           )}
         </DialogContent>
@@ -314,8 +427,8 @@ export default function DatabasesPage() {
       <Confirm
         open={!!del}
         onOpenChange={(o) => !o && setDel(null)}
-        title={`Delete ${del?.name}?`}
-        description="The database, its user and all data are permanently removed. Back it up first if you need it."
+        title={t("Delete {name}?", { name: del?.name ?? "" })}
+        description={t("The database, its user and all data are permanently removed. Back it up first if you need it.")}
         loading={remove.isPending}
         onConfirm={() => remove.mutate(del!.id)}
       />

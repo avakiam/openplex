@@ -1,0 +1,4 @@
+{
+  "Uploaded {count} files": { "one": "Uploaded {count} file", "other": "Uploaded {count} files" },
+  "Delete {count} items?": { "one": "Delete {count} item?", "other": "Delete {count} items?" }
+}

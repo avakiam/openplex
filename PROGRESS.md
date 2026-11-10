@@ -121,6 +121,11 @@ has been verified on the Linux test server. One commit per milestone.
       file manager with Monaco (self-hosted, no CDN), users, API/SSH keys, account (password, 2FA + QR), audit log
 - [x] Views: terminal (xterm.js), databases, backups
 - [ ] Views for upcoming modules: mail, DNS, security, cron
+- [x] Interface languages: English, Spanish, Catalan — browser detection, switcher in the header and on
+      the login page, per-user preference stored on the account (`users.locale`, `PATCH /auth/me`, set by
+      managers too), locale-aware numbers/dates, fixed API error messages translated; the build fails on a
+      missing translation (`scripts/check-i18n.mjs`)
+- [ ] Turn dynamic API messages (quotas, overlaps, invalid JSON) into fixed, translatable strings
 - [ ] Trim the embedded Monaco bundle (~25 MB of the 41 MB binary) to the languages we need
 
 ## M14 — Installer & packaging
@@ -171,3 +176,7 @@ has been verified on the Linux test server. One commit per milestone.
   PHP 8.4 image built in 5 min on 2 vCPU; PHP 8.4.27 site talked to MariaDB 11.8 over PDO with the
   password injected as an env var. First automatic backup ran. From the internet only 22/80/443
   answer (2019, 3306, 5432, 6379, 7080, 7081 closed; ufw active); bare-IP HTTPS gets no certificate.
+- 2026-11-10 — Languages on the real server (v0.6.0, migration v4 applied on both servers): a Spanish
+  browser got the login page and panel in Spanish automatically (`2,6%`, `2,2 GB`, `4 d 1 h`); switching
+  to Català from the header translated the whole panel at once and was saved on the account;
+  "Automatic" cleared it again. 436 strings × 2 languages, 113 server messages.
