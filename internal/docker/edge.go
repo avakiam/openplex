@@ -41,6 +41,39 @@ func (o *Orchestrator) BuildEdgeConfig(ctx context.Context) (ssl.Config, error) 
 	for _, r := range redirects {
 		rules[r.DomainID] = append(rules[r.DomainID], ssl.Redirect{Path: r.SourcePath, Target: r.TargetURL, Code: r.StatusCode})
 	}
+	// www.<domain> is served (as a redirect) when the domain's DNS zone has a
+	// www record and that name is not a website or alias of its own.
+	hasWWW := map[int64]bool{}
+	zones, err := o.db.ListDNSZones(ctx)
+	if err != nil {
+		return ssl.Config{}, err
+	}
+	for _, z := range zones {
+		recs, err := o.db.ListDNSRecords(ctx, z.ID)
+		if err != nil {
+			return ssl.Config{}, err
+		}
+		for _, r := range recs {
+			if r.Name == "www" {
+				hasWWW[z.DomainID] = true
+			}
+		}
+	}
+	taken := map[string]bool{}
+	for _, d := range domains {
+		taken[d.Name] = true
+	}
+	www := map[int64][]string{} // site id -> hosts
+	for _, d := range domains {
+		if d.Kind == db.KindSubdomain || !hasWWW[d.ID] || taken["www."+d.Name] {
+			continue
+		}
+		site := d.ID
+		if d.Kind == db.KindAlias && d.ParentID != nil {
+			site = *d.ParentID
+		}
+		www[site] = append(www[site], d.Name)
+	}
 	cfg := ssl.Config{ACMEEmail: o.cfg.ACMEEmail, PanelDomain: o.cfg.PanelDomain}
 	for _, d := range domains {
 		if d.Kind == db.KindAlias {
@@ -53,7 +86,7 @@ func (o *Orchestrator) BuildEdgeConfig(ctx context.Context) (ssl.Config, error) 
 		}
 		s := ssl.Site{
 			ID: d.ID, Name: d.Name, Aliases: aliases[d.ID], DocumentRoot: d.DocumentRoot,
-			Backend: rt.Backend, SSL: d.SSLEnabled, ForceHTTPS: d.ForceHTTPS, Redirects: rules[d.ID],
+			Backend: rt.Backend, SSL: d.SSLEnabled, ForceHTTPS: d.ForceHTTPS, Redirects: rules[d.ID], WWW: www[d.ID],
 		}
 		switch rt.Backend {
 		case ssl.BackendFastCGI:

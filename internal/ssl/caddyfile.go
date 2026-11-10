@@ -41,6 +41,7 @@ type Site struct {
 	SSL          bool
 	ForceHTTPS   bool
 	Redirects    []Redirect
+	WWW          []string // hosts whose www. name redirects to Name (permanent)
 }
 
 // Redirect rule.
@@ -141,6 +142,9 @@ func renderSite(b *strings.Builder, s Site) error {
 	if !ValidDocumentRoot(s.DocumentRoot) {
 		return fmt.Errorf("invalid document root %q", s.DocumentRoot)
 	}
+	if err := renderWWW(b, s); err != nil {
+		return err
+	}
 	var addrs []string
 	for _, h := range hosts {
 		switch {
@@ -183,5 +187,25 @@ func renderSite(b *strings.Builder, s Site) error {
 		return fmt.Errorf("unknown backend %q", s.Backend)
 	}
 	b.WriteString("}\n\n")
+	return nil
+}
+
+// renderWWW adds www.<host> blocks that redirect to the site's main name.
+func renderWWW(b *strings.Builder, s Site) error {
+	scheme := "https"
+	if !s.SSL {
+		scheme = "http"
+	}
+	for _, h := range s.WWW {
+		w := "www." + h
+		if !ValidHostname(w) || strings.HasPrefix(h, "*.") {
+			return fmt.Errorf("invalid www host %q", w)
+		}
+		addr := w
+		if !s.SSL {
+			addr = "http://" + w
+		}
+		fmt.Fprintf(b, "# site %d www\n%s {\n\timport opx_common\n\tredir %s://%s{uri} 308\n}\n\n", s.ID, addr, scheme, s.Name)
+	}
 	return nil
 }

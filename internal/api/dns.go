@@ -154,6 +154,7 @@ func (s *Server) saveRecord(w http.ResponseWriter, r *http.Request, d *db.Domain
 	}
 	_ = s.db.TouchDNSZone(r.Context(), z.ID)
 	s.dns.Changed()
+	s.applyEdgeAsync() // a www record decides whether the edge serves www.<domain>
 	return true
 }
 
@@ -219,6 +220,7 @@ func (s *Server) handleDeleteRecord(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.db.TouchDNSZone(r.Context(), z.ID)
 	s.dns.Changed()
+	s.applyEdgeAsync() // a www record decides whether the edge serves www.<domain>
 	s.audit(r, "dns.record_deleted", z.Name, rec.Name+" "+rec.Type+" "+rec.Content)
 	w.WriteHeader(http.StatusNoContent)
 }

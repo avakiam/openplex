@@ -66,3 +66,25 @@ func TestValidators(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderWWW(t *testing.T) {
+	out, err := Render(Config{Sites: []Site{
+		{ID: 1, Name: "example.com", Aliases: []string{"example.net"}, Backend: BackendStatic, SSL: true, ForceHTTPS: true, WWW: []string{"example.com", "example.net"}},
+		{ID: 2, Name: "plain.test", Backend: BackendStatic, WWW: []string{"plain.test"}},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"www.example.com {\n\timport opx_common\n\tredir https://example.com{uri} 308\n}",
+		"www.example.net {\n\timport opx_common\n\tredir https://example.com{uri} 308\n}",
+		"http://www.plain.test {\n\timport opx_common\n\tredir http://plain.test{uri} 308\n}",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+	if _, err := Render(Config{Sites: []Site{{ID: 3, Name: "x.test", Backend: BackendStatic, WWW: []string{"x.test {\n}"}}}}); err == nil {
+		t.Error("injected www host rendered")
+	}
+}

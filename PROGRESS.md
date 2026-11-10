@@ -94,7 +94,9 @@ has been verified on the Linux test server. One commit per milestone.
       changing the server address moves the records that used the old one
 - [x] Records: A, AAAA, CNAME, MX, TXT, SRV, NS (sub-delegation), CAA — validated (CNAME exclusivity, host names,
       TXT quoting/splitting, SRV/CAA syntax, TTL 60 s–7 d, 500 per zone), owners edit their own zones, audited;
-      DNS tab per website, admin DNS page with nameservers, registrar/glue instructions and live delegation check
+      DNS tab per website, admin DNS page with nameservers, registrar/glue instructions and a delegation check asked
+      of the parent zone's servers (not the caching system resolver); a zone's www record makes the edge serve
+      www.<domain> as a 308 redirect to the main name with its own certificate
 
 ## M10 — Security & cron
 - [x] Firewall rules (nftables) CRUD + apply with safety rollback — implemented: own table `inet openplex` replaced
@@ -218,3 +220,13 @@ has been verified on the Linux test server. One commit per milestone.
   with the translated message; 7 SSH attempts with unknown users got 10.99.0.2 banned by Fail2Ban (drop in prerouting,
   website unreachable too) and "Unban" in the panel lifted it. Server left as found (firewall off, ufw on). Timed
   block expiry is covered by unit tests only.
+- 2026-11-10 — DNS on the public VPS (v0.9.0, migration v8) with a real domain: the installer upgrade also brought
+  nftables + Fail2Ban (firewall left off, ufw active). PowerDNS 5.0.8 answered on 167.114.71.160 and the public IPv6
+  (systemd-resolved untouched); from outside: SOA/NS/A/AAAA/www/glue correct, `aa` set, UDP and TCP, other domains
+  refused, version hidden; a re-sync without changes kept the SOA serial, adding a TXT published it in seconds
+  (serial +1). At Hostinger: child nameservers ns1/ns2.mailcactus.com → 167.114.71.160, then the domain's
+  nameservers changed to them; Verisign served the new delegation + glue and 1.1.1.1, 8.8.8.8 and 9.9.9.9 resolved
+  mailcactus.com through the VPS. Caddy then got Let's Encrypt certificates for mailcactus.com and
+  www.mailcactus.com (www → 308 to the apex keeping path and query). The panel showed the zone as delegated once the
+  check asked the .com servers instead of OVH's caching resolver. DNS tab tested in the UI on the LAN server
+  (MX added; a bare "mail" target refused with the translated message).

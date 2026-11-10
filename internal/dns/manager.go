@@ -67,7 +67,7 @@ func New(store *db.DB, srv Server, dataDir, apiURL string, log *slog.Logger) *Ma
 	return &Manager{
 		db: store, srv: srv, log: log, dataDir: dataDir, apiURL: apiURL,
 		kick: make(chan struct{}, 1), deleg: map[string]Delegation{},
-		lookupNS: net.DefaultResolver.LookupNS, addrs: hostAddrs,
+		lookupNS: parentNS, addrs: hostAddrs,
 	}
 }
 
@@ -380,7 +380,7 @@ func (m *Manager) UpdateSettings(ctx context.Context, in db.DNSSettings) error {
 	return nil
 }
 
-// Delegation looks up the zone's NS records in the public DNS (cached 5 min).
+// Delegation looks up the zone's delegation at its parent zone (cached 5 min).
 func (m *Manager) Delegation(ctx context.Context, zone string) Delegation {
 	m.mu.Lock()
 	if d, ok := m.deleg[zone]; ok && time.Since(d.Checked) < 5*time.Minute {
