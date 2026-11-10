@@ -127,7 +127,7 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] `scripts/install.sh`: unattended Ubuntu/Debian install (Docker, user, dirs, binary, systemd, firewall)
 - [x] `deploy/openplexd.service` (hardened systemd unit)
 - [ ] Release build (`linux/amd64`, `linux/arm64`) + checksums
-- [ ] Verified end-to-end on the Linux test server
+- [x] Verified end-to-end on the Linux test server and on a clean public VPS
 
 ---
 
@@ -145,7 +145,6 @@ has been verified on the Linux test server. One commit per milestone.
   installer upgrades in place.
   **Bug found & fixed:** systemd `UMask=0027` made site files 0640 → edge 403. The unit now uses
   0022 and the code sets 0755/0644 explicitly (regression test forces umask 077).
-- Pending: Let's Encrypt issuance with a public DNS name (the test server is LAN-only).
 - 2026-11-06 — Databases on the real server: 4 databases for 2 customers provisioned in 22 s
   (first pull included); own-DB read/write OK on MariaDB/PostgreSQL/Redis; cross-tenant access
   denied (MariaDB 1044, Postgres CONNECT revoked incl. maintenance DBs); Redis without password
@@ -166,3 +165,9 @@ has been verified on the Linux test server. One commit per milestone.
   (bash, git, DB clients, internet) removed on disconnect. Closing the tab killed the shell and a
   background `sleep` it had started (Docker does not hang up TTY execs on its own — fixed).
   Open/close audited with duration.
+- 2026-11-10 — Clean public VPS (OVH, Ubuntu 26.04.1, 2 vCPU, 3.7 GiB): `install.sh --binary …
+  --panel-domain <vps hostname>` installed Docker 29.9.3 + OpenPlex in 26 s. Caddy obtained real
+  Let's Encrypt certificates on its own for the panel and two sslip.io sites; HTTP → 308 HTTPS.
+  PHP 8.4 image built in 5 min on 2 vCPU; PHP 8.4.27 site talked to MariaDB 11.8 over PDO with the
+  password injected as an env var. First automatic backup ran. From the internet only 22/80/443
+  answer (2019, 3306, 5432, 6379, 7080, 7081 closed; ufw active); bare-IP HTTPS gets no certificate.
