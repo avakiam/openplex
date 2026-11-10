@@ -4,11 +4,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
 import { Logo } from "@/components/app-shell";
+import { CaptchaWidget } from "@/components/captcha";
 import { LanguageSelect } from "@/components/language-select";
 import { Button, Card, ErrorBox, Field, Input, Spinner } from "@/components/ui";
-import { ApiError, login } from "@/lib/api";
+import { API, ApiError, login } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
+import type { CaptchaProvider } from "@/lib/types";
 
 function safeNext(n: string | null) {
   // Only allow same-site relative paths (no protocol-relative //evil.com).
@@ -19,7 +21,7 @@ function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const { user, ready } = useAuth();
-  const { t } = useT();
+  const { t, locale } = useT();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -27,6 +29,19 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const next = safeNext(params.get("next"));
+  const [captcha, setCaptcha] = useState<{ provider: Exclude<CaptchaProvider, "">; site_key: string } | null>(null);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaPass, setCaptchaPass] = useState<string | undefined>();
+  const [resetSignal, setResetSignal] = useState(0);
+
+  useEffect(() => {
+    fetch(`${API}/auth/captcha`, { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((c: { provider: CaptchaProvider; site_key: string } | null) => {
+        if (c?.provider && c.site_key) setCaptcha({ provider: c.provider, site_key: c.site_key });
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (ready && user) router.replace(next);
@@ -37,9 +52,12 @@ function LoginForm() {
     setBusy(true);
     setError(null);
     try {
-      await login(username, password, needTotp ? code : undefined);
+      await login(username, password, needTotp ? code : undefined, { token: captchaToken, pass: captchaPass });
       router.replace(next);
     } catch (err) {
+      // A token works once: the next attempt needs a new one (or the pass).
+      setResetSignal((n) => n + 1);
+      setCaptchaPass(err instanceof ApiError ? err.captchaPass : undefined);
       if (err instanceof ApiError && err.code === "totp_required") {
         setNeedTotp(true);
       } else {
@@ -97,8 +115,18 @@ function LoginForm() {
             />
           </Field>
         )}
+        {captcha && !captchaPass && (
+          <CaptchaWidget
+            provider={captcha.provider}
+            siteKey={captcha.site_key}
+            lang={locale}
+            resetSignal={resetSignal}
+            onToken={setCaptchaToken}
+            onError={() => setError(t("The anti-robot check could not load. Reload the page and try again."))}
+          />
+        )}
         <ErrorBox error={error} />
-        <Button type="submit" loading={busy} className="w-full">
+        <Button type="submit" loading={busy} disabled={!!captcha && !captchaPass && !captchaToken} className="w-full">
           {needTotp ? (
             <>
               <ShieldCheck /> {t("Verify")}
@@ -115,6 +143,7 @@ function LoginForm() {
               setNeedTotp(false);
               setCode("");
               setError(null);
+              setCaptchaPass(undefined);
             }}
           >
             {t("Back")}

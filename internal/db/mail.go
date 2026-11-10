@@ -10,6 +10,7 @@ import (
 type MailSettings struct {
 	Enabled   bool      `json:"enabled"`
 	Hostname  string    `json:"hostname"` // the server's mail host (MX target, PTR, certificate)
+	Webmail   bool      `json:"webmail"`  // Roundcube on the mail host and webmail.<domain>
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
@@ -51,7 +52,7 @@ func (db *DB) GetMailSettings(ctx context.Context) (*MailSettings, error) {
 		return nil, err
 	}
 	var s MailSettings
-	err := db.sql.QueryRowContext(ctx, `SELECT enabled, hostname, updated_at FROM mail_settings WHERE id = 1`).Scan(&s.Enabled, &s.Hostname, &s.UpdatedAt)
+	err := db.sql.QueryRowContext(ctx, `SELECT enabled, hostname, webmail, updated_at FROM mail_settings WHERE id = 1`).Scan(&s.Enabled, &s.Hostname, &s.Webmail, &s.UpdatedAt)
 	return &s, mapErr(err)
 }
 
@@ -61,7 +62,7 @@ func (db *DB) SaveMailSettings(ctx context.Context, s *MailSettings) error {
 		return err
 	}
 	s.UpdatedAt = now()
-	_, err := db.sql.ExecContext(ctx, `UPDATE mail_settings SET enabled=?, hostname=?, updated_at=? WHERE id=1`, s.Enabled, s.Hostname, s.UpdatedAt)
+	_, err := db.sql.ExecContext(ctx, `UPDATE mail_settings SET enabled=?, hostname=?, webmail=?, updated_at=? WHERE id=1`, s.Enabled, s.Hostname, s.Webmail, s.UpdatedAt)
 	return err
 }
 

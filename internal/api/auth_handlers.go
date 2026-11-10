@@ -49,6 +49,8 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		Username string `json:"username"`
 		Password string `json:"password"`
 		TOTPCode string `json:"totp_code"`
+		Captcha  string `json:"captcha_token"`
+		Pass     string `json:"captcha_pass"` // from a totp_required answer
 	}
 	if !decode(w, r, &in) {
 		return
@@ -56,6 +58,9 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	ip := clientIP(r)
 	if !s.loginLimiter.allow("ip:"+ip) || !s.loginLimiter.allow("user:"+strings.ToLower(in.Username)) {
 		writeErr(w, http.StatusTooManyRequests, "rate_limited", "too many login attempts, try again later")
+		return
+	}
+	if !s.checkLoginCaptcha(w, r, in.Username, in.Captcha, in.Pass) {
 		return
 	}
 	u, err := s.db.GetUserByUsername(r.Context(), in.Username)
@@ -75,13 +80,13 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	if u.TOTPEnabled {
 		if in.TOTPCode == "" {
-			writeErr(w, http.StatusUnauthorized, "totp_required", "two-factor code required")
+			writeJSON(w, http.StatusUnauthorized, apiError{Error: "totp_required", Message: "two-factor code required", CaptchaPass: s.issueCaptchaPass(in.Username)})
 			return
 		}
 		if !auth.ValidateTOTP(u.TOTPSecret, in.TOTPCode) {
 			s.log.Warn("authentication failed", "ip", ip, "user", u.Username)
 			s.audit(r, "auth.totp_failed", u.Username, "")
-			writeErr(w, http.StatusUnauthorized, "totp_invalid", "invalid two-factor code")
+			writeJSON(w, http.StatusUnauthorized, apiError{Error: "totp_invalid", Message: "invalid two-factor code", CaptchaPass: s.issueCaptchaPass(in.Username)})
 			return
 		}
 	}

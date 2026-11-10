@@ -67,5 +67,11 @@
   "Delete this forwarding?": "Vols eliminar aquest reenviament?",
   "Turn off mail for {domain}?": "Vols desactivar el correu de {domain}?",
   "All mailboxes of this domain, their messages and the forwarding are deleted, and its mail DNS records are removed. This cannot be undone.": "S'eliminen totes les bústies d'aquest domini, els seus missatges i els reenviaments, i es treuen els seus registres DNS de correu. No es pot desfer.",
-  "Turn off and delete": "Desactiva i elimina"
+  "Turn off and delete": "Desactiva i elimina",
+  "Webmail": "Webmail",
+  "Webmail (Roundcube)": "Webmail (Roundcube)",
+  "Read and send mail from the browser at the mail host and at webmail.<domain> for domains whose DNS is here.": "Llegir i enviar correu des del navegador a l'amfitrió de correu i a webmail.<domini> per als dominis amb el DNS aquí.",
+  "Webmail running.": "Webmail en marxa.",
+  "The webmail is starting or not running.": "El webmail s'està iniciant o no està en marxa.",
+  "Open webmail": "Obrir el webmail"
 }

@@ -42,12 +42,22 @@ type Snapshot struct {
 	Domains   []DomainConfig
 	Mailboxes []MailboxConfig
 	Aliases   []AliasConfig
+	Master    *MasterConfig // the webmail's master login, when the webmail runs
+}
+
+// MasterConfig is a Dovecot master user: it logs in as any mailbox
+// ("<mailbox>*<name>") but only from Nets.
+type MasterConfig struct {
+	Name string
+	Hash string
+	Nets string // CIDR
 }
 
 var (
 	safeAddr = regexp.MustCompile(`^[a-z0-9._%+-]+@[a-z0-9.-]+$`)
 	safeHash = regexp.MustCompile(`^\{SHA512-CRYPT\}\$6\$[A-Za-z0-9./=$]+$`)
 	safeHost = regexp.MustCompile(`^[a-z0-9.-]+$`)
+	safeNet  = regexp.MustCompile(`^[0-9]{1,3}(\.[0-9]{1,3}){3}/[0-9]{1,2}$`)
 )
 
 // Files renders the configuration files, relative to the config dir. Every
@@ -90,6 +100,16 @@ func Files(s Snapshot) (map[string][]byte, error) {
 		fmt.Fprintf(&dkim, "    %s {\n        path = \"%s/%s\";\n        selector = \"%s\";\n    }\n", d.Name, ContainerConfigDir, key, d.Selector)
 	}
 	dkim.WriteString("}\n")
+	var masters bytes.Buffer
+	if m := s.Master; m != nil {
+		if !safeHost.MatchString(m.Name) || !safeHash.MatchString(m.Hash) || !safeNet.MatchString(m.Nets) {
+			return nil, fmt.Errorf("master user %q: invalid row", m.Name)
+		}
+		// docker-mailserver turns "name|rest" into the passwd-file line
+		// "name:rest"; the sixth field after the password holds extra fields.
+		fmt.Fprintf(&masters, "%s|%s::::::allow_nets=%s\n", m.Name, m.Hash, m.Nets)
+	}
+	out["dovecot-masters.cf"] = masters.Bytes()
 	out["postfix-accounts.cf"] = accounts.Bytes()
 	out["dovecot-quotas.cf"] = quotas.Bytes()
 	out["postfix-virtual.cf"] = virtual.Bytes()

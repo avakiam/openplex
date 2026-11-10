@@ -1,5 +1,5 @@
 "use client";
-import { Forward, KeyRound, Mail, Plus, RefreshCw, Trash2, TriangleAlert } from "lucide-react";
+import { ExternalLink, Forward, KeyRound, Mail, Plus, RefreshCw, Trash2, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -200,6 +200,22 @@ export function MailTab({ domain: d }: { domain: Domain }) {
     ...inv,
     onSuccess: () => setDelBox(null),
   });
+  const openWebmail = useAction(
+    async (b: Mailbox) => {
+      // Opened before the request so pop-up blockers allow it.
+      const tab = window.open("about:blank", "_blank");
+      try {
+        const { url } = await api.post<{ url: string }>(`/domains/${d.id}/mail/mailboxes/${b.id}/webmail`);
+        if (tab) {
+          tab.opener = null;
+          tab.location.href = url;
+        } else window.location.href = url;
+      } catch (e) {
+        tab?.close();
+        throw e;
+      }
+    },
+  );
   const removeAlias = useAction((a: MailAlias) => api.del(`/domains/${d.id}/mail/aliases/${a.id}`), {
     success: t("Forwarding deleted"),
     ...inv,
@@ -264,7 +280,7 @@ export function MailTab({ domain: d }: { domain: Domain }) {
                 <Th>{t("Address")}</Th>
                 <Th>{t("Used")}</Th>
                 <Th>{t("Active")}</Th>
-                <Th className="w-24" />
+                <Th className="w-32" />
               </tr>
             </thead>
             <tbody>
@@ -283,6 +299,18 @@ export function MailTab({ domain: d }: { domain: Domain }) {
                       <Switch checked={b.enabled} aria-label={t("Active")} onCheckedChange={() => toggle.mutate(b)} />
                     </Td>
                     <Td className="whitespace-nowrap text-right">
+                      {data.webmail_url && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label={t("Open webmail")}
+                          title={t("Open webmail")}
+                          disabled={!b.enabled || openWebmail.isPending}
+                          onClick={() => openWebmail.mutate(b)}
+                        >
+                          <ExternalLink />
+                        </Button>
+                      )}
                       <Button size="icon" variant="ghost" aria-label={t("Password and size")} onClick={() => setBox(b)}>
                         <KeyRound />
                       </Button>
@@ -346,6 +374,16 @@ export function MailTab({ domain: d }: { domain: Domain }) {
             <dd className="font-mono">
               {data.hostname || "—"} · 465 · SSL/TLS {t("or")} 587 · STARTTLS
             </dd>
+            {data.webmail_url && (
+              <>
+                <dt className="text-muted-foreground">{t("Webmail")}</dt>
+                <dd className="font-mono">
+                  <a className="hover:underline" href={data.webmail_url} target="_blank" rel="noreferrer">
+                    {data.webmail_url}
+                  </a>
+                </dd>
+              </>
+            )}
           </dl>
         </CardBody>
       </Card>

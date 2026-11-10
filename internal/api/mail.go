@@ -102,6 +102,7 @@ func (s *Server) handleGetDomainMail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out := map[string]any{"enabled": md != nil, "domain": d.Name, "hostname": st.Hostname, "server_enabled": st.Enabled,
+		"webmail_url": mail.WebmailURL(st),
 		"max_mailboxes": mail.MaxMailboxesPerDomain, "mailboxes": []mailboxView{}, "aliases": []*db.MailAlias{}}
 	if md != nil {
 		mbs, err := s.db.ListMailboxes(r.Context(), md.ID)
@@ -429,4 +430,25 @@ func (s *Server) handleDeleteAlias(w http.ResponseWriter, r *http.Request) {
 	s.mail.Changed()
 	s.audit(r, "mail.alias_deleted", a.LocalPart+"@"+d.Name, "")
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// POST /domains/{id}/mail/mailboxes/{mid}/webmail: a one-click webmail link
+// (single use, valid for a couple of minutes) for a mailbox the caller owns.
+func (s *Server) handleWebmailLogin(w http.ResponseWriter, r *http.Request) {
+	md, b := s.loadMailbox(w, r)
+	if b == nil {
+		return
+	}
+	if !b.Enabled {
+		badRequest(w, "turn the mailbox on to open its webmail")
+		return
+	}
+	addr := b.LocalPart + "@" + md.Name
+	url, err := s.mail.WebmailLogin(r.Context(), addr)
+	if err != nil {
+		badRequest(w, err.Error())
+		return
+	}
+	s.audit(r, "mail.webmail_login", addr, "")
+	writeJSON(w, http.StatusOK, map[string]string{"url": url})
 }

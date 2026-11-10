@@ -189,7 +189,9 @@ type ticket struct {
 	exp    time.Time
 }
 
-func (t *ticketStore) issue(userID int64) (string, error) {
+func (t *ticketStore) issue(userID int64) (string, error) { return t.issueFor(userID, 30*time.Second) }
+
+func (t *ticketStore) issueFor(userID int64, ttl time.Duration) (string, error) {
 	b := make([]byte, 24)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
@@ -209,7 +211,7 @@ func (t *ticketStore) issue(userID int64) (string, error) {
 	if len(t.m) > 10000 {
 		return "", errors.New("too many outstanding tickets")
 	}
-	t.m[id] = ticket{userID: userID, exp: now.Add(30 * time.Second)}
+	t.m[id] = ticket{userID: userID, exp: now.Add(ttl)}
 	return id, nil
 }
 

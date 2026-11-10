@@ -27,6 +27,7 @@ import type {
   FileEntry,
   FirewallStatus,
   HostSample,
+  CaptchaSettings,
   MailOverview,
   Redirect,
   Runtime,
@@ -62,13 +63,14 @@ export const keys = {
   dns: ["dns"] as const,
   zone: (id: number) => ["domains", id, "dns"] as const,
   mail: ["mail"] as const,
+  captcha: ["captcha"] as const,
   domainMail: (id: number) => ["domains", id, "mail"] as const,
 };
 
 /** Wraps useMutation with toast feedback and cache invalidation. */
 export function useAction<TArgs, TRes = unknown>(
   fn: (a: TArgs) => Promise<TRes>,
-  opts: { success?: string; invalidate?: readonly (readonly unknown[])[]; onSuccess?: (r: TRes) => void } = {},
+  opts: { success?: string; invalidate?: readonly (readonly unknown[])[]; onSuccess?: (r: TRes) => void; onError?: (e: Error) => void } = {},
 ) {
   const qc = useQueryClient();
   return useMutation({
@@ -78,7 +80,10 @@ export function useAction<TArgs, TRes = unknown>(
       opts.invalidate?.forEach((k) => qc.invalidateQueries({ queryKey: k }));
       opts.onSuccess?.(r);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      toast.error(e.message);
+      opts.onError?.(e);
+    },
   });
 }
 
@@ -253,6 +258,7 @@ export const useZone = (id: number, enabled = true) =>
 
 // ---------- Mail ----------
 
+export const useCaptcha = () => useQuery({ queryKey: keys.captcha, queryFn: () => api.get<CaptchaSettings>("/captcha") });
 export const useMail = () => useQuery({ queryKey: keys.mail, queryFn: () => api.get<MailOverview>("/mail"), refetchInterval: 30_000 });
 
 export const useDomainMail = (id: number, enabled = true) =>

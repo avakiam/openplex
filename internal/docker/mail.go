@@ -11,6 +11,7 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 )
@@ -19,6 +20,9 @@ import (
 const (
 	MailImage     = "mailserver/docker-mailserver:16.0.1"
 	MailContainer = "openplex-mail"
+	// MailNetwork is the internal network between the mail server and the
+	// webmail (the only place the webmail's master login is accepted from).
+	MailNetwork = "openplex_mail"
 )
 
 // MailPorts are published on every host address: SMTP, submissions,
@@ -44,7 +48,10 @@ func (o *Orchestrator) EnsureMail(ctx context.Context, hostname, configDir strin
 		"POSTFIX_MESSAGE_SIZE_LIMIT=52428800",
 		"SSL_TYPE=manual", "SSL_CERT_PATH=/tmp/docker-mailserver/ssl/cert.pem", "SSL_KEY_PATH=/tmp/docker-mailserver/ssl/key.pem",
 	}
-	sum := sha256.Sum256([]byte(MailImage + "|" + hostname + "|" + configDir + "|" + strings.Join(env, ",")))
+	if err := o.ensureNetwork(ctx, MailNetwork, true); err != nil {
+		return err
+	}
+	sum := sha256.Sum256([]byte(MailImage + "|" + hostname + "|" + configDir + "|" + strings.Join(env, ",") + "|net=" + MailNetwork))
 	hash := hex.EncodeToString(sum[:8])
 	c, err := o.findContainer(ctx, MailContainer)
 	if err != nil {
@@ -89,6 +96,10 @@ func (o *Orchestrator) EnsureMail(ctx context.Context, hostname, configDir strin
 	created, err := o.cli.ContainerCreate(ctx, cc, hc, nil, nil, MailContainer)
 	if err != nil {
 		return fmt.Errorf("create mail server: %w", err)
+	}
+	if err := o.cli.NetworkConnect(ctx, MailNetwork, created.ID, &network.EndpointSettings{}); err != nil {
+		_ = o.cli.ContainerRemove(ctx, created.ID, container.RemoveOptions{Force: true})
+		return fmt.Errorf("connect mail server to %s: %w", MailNetwork, err)
 	}
 	if err := o.cli.ContainerStart(ctx, created.ID, container.StartOptions{}); err != nil {
 		_ = o.cli.ContainerRemove(ctx, created.ID, container.RemoveOptions{Force: true})
@@ -144,4 +155,31 @@ func (o *Orchestrator) MailExec(ctx context.Context, cmd ...string) (string, err
 		return out.String(), fmt.Errorf("exit %d: %s", insp.ExitCode, strings.TrimSpace(out.String()))
 	}
 	return out.String(), nil
+}
+
+// NetworkSubnets returns the IPv4 ranges of the mail network (which the
+// webmail reaches the mail server through) and of the edge network (where
+// the reverse proxy in front of the webmail lives). Both are created if missing.
+func (o *Orchestrator) NetworkSubnets(ctx context.Context) (mail, edge string, err error) {
+	if mail, err = o.subnet(ctx, MailNetwork, true); err != nil {
+		return "", "", err
+	}
+	edge, err = o.subnet(ctx, EdgeNetwork, false)
+	return mail, edge, err
+}
+
+func (o *Orchestrator) subnet(ctx context.Context, name string, internal bool) (string, error) {
+	if err := o.ensureNetwork(ctx, name, internal); err != nil {
+		return "", err
+	}
+	n, err := o.cli.NetworkInspect(ctx, name, network.InspectOptions{})
+	if err != nil {
+		return "", fmt.Errorf("inspect %s: %w", name, err)
+	}
+	for _, c := range n.IPAM.Config {
+		if c.Subnet != "" && !strings.Contains(c.Subnet, ":") {
+			return c.Subnet, nil
+		}
+	}
+	return "", fmt.Errorf("network %s has no IPv4 subnet", name)
 }

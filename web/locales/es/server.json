@@ -186,5 +186,13 @@
   "the password contains invalid characters": "la contraseña contiene caracteres no válidos",
   "enter the mail server's host name, such as mail.example.com": "indica el nombre de host del servidor de correo, como mail.example.com",
   "to turn mail on, enter the mail server's host name": "para activar el correo, indica el nombre de host del servidor de correo",
-  "enter between 1 and 50 destination addresses": "indica entre 1 y 50 direcciones de destino"
+  "enter between 1 and 50 destination addresses": "indica entre 1 y 50 direcciones de destino",
+  "please confirm that you are not a robot": "Confirma que no eres un robot",
+  "the captcha could not be checked, try again": "No se ha podido comprobar el captcha; vuelve a intentarlo",
+  "solve the captcha shown here with the new keys before turning it on": "Resuelve el captcha que se muestra con las claves nuevas antes de activarlo",
+  "choose Cloudflare Turnstile, hCaptcha or Google reCAPTCHA": "Elige Cloudflare Turnstile, hCaptcha o Google reCAPTCHA",
+  "enter the site key from the captcha provider": "Introduce la clave del sitio del proveedor de captcha",
+  "enter the secret key from the captcha provider": "Introduce la clave secreta del proveedor de captcha",
+  "turn the mailbox on to open its webmail": "Activa el buzón para abrir su webmail",
+  "the webmail is off": "El webmail está desactivado"
 }

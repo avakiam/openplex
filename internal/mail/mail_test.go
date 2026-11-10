@@ -2,12 +2,18 @@ package mail
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/secrets"
@@ -97,10 +103,10 @@ func TestRecords(t *testing.T) {
 		}
 		return strings.Join(out, ", ")
 	}
-	if got := names(apex); got != "@ MX, @ TXT, opx._domainkey TXT, _dmarc TXT" {
+	if got := names(apex); got != "@ MX, @ TXT, opx._domainkey TXT, _dmarc TXT, webmail CNAME" {
 		t.Errorf("apex = %s", got)
 	}
-	if got := names(sub); got != "shop MX, shop TXT, opx._domainkey.shop TXT, _dmarc.shop TXT" {
+	if got := names(sub); got != "shop MX, shop TXT, opx._domainkey.shop TXT, _dmarc.shop TXT, webmail.shop CNAME" {
 		t.Errorf("subdomain = %s", got)
 	}
 	if apex[0].Source != "mail:7" || apex[0].Content != "mail.example.com" || apex[0].Priority != 10 {
@@ -132,6 +138,18 @@ type fakeServer struct {
 	running  bool
 	hostname string
 	execs    []string
+	webmail  bool
+	version  string
+}
+
+func (f *fakeServer) EnsureWebmail(_ context.Context, _, v string) error {
+	f.webmail, f.version = true, v
+	return nil
+}
+func (f *fakeServer) StopWebmail(context.Context) error   { f.webmail = false; return nil }
+func (f *fakeServer) WebmailRunning(context.Context) bool { return f.webmail }
+func (f *fakeServer) NetworkSubnets(context.Context) (string, string, error) {
+	return "172.30.0.0/16", "172.31.0.0/16", nil
 }
 
 func (f *fakeServer) EnsureMail(_ context.Context, host, _ string) error {
@@ -164,7 +182,7 @@ func TestManager(t *testing.T) {
 	if err := m.UpdateSettings(ctx, db.MailSettings{Enabled: true}); err == nil {
 		t.Error("enabled without a host name")
 	}
-	if err := m.UpdateSettings(ctx, db.MailSettings{Enabled: true, Hostname: "mail.example.com"}); err != nil {
+	if err := m.UpdateSettings(ctx, db.MailSettings{Enabled: true, Hostname: "mail.example.com", Webmail: true}); err != nil {
 		t.Fatal(err)
 	}
 	md, err := m.EnableDomain(ctx, d)
@@ -191,6 +209,24 @@ func TestManager(t *testing.T) {
 	m.Sync(ctx)
 	if st, _ := m.Status(ctx); st.LastError != "" || !srv.running || srv.hostname != "mail.example.com" || st.Certificate != "self-signed" {
 		t.Fatalf("status = %+v", st)
+	}
+	if !srv.webmail || srv.version == "" {
+		t.Error("webmail not started")
+	}
+	masters, _ := os.ReadFile(filepath.Join(dir, "mail", "config", "dovecot-masters.cf"))
+	if !strings.HasPrefix(string(masters), "opx-webmail|{SHA512-CRYPT}$6$") || !strings.HasSuffix(string(masters), "::::::allow_nets=172.30.0.0/16\n") {
+		t.Errorf("masters = %q", masters)
+	}
+	conf, _ := os.ReadFile(filepath.Join(dir, "webmail", "config", "openplex.inc.php"))
+	if !strings.Contains(string(conf), "$config['proxy_whitelist'] = ['172.31.0.0/16'];") || strings.Contains(string(conf), "openplex_captcha") {
+		t.Errorf("webmail config = %s", conf)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "webmail", "plugin", "openplex", "openplex.php")); err != nil {
+		t.Error("plugin not written:", err)
+	}
+	link, err := m.WebmailLogin(ctx, "info@example.com")
+	if err != nil || !strings.HasPrefix(link, "https://mail.example.com/?_task=login&_opx=") {
+		t.Errorf("webmail link = %q %v", link, err)
 	}
 	acc, _ := os.ReadFile(filepath.Join(dir, "mail", "config", "postfix-accounts.cf"))
 	if !strings.Contains(string(acc), "info@example.com|") || strings.Contains(string(acc), "off@") {
@@ -228,7 +264,57 @@ func TestManager(t *testing.T) {
 	}
 	_ = m.UpdateSettings(ctx, db.MailSettings{Hostname: "mx.example.com"})
 	m.Sync(ctx)
-	if srv.running {
+	if srv.running || srv.webmail {
 		t.Error("server still running after turning mail off")
+	}
+}
+
+func TestTicket(t *testing.T) {
+	key := strings.Repeat("ab", 32)
+	now := time.Unix(1700000000, 0)
+	tk, err := Ticket(key, "info@example.com", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, sig, ok := strings.Cut(tk, ".")
+	if !ok {
+		t.Fatalf("ticket = %q", tk)
+	}
+	raw, _ := hex.DecodeString(key)
+	mac := hmac.New(sha256.New, raw)
+	mac.Write([]byte(p))
+	if base64.RawURLEncoding.EncodeToString(mac.Sum(nil)) != sig {
+		t.Error("bad signature")
+	}
+	body, _ := base64.RawURLEncoding.DecodeString(p)
+	var v struct {
+		U string
+		E int64
+		N string
+	}
+	if json.Unmarshal(body, &v) != nil || v.U != "info@example.com" || v.E != now.Add(TicketTTL).Unix() || len(v.N) != 32 {
+		t.Errorf("payload = %s", body)
+	}
+	if _, err := Ticket("zz", "a@b.c", now); err == nil {
+		t.Error("bad key accepted")
+	}
+}
+
+func TestWebmailConfig(t *testing.T) {
+	k := &webmailKeys{DESKey: "x'y", SSOKey: "ab", MasterPassword: `p\w`, MasterHash: "h"}
+	c, err := webmailConfig(k, "172.30.0.0/16", "172.31.0.0/16", &WebmailCaptcha{Provider: "turnstile", SiteKey: "0x4AAAAAAAsite", Secret: "0x4AAAAAAAsecret"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`$config['des_key'] = 'x\'y';`, `$config['openplex_master_password'] = 'p\\w';`, `'provider' => 'turnstile'`} {
+		if !strings.Contains(string(c), want) {
+			t.Errorf("config lacks %s:\n%s", want, c)
+		}
+	}
+	if _, err := webmailConfig(k, "172.30.0.0/16'];", "172.31.0.0/16", nil); err == nil {
+		t.Error("bad network accepted")
+	}
+	if _, err := webmailConfig(k, "172.30.0.0/16", "172.31.0.0/16", &WebmailCaptcha{Provider: "turnstile", SiteKey: "a'b", Secret: "0x4AAAAAAAsecret"}); err == nil {
+		t.Error("bad site key accepted")
 	}
 }

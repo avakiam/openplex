@@ -115,5 +115,15 @@ func Records(prefix, host, selector, dkim string, domainID int64) []db.DNSRecord
 		{Name: at("@"), Type: "TXT", Content: "v=spf1 mx ~all", TTL: 3600, Source: src},
 		{Name: at(selector + "._domainkey"), Type: "TXT", Content: dkim, TTL: 3600, Source: src},
 		{Name: at("_dmarc"), Type: "TXT", Content: "v=DMARC1; p=none", TTL: 3600, Source: src},
+		WebmailRecord(prefix, host, domainID),
 	}
+}
+
+// WebmailRecord points webmail.<domain> at the mail host, which serves the webmail.
+func WebmailRecord(prefix, host string, domainID int64) db.DNSRecord {
+	name := "webmail"
+	if prefix != "" {
+		name += "." + prefix
+	}
+	return db.DNSRecord{Name: name, Type: "CNAME", Content: host, TTL: 3600, Source: Source(domainID)}
 }

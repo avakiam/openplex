@@ -56,7 +56,10 @@ type Config struct {
 	ACMEEmail   string
 	PanelDomain string // optional hostname proxied to openplexd
 	MailHost    string // mail server host: served so Caddy obtains its certificate
-	Sites       []Site
+	// Webmail, when on, is served on MailHost and on WebmailHosts.
+	WebmailUpstream string
+	WebmailHosts    []string
+	Sites           []Site
 }
 
 var (
@@ -130,7 +133,28 @@ func Render(c Config) (string, error) {
 		if !ValidHostname(c.MailHost) {
 			return "", fmt.Errorf("invalid mail host %q", c.MailHost)
 		}
-		fmt.Fprintf(&b, "# mail server (certificate for SMTP/IMAP)\n%s {\n\timport opx_common\n\trespond \"This is the mail server. Use it in your e-mail app.\" 200\n}\n\n", c.MailHost)
+		if c.WebmailUpstream == "" {
+			fmt.Fprintf(&b, "# mail server (certificate for SMTP/IMAP)\n%s {\n\timport opx_common\n\trespond \"This is the mail server. Use it in your e-mail app.\" 200\n}\n\n", c.MailHost)
+		}
+	}
+	if c.WebmailUpstream != "" {
+		if !upstreamRe.MatchString(c.WebmailUpstream) {
+			return "", fmt.Errorf("invalid webmail upstream %q", c.WebmailUpstream)
+		}
+		hosts := append([]string(nil), c.WebmailHosts...)
+		sort.Strings(hosts)
+		if c.MailHost != "" {
+			hosts = append([]string{c.MailHost}, hosts...)
+		}
+		for _, h := range hosts {
+			if !ValidHostname(h) || strings.HasPrefix(h, "*.") {
+				return "", fmt.Errorf("invalid webmail host %q", h)
+			}
+		}
+		if len(hosts) > 0 {
+			// The mail host also gives SMTP/IMAP their certificate.
+			fmt.Fprintf(&b, "# webmail\n%s {\n\timport opx_common\n\trequest_body {\n\t\tmax_size 30MB\n\t}\n\treverse_proxy %s\n}\n\n", strings.Join(hosts, ", "), c.WebmailUpstream)
+		}
 	}
 	// Catch-all: plain HTTP to a hostname nobody configured (or to the bare
 	// IP) gets a clear 404 instead of Caddy's empty 200. Host-specific blocks

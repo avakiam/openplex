@@ -11,6 +11,8 @@ export class ApiError extends Error {
     public status: number,
     public code: string,
     message: string,
+    /** Lets the two-factor step skip a second captcha (login only). */
+    public captchaPass?: string,
   ) {
     super(message);
   }
@@ -55,14 +57,16 @@ function adopt(t: TokenResponse): Session {
 async function parseError(res: Response): Promise<ApiError> {
   let code = "http_" + res.status;
   let message = res.statusText || t("Request failed");
+  let captchaPass: string | undefined;
   try {
     const body = await res.json();
     code = body.error ?? code;
     message = body.message ?? message;
+    captchaPass = body.captcha_pass || undefined;
   } catch {
     /* non-JSON error body */
   }
-  return new ApiError(res.status, code, tServer(message));
+  return new ApiError(res.status, code, tServer(message), captchaPass);
 }
 
 /** Exchanges the refresh cookie for a new access token (deduplicated). */
@@ -90,12 +94,23 @@ async function token(): Promise<string | null> {
   return s?.accessToken ?? null;
 }
 
-export async function login(username: string, password: string, totpCode?: string) {
+export interface LoginCaptcha {
+  token?: string; // solved widget
+  pass?: string; // from a totp_required answer
+}
+
+export async function login(username: string, password: string, totpCode?: string, captcha?: LoginCaptcha) {
   const res = await fetch(`${API}/auth/login`, {
     method: "POST",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password, totp_code: totpCode || undefined }),
+    body: JSON.stringify({
+      username,
+      password,
+      totp_code: totpCode || undefined,
+      captcha_token: captcha?.token || undefined,
+      captcha_pass: captcha?.pass || undefined,
+    }),
   });
   if (!res.ok) throw await parseError(res);
   return adopt(await res.json()).user;

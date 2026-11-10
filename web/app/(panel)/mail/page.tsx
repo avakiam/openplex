@@ -1,5 +1,5 @@
 "use client";
-import { CircleCheck, Mail, ShieldCheck, TriangleAlert } from "lucide-react";
+import { CircleCheck, ExternalLink, Mail, ShieldCheck, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -12,9 +12,9 @@ import { ago } from "@/lib/utils";
 
 function SettingsCard({ st }: { st: MailStatus }) {
   const { t } = useT();
-  const [f, setF] = useState<MailSettings>({ enabled: st.enabled, hostname: st.hostname });
-  const key = `${st.enabled}|${st.hostname}`;
-  useEffect(() => setF({ enabled: st.enabled, hostname: st.hostname }), [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [f, setF] = useState<MailSettings>({ enabled: st.enabled, hostname: st.hostname, webmail: st.webmail });
+  const key = `${st.enabled}|${st.hostname}|${st.webmail}`;
+  useEffect(() => setF({ enabled: st.enabled, hostname: st.hostname, webmail: st.webmail }), [key]); // eslint-disable-line react-hooks/exhaustive-deps
   const save = useAction(() => api.put("/mail/settings", f), { success: t("Mail settings saved"), invalidate: [keys.mail] });
   return (
     <Card>
@@ -36,6 +36,15 @@ function SettingsCard({ st }: { st: MailStatus }) {
         <Field label={t("Mail server host name")} hint={t("Every mail domain's MX points here, and e-mail apps connect to it. It gets its own certificate.")}>
           <Input className="font-mono" placeholder="mail.example.com" value={f.hostname} onChange={(e) => setF({ ...f, hostname: e.target.value })} />
         </Field>
+        <label className="flex items-start gap-3">
+          <Switch checked={f.webmail} onCheckedChange={(v) => setF({ ...f, webmail: v })} className="mt-0.5" aria-label={t("Webmail")} />
+          <span>
+            <span className="block font-medium">{t("Webmail (Roundcube)")}</span>
+            <span className="text-sm text-muted-foreground">
+              {t("Read and send mail from the browser at the mail host and at webmail.<domain> for domains whose DNS is here.")}
+            </span>
+          </span>
+        </label>
         <ErrorBox error={save.error} />
         <div className="flex justify-end">
           <Button type="submit" loading={save.isPending}>
@@ -96,6 +105,16 @@ function StatusCard({ st }: { st: MailStatus }) {
                   })}
               {st.ptr.length > 0 && <span className="block font-mono text-xs text-muted-foreground">{st.ptr.join(" · ")}</span>}
             </Check>
+            {st.webmail && st.enabled && (
+              <Check ok={st.webmail_running}>
+                {st.webmail_running ? t("Webmail running.") : t("The webmail is starting or not running.")}{" "}
+                {st.webmail_url && (
+                  <a className="inline-flex items-center gap-1 font-medium hover:underline" href={st.webmail_url} target="_blank" rel="noreferrer">
+                    {st.webmail_url.replace(/^https:\/\/|\/$/g, "")} <ExternalLink className="size-3" />
+                  </a>
+                )}
+              </Check>
+            )}
             <Check ok={st.certificate === "letsencrypt"}>
               {st.certificate === "letsencrypt"
                 ? t("Trusted certificate for {host}.", { host: st.hostname })

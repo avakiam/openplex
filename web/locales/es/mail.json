@@ -67,5 +67,11 @@
   "Delete this forwarding?": "¿Eliminar este reenvío?",
   "Turn off mail for {domain}?": "¿Desactivar el correo de {domain}?",
   "All mailboxes of this domain, their messages and the forwarding are deleted, and its mail DNS records are removed. This cannot be undone.": "Se eliminan todos los buzones de este dominio, sus mensajes y los reenvíos, y se quitan sus registros DNS de correo. No se puede deshacer.",
-  "Turn off and delete": "Desactivar y eliminar"
+  "Turn off and delete": "Desactivar y eliminar",
+  "Webmail": "Webmail",
+  "Webmail (Roundcube)": "Webmail (Roundcube)",
+  "Read and send mail from the browser at the mail host and at webmail.<domain> for domains whose DNS is here.": "Leer y enviar correo desde el navegador en el host de correo y en webmail.<dominio> para los dominios cuyo DNS está aquí.",
+  "Webmail running.": "Webmail en marcha.",
+  "The webmail is starting or not running.": "El webmail se está iniciando o no está en marcha.",
+  "Open webmail": "Abrir webmail"
 }

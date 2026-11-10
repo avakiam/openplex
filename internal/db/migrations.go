@@ -308,6 +308,19 @@ CREATE TABLE mail_aliases (
 	UNIQUE (mail_domain_id, local_part)
 );
 `,
+	// v10: webmail (Roundcube) and login captchas.
+	`
+ALTER TABLE mail_settings ADD COLUMN webmail INTEGER NOT NULL DEFAULT 1;
+CREATE TABLE captcha_settings (
+	id         INTEGER PRIMARY KEY CHECK (id = 1),
+	provider   TEXT NOT NULL DEFAULT '',
+	site_key   TEXT NOT NULL DEFAULT '',
+	secret_enc TEXT NOT NULL DEFAULT '',
+	panel      INTEGER NOT NULL DEFAULT 0,
+	webmail    INTEGER NOT NULL DEFAULT 0,
+	updated_at TIMESTAMP NOT NULL
+);
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

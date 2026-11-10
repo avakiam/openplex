@@ -407,6 +407,7 @@ export interface DNSOverview {
 export interface MailSettings {
   enabled: boolean;
   hostname: string;
+  webmail: boolean;
 }
 
 export interface MailStatus extends MailSettings {
@@ -420,6 +421,19 @@ export interface MailStatus extends MailSettings {
   ptr: string[];
   ptr_ok: boolean;
   forward: string[];
+  webmail_running: boolean;
+  webmail_url: string;
+}
+
+export type CaptchaProvider = "" | "turnstile" | "hcaptcha" | "recaptcha";
+
+export interface CaptchaSettings {
+  provider: CaptchaProvider;
+  site_key: string;
+  secret_set: boolean;
+  panel: boolean;
+  webmail: boolean;
+  disabled_by_config: boolean;
 }
 
 export interface MailOverview {
@@ -448,6 +462,7 @@ export interface DomainMail {
   domain: string;
   hostname: string;
   server_enabled: boolean;
+  webmail_url: string;
   max_mailboxes: number;
   mailboxes: Mailbox[];
   aliases: MailAlias[];

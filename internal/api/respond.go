@@ -16,6 +16,8 @@ import (
 type apiError struct {
 	Error   string `json:"error"`
 	Message string `json:"message"`
+	// CaptchaPass lets the two-factor step skip a second captcha.
+	CaptchaPass string `json:"captcha_pass,omitempty"`
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

@@ -82,14 +82,20 @@ has been verified on the Linux test server. One commit per milestone.
       one server-wide mail host (MX target, PTR, its own Let's Encrypt certificate via the edge, self-signed until then),
       SRS for forwards, spoofing protection, nothing on Docker networks trusted; files rendered from the DB and picked
       up by the container without restarts (only rewritten when they change)
-- [ ] Roundcube webmail
+- [x] Roundcube webmail (1.7.6, SQLite in a volume) behind the edge on the mail host and on webmail.<domain> (a CNAME
+      added to zones hosted here); reaches Dovecot/Postfix over an internal Docker network; can be turned off
 - [x] Mail domains (per website, alias or subdomain), mailboxes (SHA512-CRYPT, 10–128 chars, quota, enable/disable,
       password change), aliases/forwarding (to local or external addresses), usage from Dovecot, 200 each per domain;
       owners manage their own; deleting a mailbox, turning mail off or deleting the website removes the stored mail
 - [x] DKIM key per domain (RSA 2048, encrypted in the DB), MX/SPF/DKIM/DMARC added to the zone (an existing MX, SPF or
       DMARC is kept), moved when the mail host changes, removed when mail is turned off; mail host address generated in
       its zone; admin page checks forward DNS, reverse DNS (PTR) and the certificate
-- [ ] Webmail one-click login
+- [x] Webmail one-click login: the panel signs a single-use ticket (HMAC, 2 min) for a mailbox the user owns; the
+      OpenPlex Roundcube plugin logs in with a Dovecot master user that only works from the webmail's network
+      (allow_nets); spoofing protection still applies to mail sent that way
+- [x] Login captcha (Cloudflare Turnstile, hCaptcha or Google reCAPTCHA v2) for the panel and the webmail, one set of
+      keys, secret encrypted; turning it on needs a token solved with the new keys; 2FA step skips a second captcha;
+      `OPENPLEX_CAPTCHA=false` switches the panel's off if a key breaks
 
 ## M9 — DNS
 - [x] PowerDNS 5.0.8 container (gsqlite3 in a volume, API on 127.0.0.1:7082 with a generated key), only while
@@ -250,3 +256,12 @@ has been verified on the Linux test server. One commit per milestone.
   Reverse DNS of the IPv4 and IPv6 set to mail.mailcactus.com at OVH (1.1.1.1 and 8.8.8.8 answer it at once; the
   host's own OVH resolver keeps the old PTR for its 24 h TTL, so the panel's PTR check turns green a day later).
   mail-tester.com: 10/10 — SPF pass, DKIM pass (2048-bit, s=opx), DMARC pass, rDNS and HELO match, no blocklists.
+- 2026-11-10 — Webmail and login captcha on the VPS (v0.11.0, migration v10). Upgrading recreated the mail server on
+  the new internal network and started Roundcube 1.7.6; saving the mail settings added webmail.mailcactus.com
+  (CNAME) and Caddy issued certificates for both webmail hosts. The master login is refused from the Internet on 993
+  and accepted from the mail network, where Postfix still refuses sending as another address. One-click link from
+  the panel → straight into the inbox; replaying the same link is refused ("expired"). Captcha with Cloudflare's
+  Turnstile test keys: saving with an always-failing secret or without a test token refused; panel login without a
+  token refused, with one accepted; the webmail login says "please confirm that you are not a robot" without it and
+  checks the password with it; the one-click link skips it. Widgets render (in Spanish) on both login pages and in
+  the settings tab. Test keys removed afterwards.

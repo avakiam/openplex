@@ -229,8 +229,8 @@ func (db *DB) DeleteDNSRecordsBySource(ctx context.Context, source string) error
 	return err
 }
 
-// RetargetMX points the MX records a module added at a new host.
+// RetargetMX points the MX (and CNAME) records a module added at a new host.
 func (db *DB) RetargetMX(ctx context.Context, source, host string) error {
-	_, err := db.sql.ExecContext(ctx, `UPDATE dns_records SET content=?, updated_at=? WHERE source=? AND type='MX'`, host, now(), source)
+	_, err := db.sql.ExecContext(ctx, `UPDATE dns_records SET content=?, updated_at=? WHERE source=? AND type IN ('MX', 'CNAME')`, host, now(), source)
 	return err
 }

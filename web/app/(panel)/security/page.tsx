@@ -2,6 +2,7 @@
 import { Ban, Globe, Info, Plus, RotateCcw, Shield, ShieldAlert, ShieldCheck, ShieldOff, Trash2, TriangleAlert, Undo2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { CaptchaSettingsCard } from "@/components/captcha-settings";
 import {
   Badge,
   Button,
@@ -442,6 +443,7 @@ export default function SecurityPage() {
                 {blocked > 0 && <Badge className="ml-1.5">{blocked}</Badge>}
               </TabsTrigger>
               <TabsTrigger value="fail2ban">Fail2Ban</TabsTrigger>
+              <TabsTrigger value="captcha">{t("Captcha")}</TabsTrigger>
             </TabsList>
             <TabsContent value="rules" className="mt-4">
               {st.available ? (
@@ -467,6 +469,9 @@ export default function SecurityPage() {
             </TabsContent>
             <TabsContent value="fail2ban" className="mt-4">
               <Fail2BanTab />
+            </TabsContent>
+            <TabsContent value="captcha" className="mt-4">
+              <CaptchaSettingsCard />
             </TabsContent>
           </Tabs>
         </>

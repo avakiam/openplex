@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"openplex.dev/openplex/internal/auth"
+	"openplex.dev/openplex/internal/captcha"
 	"openplex.dev/openplex/internal/config"
 	"openplex.dev/openplex/internal/cron"
 	"openplex.dev/openplex/internal/db"
@@ -42,8 +43,10 @@ type Server struct {
 	ui       http.Handler
 	version  string
 
-	loginLimiter *limiter
-	tickets      ticketStore
+	loginLimiter  *limiter
+	tickets       ticketStore
+	captchaPasses ticketStore // captcha solved, password right: the 2FA step may skip it
+	captcha       *captcha.Verifier
 
 	baseCtx context.Context
 	bg      sync.WaitGroup
@@ -79,6 +82,7 @@ func New(o Options) *Server {
 		dns:          o.DNS,
 		mail:         o.Mail,
 		loginLimiter: newLimiter(10, 5*time.Minute),
+		captcha:      captcha.NewVerifier(),
 		baseCtx:      o.BaseContext,
 	}
 }
@@ -94,6 +98,7 @@ func (s *Server) Handler() http.Handler {
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/system/health", s.handleHealth)
 		r.Post("/auth/login", s.handleLogin)
+		r.Get("/auth/captcha", s.handleLoginCaptcha)
 		r.Post("/auth/refresh", s.handleRefresh)
 		r.Post("/auth/logout", s.handleLogout)
 
@@ -159,6 +164,7 @@ func (s *Server) Handler() http.Handler {
 				r.Post("/mail/mailboxes", s.handleCreateMailbox)
 				r.Patch("/mail/mailboxes/{mid}", s.handleUpdateMailbox)
 				r.Delete("/mail/mailboxes/{mid}", s.handleDeleteMailbox)
+				r.Post("/mail/mailboxes/{mid}/webmail", s.handleWebmailLogin)
 				r.Post("/mail/aliases", s.handleCreateAlias)
 				r.Patch("/mail/aliases/{aid}", s.handleUpdateAlias)
 				r.Delete("/mail/aliases/{aid}", s.handleDeleteAlias)
@@ -211,6 +217,8 @@ func (s *Server) Handler() http.Handler {
 				r.Put("/dns/settings", s.handlePutDNSSettings)
 				r.Get("/mail", s.handleGetMail)
 				r.Put("/mail/settings", s.handlePutMailSettings)
+				r.Get("/captcha", s.handleGetCaptcha)
+				r.Put("/captcha", s.handlePutCaptcha)
 				r.Post("/fail2ban/unban", s.handleFail2BanUnban)
 			})
 		})

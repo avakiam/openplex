@@ -33,6 +33,11 @@ type Server interface {
 	StopMail(ctx context.Context) error
 	MailStatus(ctx context.Context) (running bool, health string)
 	MailExec(ctx context.Context, cmd ...string) (string, error)
+	// Webmail (Roundcube), reached through the edge.
+	EnsureWebmail(ctx context.Context, dir, version string) error
+	StopWebmail(ctx context.Context) error
+	WebmailRunning(ctx context.Context) bool
+	NetworkSubnets(ctx context.Context) (mail, edge string, err error)
 }
 
 // DNS is the part of the DNS manager mail needs.
@@ -54,6 +59,8 @@ type Status struct {
 	PTR         []string   `json:"ptr"`     // reverse DNS of the server addresses
 	PTROK       bool       `json:"ptr_ok"`  // every address points back at the hostname
 	Forward     []string   `json:"forward"` // what the hostname resolves to
+	WebmailUp   bool       `json:"webmail_running"`
+	WebmailURL  string     `json:"webmail_url"`
 }
 
 // Manager keeps docker-mailserver in sync with the database.
@@ -64,6 +71,7 @@ type Manager struct {
 	box       *secrets.Box
 	log       *slog.Logger
 	configDir string // host path mounted as /tmp/docker-mailserver
+	webDir    string // the webmail's plugin and configuration
 	certDir   string // Caddy's certificate store on the host
 	edge      func() // re-renders the edge (the mail host gets a certificate there)
 	kick      chan struct{}
@@ -80,6 +88,7 @@ func New(store *db.DB, srv Server, d DNS, box *secrets.Box, dataDir, caddyDir st
 	return &Manager{
 		db: store, srv: srv, dns: d, box: box, log: log, edge: edge,
 		configDir: filepath.Join(dataDir, "mail", "config"),
+		webDir:    filepath.Join(dataDir, "webmail"),
 		certDir:   filepath.Join(caddyDir, "data", "caddy", "certificates"),
 		kick:      make(chan struct{}, 1), resolver: net.DefaultResolver,
 	}
@@ -140,6 +149,11 @@ func (m *Manager) sync(ctx context.Context) error {
 		return errors.New("Docker is not available on this server.")
 	}
 	if !s.Enabled {
+		if m.srv.WebmailRunning(ctx) {
+			if err := m.srv.StopWebmail(ctx); err != nil {
+				return err
+			}
+		}
 		if running, _ := m.srv.MailStatus(ctx); running {
 			return m.srv.StopMail(ctx)
 		}
@@ -148,6 +162,17 @@ func (m *Manager) sync(ctx context.Context) error {
 	snap, err := m.snapshot(ctx)
 	if err != nil {
 		return err
+	}
+	var keys *webmailKeys
+	var mailNet, edgeNet string
+	if s.Webmail {
+		if keys, err = loadKeys(filepath.Join(m.webDir, "keys.json")); err != nil {
+			return fmt.Errorf("webmail keys: %w", err)
+		}
+		if mailNet, edgeNet, err = m.srv.NetworkSubnets(ctx); err != nil {
+			return err
+		}
+		snap.Master = &MasterConfig{Name: MasterUser, Hash: keys.MasterHash, Nets: mailNet}
 	}
 	files, err := Files(snap)
 	if err != nil {
@@ -159,7 +184,70 @@ func (m *Manager) sync(ctx context.Context) error {
 	if _, err := WriteFiles(m.configDir, files); err != nil {
 		return fmt.Errorf("write mail configuration: %w", err)
 	}
-	return m.srv.EnsureMail(ctx, s.Hostname, m.configDir)
+	if err := m.srv.EnsureMail(ctx, s.Hostname, m.configDir); err != nil {
+		return err
+	}
+	if !s.Webmail {
+		if m.srv.WebmailRunning(ctx) {
+			return m.srv.StopWebmail(ctx)
+		}
+		return nil
+	}
+	wc, err := m.webmailCaptcha(ctx)
+	if err != nil {
+		return err
+	}
+	conf, err := webmailConfig(keys, mailNet, edgeNet, wc)
+	if err != nil {
+		return err
+	}
+	version, err := writeWebmail(m.webDir, conf)
+	if err != nil {
+		return fmt.Errorf("write webmail configuration: %w", err)
+	}
+	return m.srv.EnsureWebmail(ctx, m.webDir, version)
+}
+
+// webmailCaptcha is the captcha the webmail asks for, if any.
+func (m *Manager) webmailCaptcha(ctx context.Context) (*WebmailCaptcha, error) {
+	c, err := m.db.GetCaptchaSettings(ctx)
+	if err != nil || !c.Webmail || c.Provider == "" {
+		return nil, err
+	}
+	secret, err := m.box.Open(c.SecretEnc)
+	if err != nil {
+		return nil, fmt.Errorf("captcha secret: %w", err)
+	}
+	return &WebmailCaptcha{Provider: c.Provider, SiteKey: c.SiteKey, Secret: secret}, nil
+}
+
+// WebmailURL is where the webmail is served (the mail host), "" when off.
+func WebmailURL(s *db.MailSettings) string {
+	if !s.Enabled || !s.Webmail || s.Hostname == "" {
+		return ""
+	}
+	return "https://" + s.Hostname + "/"
+}
+
+// WebmailLogin returns a one-click login link for a mailbox address.
+func (m *Manager) WebmailLogin(ctx context.Context, address string) (string, error) {
+	s, err := m.db.GetMailSettings(ctx)
+	if err != nil {
+		return "", err
+	}
+	base := WebmailURL(s)
+	if base == "" {
+		return "", errors.New("the webmail is off")
+	}
+	keys, err := loadKeys(filepath.Join(m.webDir, "keys.json"))
+	if err != nil {
+		return "", err
+	}
+	t, err := Ticket(keys.SSOKey, address, time.Now())
+	if err != nil {
+		return "", err
+	}
+	return base + "?_task=login&_opx=" + t, nil
 }
 
 func (m *Manager) snapshot(ctx context.Context) (Snapshot, error) {
@@ -259,7 +347,9 @@ func (m *Manager) Status(ctx context.Context) (*Status, error) {
 	st := &Status{MailSettings: *s, Available: m.srv != nil, Certificate: "none", ServerIPs: []string{}, PTR: []string{}, Forward: []string{}}
 	if m.srv != nil {
 		st.Running, st.Health = m.srv.MailStatus(ctx)
+		st.WebmailUp = m.srv.WebmailRunning(ctx)
 	}
+	st.WebmailURL = WebmailURL(s)
 	if s.Hostname != "" {
 		if _, _, ok := m.caddyCert(s.Hostname); ok {
 			st.Certificate = "letsencrypt"
@@ -325,12 +415,51 @@ func (m *Manager) UpdateSettings(ctx context.Context, in db.MailSettings) error 
 			}
 		}
 	}
+	if in.Webmail {
+		if err := m.addWebmailRecords(ctx, in.Hostname); err != nil {
+			m.log.Warn("mail: webmail records", "err", err)
+		}
+	}
 	m.Changed()
 	if m.dns != nil {
 		m.dns.Changed()
 	}
 	if m.edge != nil {
 		m.edge()
+	}
+	return nil
+}
+
+// addWebmailRecords adds webmail.<domain> to the zones of mail domains that
+// don't have that name yet (domains whose mail was on before the webmail).
+func (m *Manager) addWebmailRecords(ctx context.Context, host string) error {
+	if m.dns == nil || host == "" {
+		return nil
+	}
+	doms, err := m.db.ListMailDomains(ctx)
+	if err != nil {
+		return err
+	}
+	for _, d := range doms {
+		z, err := m.dns.ZoneFor(ctx, d.Name)
+		if err != nil || z == nil {
+			continue
+		}
+		existing, err := m.db.ListDNSRecords(ctx, z.ID)
+		if err != nil {
+			return err
+		}
+		prefix := strings.TrimSuffix(strings.TrimSuffix(d.Name, z.Name), ".")
+		r := WebmailRecord(prefix, host, d.DomainID)
+		if slices.ContainsFunc(existing, func(e db.DNSRecord) bool { return clashes(e, r) }) {
+			continue
+		}
+		r.ZoneID = z.ID
+		id := d.DomainID
+		r.DomainID = &id
+		if err := m.db.CreateDNSRecords(ctx, []db.DNSRecord{r}); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -405,6 +534,8 @@ func clashes(e, r db.DNSRecord) bool {
 		return false
 	}
 	switch {
+	case r.Type == "CNAME":
+		return true // a CNAME can't share its name with anything
 	case r.Type == "MX":
 		return e.Type == "MX" || e.Type == "CNAME"
 	case strings.HasPrefix(r.Content, "v=spf1"):

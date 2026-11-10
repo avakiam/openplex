@@ -26,6 +26,7 @@ type Config struct {
 	RefreshTTL   time.Duration
 	EnableDocker bool
 	Firewall     bool // manage the host firewall (nftables)
+	Captcha      bool // ask the configured captcha on the login page (false: recovery switch)
 
 	Secret []byte // HMAC key for JWTs, loaded from DataDir/secret.key
 }
@@ -55,6 +56,7 @@ func Load(args []string) (*Config, error) {
 	fsFlags.BoolVar(&c.Dev, "dev", envBool("OPENPLEX_DEV", false), "development mode (text logs, permissive CORS)")
 	fsFlags.BoolVar(&c.EnableDocker, "docker", envBool("OPENPLEX_DOCKER", true), "enable the Docker orchestrator")
 	fsFlags.BoolVar(&c.Firewall, "firewall", envBool("OPENPLEX_FIREWALL", true), "manage the host firewall (nftables table inet openplex)")
+	fsFlags.BoolVar(&c.Captcha, "captcha", envBool("OPENPLEX_CAPTCHA", true), "ask the configured captcha on the panel login (false turns it off, e.g. after a wrong key)")
 	fsFlags.DurationVar(&c.AccessTTL, "access-ttl", 15*time.Minute, "access token lifetime")
 	fsFlags.DurationVar(&c.RefreshTTL, "refresh-ttl", 30*24*time.Hour, "refresh token lifetime")
 	if err := fsFlags.Parse(args); err != nil {

@@ -44,6 +44,7 @@ func (o *Orchestrator) BuildEdgeConfig(ctx context.Context) (ssl.Config, error) 
 	// www.<domain> is served (as a redirect) when the domain's DNS zone has a
 	// www record and that name is not a website or alias of its own.
 	hasWWW := map[int64]bool{}
+	names := map[string]bool{} // every name with a record in a zone hosted here
 	zones, err := o.db.ListDNSZones(ctx)
 	if err != nil {
 		return ssl.Config{}, err
@@ -56,6 +57,9 @@ func (o *Orchestrator) BuildEdgeConfig(ctx context.Context) (ssl.Config, error) 
 		for _, r := range recs {
 			if r.Name == "www" {
 				hasWWW[z.DomainID] = true
+			}
+			if r.Name != "@" {
+				names[r.Name+"."+z.Name] = true
 			}
 		}
 	}
@@ -77,6 +81,19 @@ func (o *Orchestrator) BuildEdgeConfig(ctx context.Context) (ssl.Config, error) 
 	cfg := ssl.Config{ACMEEmail: o.cfg.ACMEEmail, PanelDomain: o.cfg.PanelDomain}
 	if ms, err := o.db.GetMailSettings(ctx); err == nil && ms.Enabled && ms.Hostname != "" && !taken[ms.Hostname] && ms.Hostname != o.cfg.PanelDomain {
 		cfg.MailHost = ms.Hostname
+		if ms.Webmail {
+			// webmail.<domain> for every mail domain whose zone here has that name.
+			cfg.WebmailUpstream = WebmailUpstream
+			mds, err := o.db.ListMailDomains(ctx)
+			if err != nil {
+				return ssl.Config{}, err
+			}
+			for _, md := range mds {
+				if h := "webmail." + md.Name; names[h] && !taken[h] && h != ms.Hostname && h != o.cfg.PanelDomain {
+					cfg.WebmailHosts = append(cfg.WebmailHosts, h)
+				}
+			}
+		}
 	}
 	for _, d := range domains {
 		if d.Kind == db.KindAlias {
