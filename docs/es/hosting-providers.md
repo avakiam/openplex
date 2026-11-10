@@ -72,4 +72,4 @@ primer arranque (como arriba).
   extensiones abierta para crear las tuyas.
 
 ¿Te interesa ofrecer OpenPlex? Abre un issue en el
-[repositorio principal](https://github.com/openplex-dev/openplex).
+[repositorio principal](https://github.com/avakiam/openplex).

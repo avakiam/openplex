@@ -9,7 +9,7 @@ vulnerabilities seriously.
 
 **Please do not report vulnerabilities in public issues.** Use GitHub's
 private reporting instead: *Security → Report a vulnerability* in the
-[main repository](https://github.com/openplex-dev/openplex/security/advisories/new).
+[main repository](https://github.com/avakiam/openplex/security/advisories/new).
 
 Include the affected version (`openplexd --version`), what an attacker needs
 (an account? which role?), the steps to reproduce and the impact. We will
@@ -26,7 +26,7 @@ tomamos en serio las vulnerabilidades.
 
 **No publiques vulnerabilidades en issues públicos.** Usa el aviso privado de
 GitHub: *Security → Report a vulnerability* en el
-[repositorio principal](https://github.com/openplex-dev/openplex/security/advisories/new).
+[repositorio principal](https://github.com/avakiam/openplex/security/advisories/new).
 
 Indica la versión afectada (`openplexd --version`), qué necesita un atacante
 (¿una cuenta?, ¿con qué rol?), los pasos para reproducirlo y el impacto. Te
@@ -43,7 +43,7 @@ prenem seriosament les vulnerabilitats.
 
 **No publiquis vulnerabilitats en issues públics.** Fes servir l'avís privat
 de GitHub: *Security → Report a vulnerability* al
-[repositori principal](https://github.com/openplex-dev/openplex/security/advisories/new).
+[repositori principal](https://github.com/avakiam/openplex/security/advisories/new).
 
 Indica la versió afectada (`openplexd --version`), què necessita un atacant
 (un compte? amb quin rol?), els passos per reproduir-ho i l'impacte. Et

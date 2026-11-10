@@ -68,4 +68,4 @@ the image mode below exists.
   for your own.
 
 Interested in offering OpenPlex? Open an issue in the
-[main repository](https://github.com/openplex-dev/openplex).
+[main repository](https://github.com/avakiam/openplex).

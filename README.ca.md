@@ -87,6 +87,8 @@ docker run --rm -v "$PWD":/src -w /src golang:1.26-bookworm make check
 
 ## Llicència
 
+Copyright © 2026 Avakiam.
+
 El nucli d'OpenPlex es distribueix sota la
 [GNU Affero General Public License v3.0 (només aquesta versió)](LICENSE). Si
 modifiques OpenPlex i l'ofereixes a altres, també a través de la xarxa, has
@@ -99,7 +101,7 @@ català a [docs/ca/licensing.md](docs/ca/licensing.md)). OpenPlex oferirà
 extensions oficials, unes de gratuïtes i de codi obert i d'altres de
 pagament.
 
-"OpenPlex" i els seus logotips són marques del projecte: mira
+"OpenPlex" i els seus logotips són marques d'Avakiam: mira
 [TRADEMARKS.md](TRADEMARKS.md).
 
 ## Seguretat

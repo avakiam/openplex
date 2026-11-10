@@ -6,7 +6,8 @@
 
 OpenPlex is licensed under the GNU Affero General Public License, version 3
 only (the "AGPL"; see `LICENSE`). As an additional permission under section 7
-of the AGPL, the copyright holders of OpenPlex grant you the following
+of the AGPL, the copyright holders of OpenPlex (Avakiam and, where
+they exist, other contributors) grant you the following
 exception.
 
 ## 1. Definitions

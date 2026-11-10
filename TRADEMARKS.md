@@ -4,7 +4,8 @@
 > Català: [docs/ca/licensing.md](docs/ca/licensing.md#marca)
 
 The OpenPlex source code is free software (see `LICENSE`). The name
-**OpenPlex** and the OpenPlex logos are not: they identify the official
+**OpenPlex** and the OpenPlex logos are not: they are trademarks of
+**Avakiam**, the company behind OpenPlex. They identify the official
 project and its official extensions, and the licence does not grant any right
 to use them.
 

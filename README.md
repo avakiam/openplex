@@ -85,6 +85,8 @@ docker run --rm -v "$PWD":/src -w /src golang:1.26-bookworm make check
 
 ## Licence
 
+Copyright © 2026 Avakiam.
+
 The OpenPlex core is licensed under the
 [GNU Affero General Public License v3.0 only](LICENSE). If you modify
 OpenPlex and offer it to others, including over a network, you must publish
@@ -95,7 +97,7 @@ licence, including proprietary and paid ones: see the
 [OpenPlex Extension Exception](LICENSE-EXCEPTION.md). OpenPlex will offer
 official extensions, some free and open source, some paid.
 
-"OpenPlex" and its logos are trademarks of the project: see
+"OpenPlex" and its logos are trademarks of Avakiam: see
 [TRADEMARKS.md](TRADEMARKS.md).
 
 ## Security

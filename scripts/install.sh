@@ -7,7 +7,7 @@
 set -Eeuo pipefail
 
 OPENPLEX_VERSION="${OPENPLEX_VERSION:-latest}"
-RELEASE_URL="${OPENPLEX_RELEASE_URL:-https://github.com/openplex-dev/openplex/releases}"
+RELEASE_URL="${OPENPLEX_RELEASE_URL:-https://github.com/avakiam/openplex/releases}"
 BINARY=""
 PANEL_DOMAIN=""
 ACME_EMAIL=""

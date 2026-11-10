@@ -70,4 +70,4 @@ instal·la a la primera arrencada (com a dalt).
   d'extensions oberta per crear les teves.
 
 T'interessa oferir OpenPlex? Obre un issue al
-[repositori principal](https://github.com/openplex-dev/openplex).
+[repositori principal](https://github.com/avakiam/openplex).
