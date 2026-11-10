@@ -89,16 +89,16 @@ has been verified on the Linux test server. One commit per milestone.
 - [ ] Records: A, AAAA, CNAME, MX, TXT, SRV, NS, CAA
 
 ## M10 — Security & cron
-- [ ] Firewall rules (nftables) CRUD + apply with safety rollback — implemented: own table `inet openplex` replaced
+- [x] Firewall rules (nftables) CRUD + apply with safety rollback — implemented: own table `inet openplex` replaced
       atomically (`nft -f`); input chain (policy drop, SSH/ICMP/ND/established always handled) only when on; blocked
       addresses in a prerouting chain at priority raw so they also stop website visitors (Docker-forwarded); applied
       changes roll back after 60 s unless kept; refuses rule sets that close SSH, cut an open SSH session or the
       requester's direct panel access, and blocks of the requester or of an address with an open SSH/panel session;
       timed blocks expire; table re-applied at start and repaired if flushed; first start imports ufw rules (left off
-      while ufw is active). Live: apply + automatic rollback verified; **"Keep" and blocks still to be checked live**
-- [ ] Fail2Ban status, jails, banned IPs, unban — implemented: installer sets up Fail2Ban (sshd + `openplex` jail on
+      while ufw is active). Verified live (see log)
+- [x] Fail2Ban status, jails, banned IPs, unban — implemented: installer sets up Fail2Ban (sshd + `openplex` jail on
       failed panel logins from the journal; bans drop all traffic in a prerouting nftables chain); Firewall page tab with
-      jail counters and unban. Live: jails running, filter matches a failed login; **a real ban + unban still to be checked**
+      jail counters and unban. Verified live (see log)
 - [x] Scheduled tasks per website: 5-field cron / @daily…, server time zone, run as the site user inside its
       container (static sites: throwaway tools container), time limit kills the whole process tree, no overlap,
       4 at a time, missed runs skipped, run now, last 50 runs with output, 20 per site, audited; Cron tab in the UI
@@ -204,4 +204,8 @@ has been verified on the Linux test server. One commit per milestone.
   client in a network namespace saw 3000 closed while 22, 8734 and the websites on 80 stayed reachable, and a new SSH
   session got in; left unconfirmed, the previous rules came back on their own ~60 s later and 3000 answered again.
   `fail2ban-regex` matched a failed panel login in the journal (127.0.0.1 is ignored, as configured).
-  Still to check live: "Keep the new rules", blocking an address (incl. a website visit) and a real Fail2Ban ban/unban.
+  Then: "Keep" held past 60 s and across a panel restart; blocking 10.99.0.2 for 1 h from the panel cut SSH, other
+  ports, the website on 80 and ping, and unblocking restored them; blocking the admin PC (open SSH tunnel) was refused
+  with the translated message; 7 SSH attempts with unknown users got 10.99.0.2 banned by Fail2Ban (drop in prerouting,
+  website unreachable too) and "Unban" in the panel lifted it. Server left as found (firewall off, ufw on). Timed
+  block expiry is covered by unit tests only.
