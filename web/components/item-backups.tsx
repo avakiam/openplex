@@ -8,7 +8,7 @@ import { useT } from "@/lib/i18n";
 import type { BackupRun, Snapshot } from "@/lib/types";
 import { ago, bytes, dateTime } from "@/lib/utils";
 
-import { Badge, Button, Confirm, Empty, ErrorBox, Spinner, Table, Td, Th } from "./ui";
+import { Badge, Button, Confirm, Empty, ErrorBox, Field, Select, Spinner, Table, Td, Th } from "./ui";
 
 export function RunStatus({ run }: { run: BackupRun }) {
   const { t } = useT();
@@ -31,14 +31,29 @@ export function RunStatus({ run }: { run: BackupRun }) {
   );
 }
 
-/** Snapshots of one website/database with "back up now" and one-click restore. */
-export function ItemBackups({ base, label, warning }: { base: string; label: string; warning: string }) {
+/**
+ * Snapshots of one website/database/mail domain with "back up now" and
+ * one-click restore. With targets, the restore can be limited to one of them
+ * (sent as {"mailbox": value}).
+ */
+export function ItemBackups({
+  base,
+  label,
+  warning,
+  targets,
+}: {
+  base: string;
+  label: string;
+  warning: string;
+  targets?: { value: string; label: string }[];
+}) {
   const { t } = useT();
   const { data, isLoading, error } = useItemBackups(base);
   const [restore, setRestore] = useState<Snapshot | null>(null);
+  const [target, setTarget] = useState("");
   const inv = { invalidate: [keys.itemBackups(base)] };
   const now = useAction(() => api.post(`${base}/backups`), { success: t("Backup started"), ...inv });
-  const doRestore = useAction((id: string) => api.post(`${base}/backups/${id}/restore`), {
+  const doRestore = useAction((id: string) => api.post(`${base}/backups/${id}/restore`, targets ? { mailbox: target } : undefined), {
     success: t("Restore started"),
     ...inv,
     onSuccess: () => setRestore(null),
@@ -107,7 +122,20 @@ export function ItemBackups({ base, label, warning }: { base: string; label: str
         confirmLabel={t("Restore")}
         loading={doRestore.isPending}
         onConfirm={() => doRestore.mutate(restore!.id)}
-      />
+      >
+        {targets && (
+          <Field label={t("What to restore")}>
+            <Select value={target} onChange={(e) => setTarget(e.target.value)}>
+              <option value="">{t("Everything in this backup")}</option>
+              {targets.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
+      </Confirm>
     </div>
   );
 }

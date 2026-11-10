@@ -65,7 +65,7 @@ func (o *Orchestrator) EnsureWebmail(ctx context.Context, dir, version string) e
 	hc := &container.HostConfig{
 		RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyUnlessStopped},
 		Mounts: []mount.Mount{
-			{Type: mount.TypeVolume, Source: "openplex-webmail-db", Target: "/var/roundcube/db"},
+			{Type: mount.TypeVolume, Source: WebmailDBVolume, Target: "/var/roundcube/db"},
 			{Type: mount.TypeBind, Source: filepath.Join(dir, "config"), Target: "/var/roundcube/config", ReadOnly: true},
 			{Type: mount.TypeBind, Source: filepath.Join(dir, "plugin", "openplex"), Target: "/var/roundcube/openplex", ReadOnly: true},
 			{Type: mount.TypeBind, Source: filepath.Join(dir, "plugin", "post-setup.sh"), Target: "/entrypoint-tasks/post-setup/openplex", ReadOnly: true},

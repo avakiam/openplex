@@ -23,6 +23,7 @@ import {
   Textarea,
   Th,
 } from "@/components/ui";
+import { ItemBackups } from "@/components/item-backups";
 import { api } from "@/lib/api";
 import { isAdmin, useAuth } from "@/lib/auth";
 import { keys, useAction, useDomainMail } from "@/lib/hooks";
@@ -360,6 +361,20 @@ export function MailTab({ domain: d }: { domain: Domain }) {
             </tbody>
           </Table>
         )}
+      </Card>
+
+      <Card>
+        <CardHeader title={t("Mail backups")} description={t("Restore points of the messages in this domain's mailboxes, taken with the nightly backup.")} />
+        <CardBody>
+          <ItemBackups
+            base={`/domains/${d.id}/mail`}
+            label={d.name}
+            warning={t(
+              "Messages that are in the backup but missing now are put back. Nothing received since is removed and nothing is duplicated.",
+            )}
+            targets={data.mailboxes.map((b) => ({ value: b.local_part, label: b.address }))}
+          />
+        </CardBody>
       </Card>
 
       <Card>

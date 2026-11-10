@@ -126,5 +126,7 @@
   "Restoration": "Restauració",
   "scheduled": "programada",
   "Websites, databases and panel configuration — each restorable on its own from its page.": "Llocs web, bases de dades i configuració del tauler; cadascun es pot restaurar per separat des de la seva pàgina.",
-  "AES-256 encrypted": "Xifratge AES-256"
+  "AES-256 encrypted": "Xifratge AES-256",
+  "What to restore": "Què restaurar",
+  "Everything in this backup": "Tot el que hi ha en aquesta còpia"
 }

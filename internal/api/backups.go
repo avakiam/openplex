@@ -183,6 +183,12 @@ func (s *Server) handlePanelSnapshots(w http.ResponseWriter, r *http.Request) {
 // itemScope resolves {id} under /domains or /databases to its backup scope,
 // enforcing ownership via the existing loaders.
 func (s *Server) itemScope(w http.ResponseWriter, r *http.Request) string {
+	if strings.Contains(r.URL.Path, "/mail/backups") {
+		if md := s.backupMailDomain(w, r); md != nil {
+			return backup.MailTag(md.DomainID)
+		}
+		return ""
+	}
 	if strings.HasPrefix(r.URL.Path, "/api/v1/databases/") {
 		d := s.loadDatabase(w, r)
 		if d == nil {
@@ -253,5 +259,50 @@ func (s *Server) handleItemRestore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, "backup.restore_started", scope, snap)
+	writeJSON(w, http.StatusAccepted, run)
+}
+
+// backupMailDomain is the mail domain of the website in the URL (nil and an
+// error response when mail is off for it).
+func (s *Server) backupMailDomain(w http.ResponseWriter, r *http.Request) *db.MailDomain {
+	_, md, ok := s.loadMailDomain(w, r)
+	if !ok {
+		return nil
+	}
+	if md == nil {
+		badRequest(w, "mail is off for this website")
+		return nil
+	}
+	return md
+}
+
+// POST /domains/{id}/mail/backups/{snap}/restore {"mailbox": "info"}: puts back
+// the messages missing from the domain's mailboxes (or one mailbox).
+func (s *Server) handleMailRestore(w http.ResponseWriter, r *http.Request) {
+	md := s.backupMailDomain(w, r)
+	if md == nil || !s.requireBackups(w) {
+		return
+	}
+	var in struct {
+		Mailbox string `json:"mailbox"`
+	}
+	if r.ContentLength != 0 && !decode(w, r, &in) {
+		return
+	}
+	snap := chi.URLParam(r, "snap")
+	run, err := s.backups.RestoreMail(r.Context(), md, in.Mailbox, snap, &actor(r).ID)
+	if err != nil {
+		if msg := err.Error(); msg == "invalid snapshot id" || msg == "invalid mailbox" {
+			badRequest(w, msg)
+			return
+		}
+		s.backupErr(w, r, err)
+		return
+	}
+	target := md.Name
+	if in.Mailbox != "" {
+		target = in.Mailbox + "@" + md.Name
+	}
+	s.audit(r, "backup.restore_started", backup.MailTag(md.DomainID), snap+" "+target)
 	writeJSON(w, http.StatusAccepted, run)
 }

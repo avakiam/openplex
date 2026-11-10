@@ -194,5 +194,7 @@
   "enter the site key from the captcha provider": "Introdueix la clau del lloc del proveïdor de captcha",
   "enter the secret key from the captcha provider": "Introdueix la clau secreta del proveïdor de captcha",
   "turn the mailbox on to open its webmail": "Activa la bústia per obrir-ne el webmail",
-  "the webmail is off": "El webmail està desactivat"
+  "the webmail is off": "El webmail està desactivat",
+  "mail is off for this website": "El correu està desactivat per a aquest lloc web",
+  "invalid mailbox": "Bústia no vàlida"
 }

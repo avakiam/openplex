@@ -102,7 +102,7 @@ func (s *Server) handleGetDomainMail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out := map[string]any{"enabled": md != nil, "domain": d.Name, "hostname": st.Hostname, "server_enabled": st.Enabled,
-		"webmail_url": mail.WebmailURL(st),
+		"webmail_url":   mail.WebmailURL(st),
 		"max_mailboxes": mail.MaxMailboxesPerDomain, "mailboxes": []mailboxView{}, "aliases": []*db.MailAlias{}}
 	if md != nil {
 		mbs, err := s.db.ListMailboxes(r.Context(), md.ID)

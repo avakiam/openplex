@@ -12,6 +12,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 )
@@ -84,7 +85,7 @@ func (o *Orchestrator) EnsureMail(ctx context.Context, hostname, configDir strin
 		PortBindings:  ports,
 		RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyUnlessStopped},
 		Mounts: []mount.Mount{
-			{Type: mount.TypeVolume, Source: "openplex-mail-data", Target: "/var/mail"},
+			{Type: mount.TypeVolume, Source: MailDataVolume, Target: "/var/mail"},
 			{Type: mount.TypeVolume, Source: "openplex-mail-state", Target: "/var/mail-state"},
 			{Type: mount.TypeVolume, Source: "openplex-mail-logs", Target: "/var/log/mail"},
 			{Type: mount.TypeBind, Source: configDir, Target: "/tmp/docker-mailserver"},
@@ -182,4 +183,23 @@ func (o *Orchestrator) subnet(ctx context.Context, name string, internal bool) (
 		}
 	}
 	return "", fmt.Errorf("network %s has no IPv4 subnet", name)
+}
+
+// Volumes holding mail data (backed up by internal/backup).
+const (
+	MailDataVolume  = "openplex-mail-data"  // /var/mail: <domain>/<local>/ Maildirs, sieve scripts
+	WebmailDBVolume = "openplex-webmail-db" // Roundcube's SQLite database (contacts, settings)
+)
+
+// VolumePath returns where a named volume lives on the host, or "" when the
+// volume does not exist (mounting it would create an empty one).
+func (o *Orchestrator) VolumePath(ctx context.Context, name string) (string, error) {
+	v, err := o.cli.VolumeInspect(ctx, name)
+	if err != nil {
+		if client.IsErrNotFound(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("inspect volume %s: %w", name, err)
+	}
+	return v.Mountpoint, nil
 }

@@ -185,7 +185,7 @@ func (m *Manager) env(s *db.BackupSettings) ([]string, error) {
 	return env, nil
 }
 
-func (m *Manager) mounts(s *db.BackupSettings, writable bool) ([]mount.Mount, error) {
+func (m *Manager) mounts(ctx context.Context, s *db.BackupSettings, writable bool) ([]mount.Mount, error) {
 	for _, d := range []string{m.stagingDir(), filepath.Join(m.cfg.BackupsDir(), "cache"), filepath.Join(m.cfg.DataDir, "databases", "redis")} {
 		if err := os.MkdirAll(d, 0o700); err != nil {
 			return nil, err
@@ -197,6 +197,11 @@ func (m *Manager) mounts(s *db.BackupSettings, writable bool) ([]mount.Mount, er
 		{Type: mount.TypeBind, Source: filepath.Join(m.cfg.DataDir, "databases", "redis"), Target: mRedis, ReadOnly: !writable},
 		{Type: mount.TypeBind, Source: filepath.Join(m.cfg.BackupsDir(), "cache"), Target: mCache},
 	}
+	mail, err := m.mailMounts(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ms = append(ms, mail...)
 	if s.Target == "local" {
 		repo := m.LocalRepoPath(s)
 		if err := os.MkdirAll(repo, 0o700); err != nil {
@@ -213,7 +218,7 @@ func (m *Manager) restic(ctx context.Context, s *db.BackupSettings, writable boo
 	if err != nil {
 		return "", err
 	}
-	ms, err := m.mounts(s, writable)
+	ms, err := m.mounts(ctx, s, writable)
 	if err != nil {
 		return "", err
 	}
@@ -303,7 +308,7 @@ func (m *Manager) Snapshots(ctx context.Context, tag string) ([]Snapshot, error)
 func SiteTag(id int64) string     { return "site:" + strconv.FormatInt(id, 10) }
 func DatabaseTag(id int64) string { return "db:" + strconv.FormatInt(id, 10) }
 
-// Backup runs a backup of scope ("all", "panel", "site:<id>", "db:<id>").
+// Backup runs a backup of scope ("all", "panel", "site:<id>", "db:<id>", "mail:<id>").
 func (m *Manager) Backup(ctx context.Context, scope, trigger string, userID *int64) (*db.BackupRun, error) {
 	if !m.mu.TryLock() {
 		return nil, ErrBusy
@@ -341,6 +346,7 @@ func (m *Manager) doBackup(ctx context.Context, scope string, prune bool) (int64
 	}
 	var sites []*db.Domain
 	var dbs []*db.Database
+	var mails []*db.MailDomain
 	panel := scope == "all" || scope == "panel"
 	switch {
 	case scope == "all":
@@ -354,6 +360,9 @@ func (m *Manager) doBackup(ctx context.Context, scope string, prune bool) (int64
 			}
 		}
 		if dbs, err = m.db.ListDatabases(ctx, nil); err != nil {
+			return 0, "", err
+		}
+		if mails, err = m.db.ListMailDomains(ctx); err != nil {
 			return 0, "", err
 		}
 	case strings.HasPrefix(scope, "site:"):
@@ -370,6 +379,13 @@ func (m *Manager) doBackup(ctx context.Context, scope string, prune bool) (int64
 			return 0, "", err
 		}
 		dbs = append(dbs, d)
+	case strings.HasPrefix(scope, "mail:"):
+		id, _ := strconv.ParseInt(strings.TrimPrefix(scope, "mail:"), 10, 64)
+		md, err := m.db.GetMailDomainByDomain(ctx, id)
+		if err != nil {
+			return 0, "", err
+		}
+		mails = append(mails, md)
 	case scope == "panel":
 	default:
 		return 0, "", fmt.Errorf("unknown scope %q", scope)
@@ -399,7 +415,21 @@ func (m *Manager) doBackup(ctx context.Context, scope string, prune bool) (int64
 		total += n
 		done++
 	}
+	for _, md := range mails {
+		n, err := m.backupMail(ctx, md)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("mail of %s: %w", md.Name, err))
+			continue
+		}
+		total += n
+		done++
+	}
 	if panel {
+		if n, err := m.backupWebmail(ctx); err != nil {
+			errs = append(errs, fmt.Errorf("webmail: %w", err))
+		} else {
+			total += n
+		}
 		n, err := m.backupPanel(ctx, s)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("panel: %w", err))
@@ -480,10 +510,11 @@ func (m *Manager) backupPanel(ctx context.Context, s *db.BackupSettings) (int64,
 		return 0, err
 	}
 	copies := map[string]string{
-		filepath.Join(m.cfg.DataDir, "secret.key"): "secret.key",
-		filepath.Join(m.cfg.DataDir, "secrets"):    "secrets",
-		filepath.Join(m.cfg.CaddyDir(), "data"):    "caddy-data",
-		"/etc/openplex/openplex.env":               "openplex.env",
+		filepath.Join(m.cfg.DataDir, "secret.key"):           "secret.key",
+		filepath.Join(m.cfg.DataDir, "secrets"):              "secrets",
+		filepath.Join(m.cfg.CaddyDir(), "data"):              "caddy-data",
+		filepath.Join(m.cfg.DataDir, "webmail", "keys.json"): "webmail-keys.json",
+		"/etc/openplex/openplex.env":                         "openplex.env",
 	}
 	for src, dst := range copies {
 		if err := copyTree(src, filepath.Join(dir, dst)); err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -506,6 +537,14 @@ func (m *Manager) Prune(ctx context.Context, s *db.BackupSettings) error {
 // Restore restores a site or database to snapshot snapID. The snapshot must
 // carry the item's own tag, so one tenant can never restore another's data.
 func (m *Manager) Restore(ctx context.Context, scope, snapID string, userID *int64) (*db.BackupRun, error) {
+	return m.restore(ctx, scope, snapID, userID, func(ctx context.Context, snap *Snapshot) (string, error) {
+		return "restored snapshot " + snap.ShortID, m.doRestore(ctx, scope, snap)
+	})
+}
+
+// restore runs fn on the snapshot snapID of scope in the background; the
+// snapshot must carry the scope's tag.
+func (m *Manager) restore(ctx context.Context, scope, snapID string, userID *int64, fn func(context.Context, *Snapshot) (string, error)) (*db.BackupRun, error) {
 	if !snapRe.MatchString(snapID) {
 		return nil, errors.New("invalid snapshot id")
 	}
@@ -521,8 +560,12 @@ func (m *Manager) Restore(ctx context.Context, scope, snapID string, userID *int
 		defer m.mu.Unlock()
 		rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 6*time.Hour)
 		defer cancel()
-		err := m.doRestore(rctx, scope, snapID)
-		status, msg := "success", "restored snapshot "+snapID[:8]
+		var msg string
+		snap, err := m.findSnapshot(rctx, scope, snapID)
+		if err == nil {
+			msg, err = fn(rctx, snap)
+		}
+		status := "success"
 		if err != nil {
 			status, msg = "error", err.Error()
 			m.log.Error("restore failed", "scope", scope, "snapshot", snapID, "err", err)
@@ -534,24 +577,24 @@ func (m *Manager) Restore(ctx context.Context, scope, snapID string, userID *int
 	return run, nil
 }
 
-func (m *Manager) doRestore(ctx context.Context, scope, snapID string) error {
+// findSnapshot returns snapshot snapID if it belongs to scope.
+func (m *Manager) findSnapshot(ctx context.Context, scope, snapID string) (*Snapshot, error) {
+	snaps, err := m.Snapshots(ctx, scope)
+	if err != nil {
+		return nil, err
+	}
+	for i := range snaps {
+		if (snaps[i].ID == snapID || snaps[i].ShortID == snapID || strings.HasPrefix(snaps[i].ID, snapID)) && slices.Contains(snaps[i].Tags, scope) {
+			return &snaps[i], nil
+		}
+	}
+	return nil, errors.New("snapshot not found for this item")
+}
+
+func (m *Manager) doRestore(ctx context.Context, scope string, snap *Snapshot) error {
 	s, err := m.Settings(ctx)
 	if err != nil {
 		return err
-	}
-	snaps, err := m.Snapshots(ctx, scope)
-	if err != nil {
-		return err
-	}
-	var snap *Snapshot
-	for i := range snaps {
-		if snaps[i].ID == snapID || snaps[i].ShortID == snapID || strings.HasPrefix(snaps[i].ID, snapID) {
-			snap = &snaps[i]
-			break
-		}
-	}
-	if snap == nil || !slices.Contains(snap.Tags, scope) {
-		return errors.New("snapshot not found for this item")
 	}
 	switch {
 	case strings.HasPrefix(scope, "site:"):

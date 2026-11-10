@@ -33,6 +33,9 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] Endpoints: `/auth/login|refresh|logout|me`, `/auth/2fa/*`, `/users`, `/api-keys`, `/ssh-keys`
 - [x] Login rate limiting
 - [x] Audit log writes for security-relevant actions + `/audit` endpoint (admin)
+- [ ] Fine-grained access: the admin creates accounts and grants per-area permissions on chosen websites (e.g. a
+      client who only manages the mail of one domain, or only its hosting files/databases, or read-only); roles as
+      permission presets, enforced by the API (UI hides what is not granted)
 
 ## M4 — Docker orchestrator (`internal/docker`, `internal/ssl`)
 - [x] Engine client + ping, managed labels
@@ -137,7 +140,10 @@ has been verified on the Linux test server. One commit per milestone.
       (MariaDB reset + import, pg_restore --clean as the owner role, Redis data swap); snapshot must
       carry the item's own tag (no cross-tenant restores)
 - [x] Recovery key view (audited), activity log, owners can back up/restore their own sites and DBs
-- [ ] Mail backups (with the mail module)
+- [x] Mail backups: one snapshot per mail domain from the mail volume (nightly with everything, or "back up now"
+      on the Mail tab); Roundcube's database and the webmail keys go with the panel. Restore of the whole domain or
+      one mailbox merges: messages missing now come back (owner, mode and received date kept), nothing received
+      since is removed, nothing is duplicated (Maildir unique names), then Dovecot resyncs
 - [ ] Disaster recovery: `openplexd restore-panel` CLI to rebuild a new server from the repository
 - [ ] Off-site copy check: warn when the repository is on the same disk as the data
 
@@ -265,3 +271,7 @@ has been verified on the Linux test server. One commit per milestone.
   token refused, with one accepted; the webmail login says "please confirm that you are not a robot" without it and
   checks the password with it; the one-click link skips it. Widgets render (in Spanish) on both login pages and in
   the settings tab. Test keys removed afterwards.
+- 2026-11-10 — Mail backups on the VPS (v0.12.0). "Back up now" on mailcactus.com's mail made a `mail:3` snapshot.
+  Emptied the Junk folder and received a new message, then restored prueba@: the deleted message came back, the new
+  one stayed (INBOX 3, Junk 1); restoring again put back 0 messages (no duplicates). The nightly "all" backup now
+  holds 6 items: sites, database, `mail:3`, `webmail` (Roundcube DB) and the panel.

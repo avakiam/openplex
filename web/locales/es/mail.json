@@ -73,5 +73,8 @@
   "Read and send mail from the browser at the mail host and at webmail.<domain> for domains whose DNS is here.": "Leer y enviar correo desde el navegador en el host de correo y en webmail.<dominio> para los dominios cuyo DNS está aquí.",
   "Webmail running.": "Webmail en marcha.",
   "The webmail is starting or not running.": "El webmail se está iniciando o no está en marcha.",
-  "Open webmail": "Abrir webmail"
+  "Open webmail": "Abrir webmail",
+  "Mail backups": "Copias del correo",
+  "Restore points of the messages in this domain's mailboxes, taken with the nightly backup.": "Puntos de restauración de los mensajes de los buzones de este dominio, tomados con la copia nocturna.",
+  "Messages that are in the backup but missing now are put back. Nothing received since is removed and nothing is duplicated.": "Se recuperan los mensajes que están en la copia y faltan ahora. No se borra nada de lo recibido después ni se duplica nada."
 }

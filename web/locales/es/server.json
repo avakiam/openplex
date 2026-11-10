@@ -194,5 +194,7 @@
   "enter the site key from the captcha provider": "Introduce la clave del sitio del proveedor de captcha",
   "enter the secret key from the captcha provider": "Introduce la clave secreta del proveedor de captcha",
   "turn the mailbox on to open its webmail": "Activa el buzón para abrir su webmail",
-  "the webmail is off": "El webmail está desactivado"
+  "the webmail is off": "El webmail está desactivado",
+  "mail is off for this website": "El correo está desactivado para este sitio web",
+  "invalid mailbox": "Buzón no válido"
 }

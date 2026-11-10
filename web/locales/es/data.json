@@ -126,5 +126,7 @@
   "Restoration": "Restauración",
   "scheduled": "programada",
   "Websites, databases and panel configuration — each restorable on its own from its page.": "Sitios web, bases de datos y configuración del panel; cada uno se puede restaurar por separado desde su página.",
-  "AES-256 encrypted": "Cifrado AES-256"
+  "AES-256 encrypted": "Cifrado AES-256",
+  "What to restore": "Qué restaurar",
+  "Everything in this backup": "Todo lo que hay en esta copia"
 }

@@ -73,5 +73,8 @@
   "Read and send mail from the browser at the mail host and at webmail.<domain> for domains whose DNS is here.": "Llegir i enviar correu des del navegador a l'amfitrió de correu i a webmail.<domini> per als dominis amb el DNS aquí.",
   "Webmail running.": "Webmail en marxa.",
   "The webmail is starting or not running.": "El webmail s'està iniciant o no està en marxa.",
-  "Open webmail": "Obrir el webmail"
+  "Open webmail": "Obrir el webmail",
+  "Mail backups": "Còpies del correu",
+  "Restore points of the messages in this domain's mailboxes, taken with the nightly backup.": "Punts de restauració dels missatges de les bústies d'aquest domini, presos amb la còpia nocturna.",
+  "Messages that are in the backup but missing now are put back. Nothing received since is removed and nothing is duplicated.": "Es recuperen els missatges que són a la còpia i ara falten. No s'esborra res del que s'ha rebut després ni es duplica res."
 }
