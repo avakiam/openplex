@@ -30,6 +30,7 @@ func TestRender(t *testing.T) {
 		"reverse_proxy opx-site-2:3000",
 		"http://plain.test {",
 		"reverse_proxy unix//run/openplex/openplexd.sock",
+		":80 {\n\timport opx_common\n\trespond \"No website is configured for this address.\" 404",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in:\n%s", want, out)

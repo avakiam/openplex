@@ -165,6 +165,53 @@ CREATE INDEX backup_runs_started ON backup_runs(started_at);
 `,
 	// v4: per-user interface language ('' = follow the browser).
 	`ALTER TABLE users ADD COLUMN locale TEXT NOT NULL DEFAULT '';`,
+	// v5: website and database IDs are never reused. A site's uid, container
+	// name and backup tags derive from its ID, so a recycled ID could hand a new
+	// tenant an old tenant's snapshots. Seeded from the highest ID ever seen
+	// (live rows and backup history).
+	`
+CREATE TABLE id_sequences (
+	name  TEXT PRIMARY KEY,
+	value INTEGER NOT NULL
+);
+INSERT INTO id_sequences (name, value) VALUES
+	('domains', MAX(
+		(SELECT COALESCE(MAX(id), 0) FROM domains),
+		(SELECT COALESCE(MAX(CAST(substr(scope, 6) AS INTEGER)), 0) FROM backup_runs WHERE scope LIKE 'site:%'))),
+	('databases', MAX(
+		(SELECT COALESCE(MAX(id), 0) FROM databases),
+		(SELECT COALESCE(MAX(CAST(substr(scope, 4) AS INTEGER)), 0) FROM backup_runs WHERE scope LIKE 'db:%')));
+`,
+	// v6: scheduled tasks per website and their run history.
+	`
+CREATE TABLE cron_jobs (
+	id           INTEGER PRIMARY KEY AUTOINCREMENT,
+	domain_id    INTEGER NOT NULL REFERENCES domains(id) ON DELETE CASCADE,
+	name         TEXT NOT NULL DEFAULT '',
+	schedule     TEXT NOT NULL,
+	command      TEXT NOT NULL,
+	enabled      INTEGER NOT NULL DEFAULT 1,
+	timeout_sec  INTEGER NOT NULL DEFAULT 3600,
+	next_run_at  TIMESTAMP,
+	last_run_at  TIMESTAMP,
+	last_status  TEXT NOT NULL DEFAULT '',
+	created_at   TIMESTAMP NOT NULL,
+	updated_at   TIMESTAMP NOT NULL
+);
+CREATE INDEX cron_jobs_domain ON cron_jobs(domain_id);
+CREATE INDEX cron_jobs_due ON cron_jobs(enabled, next_run_at);
+CREATE TABLE cron_runs (
+	id          INTEGER PRIMARY KEY AUTOINCREMENT,
+	job_id      INTEGER NOT NULL REFERENCES cron_jobs(id) ON DELETE CASCADE,
+	trigger     TEXT NOT NULL DEFAULT 'schedule',
+	status      TEXT NOT NULL DEFAULT 'running',
+	exit_code   INTEGER,
+	output      TEXT NOT NULL DEFAULT '',
+	started_at  TIMESTAMP NOT NULL,
+	finished_at TIMESTAMP
+);
+CREATE INDEX cron_runs_job ON cron_runs(job_id, id);
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

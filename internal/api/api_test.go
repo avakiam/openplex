@@ -15,6 +15,7 @@ import (
 
 	"openplex.dev/openplex/internal/auth"
 	"openplex.dev/openplex/internal/config"
+	"openplex.dev/openplex/internal/cron"
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/monitor"
 	"openplex.dev/openplex/internal/secrets"
@@ -38,7 +39,7 @@ func newHarness(t *testing.T) *harness {
 	store := db.OpenMemory(t)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	box, _ := secrets.New(cfg.Secret, "database-passwords")
-	srv := New(Options{Config: cfg, DB: store, Monitor: monitor.New(time.Second, 10, dir, log), Logger: log, BaseContext: context.Background(), Box: box})
+	srv := New(Options{Config: cfg, DB: store, Monitor: monitor.New(time.Second, 10, dir, log), Logger: log, BaseContext: context.Background(), Box: box, Cron: cron.New(store, nil, log)})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 	h := &harness{t: t, ts: ts, db: store, cfg: cfg, box: box}
@@ -372,5 +373,70 @@ func TestUserLocale(t *testing.T) {
 	// The login response carries the stored language so the UI can switch at once.
 	if tr := h.login("carla"); tr.User.Locale != "es" {
 		t.Fatalf("login user locale = %q", tr.User.Locale)
+	}
+}
+
+func TestCronJobs(t *testing.T) {
+	h := newHarness(t)
+	h.mkUser("carla", db.RoleCustomer, nil)
+	h.mkUser("dani", db.RoleCustomer, nil)
+	carla, dani := h.login("carla").AccessToken, h.login("dani").AccessToken
+	var site, alias db.Domain
+	if c := h.do("POST", "/domains", carla, map[string]any{"name": "cron.test"}, &site); c != 201 {
+		t.Fatalf("create site: %d", c)
+	}
+	h.do("POST", "/domains", carla, map[string]any{"name": "alias.test", "kind": "alias", "parent_id": site.ID}, &alias)
+	base := "/domains/" + itoa(site.ID) + "/cron"
+
+	var job struct {
+		db.CronJob
+		Running bool `json:"running"`
+	}
+	cases := []struct {
+		name, token, method, path string
+		body                      map[string]any
+		want                      int
+	}{
+		{"bad schedule", carla, "POST", base, map[string]any{"schedule": "every day", "command": "php artisan schedule:run"}, 400},
+		{"sub-minute schedule", carla, "POST", base, map[string]any{"schedule": "@every 10s", "command": "true"}, 400},
+		{"empty command", carla, "POST", base, map[string]any{"schedule": "@daily", "command": "  "}, 400},
+		{"time limit too long", carla, "POST", base, map[string]any{"schedule": "@daily", "command": "true", "timeout_sec": 99999}, 400},
+		{"foreign website", dani, "GET", base, nil, 404},
+		{"alias has no tasks", carla, "GET", "/domains/" + itoa(alias.ID) + "/cron", nil, 400},
+		{"preview ok", carla, "POST", "/cron/preview", map[string]any{"schedule": "*/10 * * * *"}, 200},
+		{"preview bad", carla, "POST", "/cron/preview", map[string]any{"schedule": "61 * * * *"}, 400},
+	}
+	for _, c := range cases {
+		if got := h.do(c.method, c.path, c.token, c.body, nil); got != c.want {
+			t.Errorf("%s: got %d, want %d", c.name, got, c.want)
+		}
+	}
+	if c := h.do("POST", base, carla, map[string]any{"name": "Laravel", "schedule": " */5  *  * * * ", "command": "php artisan schedule:run"}, &job); c != 201 {
+		t.Fatalf("create job: %d", c)
+	}
+	if job.Schedule != "*/5 * * * *" || job.NextRunAt == nil || !job.Enabled {
+		t.Fatalf("job = %+v", job.CronJob)
+	}
+	jpath := base + "/" + itoa(job.ID)
+	if c := h.do("PATCH", jpath, dani, map[string]any{"enabled": false}, nil); c != 404 {
+		t.Fatalf("foreign update: %d", c)
+	}
+	if c := h.do("PATCH", jpath, carla, map[string]any{"enabled": false}, &job); c != 200 || job.Enabled || job.NextRunAt != nil {
+		t.Fatalf("disable: %d %+v", c, job.CronJob)
+	}
+	if c := h.do("POST", jpath+"/run", carla, nil, nil); c != 503 {
+		t.Fatalf("run without docker: %d", c)
+	}
+	if c := h.do("GET", jpath+"/runs", carla, nil, nil); c != 200 {
+		t.Fatalf("runs: %d", c)
+	}
+	for i := 1; i < cron.MaxJobsPerSite; i++ {
+		h.do("POST", base, carla, map[string]any{"schedule": "@hourly", "command": "true"}, nil)
+	}
+	if c := h.do("POST", base, carla, map[string]any{"schedule": "@hourly", "command": "true"}, nil); c != 403 {
+		t.Fatalf("quota: %d", c)
+	}
+	if c := h.do("DELETE", jpath, carla, nil, nil); c != 204 {
+		t.Fatalf("delete: %d", c)
 	}
 }

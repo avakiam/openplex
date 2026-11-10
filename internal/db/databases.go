@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -43,13 +44,18 @@ func (db *DB) CreateDatabase(ctx context.Context, d *Database) error {
 	if d.Status == "" {
 		d.Status = StatusPending
 	}
-	res, err := db.sql.ExecContext(ctx, `INSERT INTO databases (owner_id, engine, name, username, password_enc, status, status_message, created_at, updated_at)
-		VALUES (?,?,?,?,?,?,?,?,?)`, d.OwnerID, d.Engine, d.Name, d.Username, d.PasswordEnc, d.Status, d.StatusMessage, d.CreatedAt, d.UpdatedAt)
-	if err != nil {
-		return mapErr(err)
-	}
-	d.ID, err = res.LastInsertId()
-	return err
+	return db.tx(ctx, func(tx *sql.Tx) error {
+		id, err := nextID(ctx, tx, "databases")
+		if err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO databases (id, owner_id, engine, name, username, password_enc, status, status_message, created_at, updated_at)
+		VALUES (?,?,?,?,?,?,?,?,?,?)`, id, d.OwnerID, d.Engine, d.Name, d.Username, d.PasswordEnc, d.Status, d.StatusMessage, d.CreatedAt, d.UpdatedAt); err != nil {
+			return mapErr(err)
+		}
+		d.ID = id
+		return nil
+	})
 }
 
 // GetDatabase returns a database by ID.

@@ -15,6 +15,7 @@ import (
 
 	"openplex.dev/openplex/internal/auth"
 	"openplex.dev/openplex/internal/config"
+	"openplex.dev/openplex/internal/cron"
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/docker"
 	"openplex.dev/openplex/internal/monitor"
@@ -30,6 +31,7 @@ type Server struct {
 	signer  *auth.Signer
 	box     *secrets.Box
 	backups *backup.Manager // nil without Docker
+	cron    *cron.Manager
 	log     *slog.Logger
 	ui      http.Handler
 	version string
@@ -53,6 +55,7 @@ type Options struct {
 	BaseContext  context.Context // cancelled at shutdown; parent of background jobs
 	Box          *secrets.Box    // encrypts recoverable secrets (database passwords)
 	Backups      *backup.Manager // nil when Docker is unavailable
+	Cron         *cron.Manager
 }
 
 // New builds the API server.
@@ -62,6 +65,7 @@ func New(o Options) *Server {
 		signer:       auth.NewSigner(o.Config.Secret, o.Config.AccessTTL),
 		box:          o.Box,
 		backups:      o.Backups,
+		cron:         o.Cron,
 		loginLimiter: newLimiter(10, 5*time.Minute),
 		baseCtx:      o.BaseContext,
 	}
@@ -108,6 +112,7 @@ func (s *Server) Handler() http.Handler {
 			r.Delete("/ssh-keys/{id}", s.handleDeleteSSHKey)
 
 			r.Get("/runtimes", s.handleListRuntimes)
+			r.Post("/cron/preview", s.handleCronPreview)
 			r.Get("/domains", s.handleListDomains)
 			r.Post("/domains", s.handleCreateDomain)
 			r.Route("/domains/{id}", func(r chi.Router) {
@@ -126,6 +131,12 @@ func (s *Server) Handler() http.Handler {
 				r.Get("/redirects", s.handleListRedirects)
 				r.Post("/redirects", s.handleCreateRedirect)
 				r.Delete("/redirects/{rid}", s.handleDeleteRedirect)
+				r.Get("/cron", s.handleListCron)
+				r.Post("/cron", s.handleCreateCron)
+				r.Patch("/cron/{jid}", s.handleUpdateCron)
+				r.Delete("/cron/{jid}", s.handleDeleteCron)
+				r.Post("/cron/{jid}/run", s.handleRunCron)
+				r.Get("/cron/{jid}/runs", s.handleListCronRuns)
 
 				r.Get("/files", s.handleListFiles)
 				r.Get("/files/content", s.handleReadFile)

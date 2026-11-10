@@ -2,6 +2,7 @@
 import {
   Archive,
   ArrowLeft,
+  CalendarClock,
   ExternalLink,
   FileText,
   FolderOpen,
@@ -24,6 +25,7 @@ import dynamic from "next/dynamic";
 import { Suspense, useEffect, useState } from "react";
 
 import { CreateDomainDialog } from "@/components/create-domain-dialog";
+import { CronJobs } from "@/components/cron-jobs";
 import { FileManager } from "@/components/file-manager";
 import { ItemBackups } from "@/components/item-backups";
 import { LogViewer } from "@/components/log-viewer";
@@ -101,7 +103,9 @@ function Overview({ d }: { d: Domain }) {
           </Info>
           <Info label={t("Status")}>
             <StatusBadge status={d.status} />
-            {d.status_message && <p className={`mt-1 text-xs ${d.status === "error" ? "text-destructive" : "text-muted-foreground"}`}>{d.status_message}</p>}
+            {d.status_message && (
+              <p className={`mt-1 text-xs ${d.status === "error" ? "text-destructive" : "text-muted-foreground"}`}>{tServer(d.status_message)}</p>
+            )}
           </Info>
           <Info label={t("Runtime")}>{d.runtime === "static" ? t("Static files (served by the edge)") : `${d.runtime} ${d.runtime_version}`}</Info>
           <Info label={t("Document root")}>
@@ -583,7 +587,7 @@ function DomainView() {
       <PageHeader
         title={d.name}
         description={d.kind === "subdomain" ? t("Subdomain") : t("Website")}
-        actions={<StatusBadge status={d.status} title={d.status_message} />}
+        actions={<StatusBadge status={d.status} title={tServer(d.status_message)} />}
       />
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-4">
@@ -605,6 +609,11 @@ function DomainView() {
           <TabsTrigger value="terminal">
             <SquareTerminal /> {t("Terminal")}
           </TabsTrigger>
+          {d.kind !== "alias" && (
+            <TabsTrigger value="cron">
+              <CalendarClock /> {t("Scheduled tasks")}
+            </TabsTrigger>
+          )}
           <TabsTrigger value="logs">
             <ScrollText /> {t("Logs")}
           </TabsTrigger>
@@ -642,6 +651,11 @@ function DomainView() {
             <CardBody>{tab === "terminal" && <WebTerminal domainId={d.id} canRoot={isAdmin(user)} />}</CardBody>
           </Card>
         </TabsContent>
+        {d.kind !== "alias" && (
+          <TabsContent value="cron">
+            <CronJobs domain={d} />
+          </TabsContent>
+        )}
         <TabsContent value="backups">
           <Card>
             <CardHeader

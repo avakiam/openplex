@@ -44,9 +44,10 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] Per-site CPU/memory limits, env vars, restart policy, hardening
 - [x] Deploy / start / stop / restart / remove site container
 - [x] Reconcile loop (DB → Docker + Caddy) at boot and on demand
-- [ ] Sync domain status from container health (a crash-looping container still shows `running`)
-- [ ] Catch-all edge vhost: unknown hosts → 404 instead of an empty 200
-- [ ] `AUTOINCREMENT` domain IDs so a deleted site's uid/container name is never reused
+- [x] Sync website status from container health every 15 s (crash loop / unexpected exit → error, recovers on its own)
+- [x] Catch-all edge vhost: unknown hosts → 404 instead of an empty 200
+- [x] Website and database IDs are never reused (`id_sequences`, seeded from live rows and backup history),
+      so a new tenant can never inherit an old site's uid, container name or backup snapshots
 
 ## M5 — Domains & websites (`/api/v1/domains`)
 - [x] CRUD domains (primary, subdomain, alias) with ownership checks + quota
@@ -90,7 +91,9 @@ has been verified on the Linux test server. One commit per milestone.
 ## M10 — Security & cron
 - [ ] Firewall rules (nftables) CRUD + apply with safety rollback
 - [ ] Fail2Ban / CrowdSec status, jails, banned IPs, unban
-- [ ] Cron jobs per site (run inside site container) + scheduler + run history
+- [x] Scheduled tasks per website: 5-field cron / @daily…, server time zone, run as the site user inside its
+      container (static sites: throwaway tools container), time limit kills the whole process tree, no overlap,
+      4 at a time, missed runs skipped, run now, last 50 runs with output, 20 per site, audited; Cron tab in the UI
 
 ## M11 — Backup & restore
 - [x] Backup engine: restic 0.18.1 in throwaway containers — incremental, deduplicated, encrypted;
@@ -180,3 +183,9 @@ has been verified on the Linux test server. One commit per milestone.
   browser got the login page and panel in Spanish automatically (`2,6%`, `2,2 GB`, `4 d 1 h`); switching
   to Català from the header translated the whole panel at once and was saved on the account;
   "Automatic" cleared it again. 436 strings × 2 languages, 113 server messages.
+- 2026-11-10 — Core fixes + scheduled tasks on the real server (v0.7.0): PHP site task ran as uid 100002
+  with PHP 8.3 in /srv/sites/<site>; a 10 s limit stopped `sleep 300 & sleep 301` and left no process
+  behind; a second run while busy → 409; static-site task ran in a temporary container (git 2.49) that was
+  removed; an every-minute task fired at :00 on two consecutive minutes; a failing Laravel task showed
+  "Failed" with its real output in the UI. A Node app that exits at start went to "error" ("keeps crashing")
+  within a minute; unknown Host → 404, known sites unaffected; after deleting site 4 the next site got id 5.

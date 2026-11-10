@@ -228,3 +228,52 @@ export interface Snapshot {
   paths: string[];
   summary?: { total_bytes_processed: number; data_added: number; total_files_processed: number };
 }
+
+export type CronStatus = "running" | "success" | "failed" | "timeout" | "skipped";
+
+export interface CronJob {
+  id: number;
+  domain_id: number;
+  name: string;
+  schedule: string;
+  command: string;
+  enabled: boolean;
+  timeout_sec: number;
+  next_run_at: string | null;
+  last_run_at: string | null;
+  last_status: CronStatus | "";
+  created_at: string;
+  updated_at: string;
+  running: boolean;
+}
+
+export interface CronRun {
+  id: number;
+  job_id: number;
+  trigger: "schedule" | "manual";
+  status: CronStatus;
+  exit_code: number | null;
+  output: string;
+  started_at: string;
+  finished_at: string | null;
+}
+
+export interface CronList {
+  jobs: CronJob[];
+  timezone: string;
+  max_jobs: number;
+}
+
+export interface CronPreview {
+  next: string[];
+  timezone: string;
+}
+
+/** Fields accepted by POST/PATCH /domains/{id}/cron. */
+export interface CronInput {
+  name?: string;
+  schedule?: string;
+  command?: string;
+  enabled?: boolean;
+  timeout_sec?: number;
+}

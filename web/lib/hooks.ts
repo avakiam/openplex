@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { api } from "./api";
+import { t } from "./i18n";
 import type {
   APIKey,
   BackupRun,
@@ -13,6 +14,11 @@ import type {
   DatabaseEngine,
   AuditEntry,
   ContainerStats,
+  CronInput,
+  CronJob,
+  CronList,
+  CronPreview,
+  CronRun,
   Domain,
   FileEntry,
   HostSample,
@@ -29,6 +35,8 @@ export const keys = {
   domains: ["domains"] as const,
   domain: (id: number) => ["domains", id] as const,
   redirects: (id: number) => ["domains", id, "redirects"] as const,
+  cron: (id: number) => ["domains", id, "cron"] as const,
+  cronRuns: (id: number, jid: number) => ["domains", id, "cron", jid, "runs"] as const,
   files: (id: number, path: string) => ["domains", id, "files", path] as const,
   runtimes: ["runtimes"] as const,
   databases: ["databases"] as const,
@@ -64,8 +72,7 @@ export function useAction<TArgs, TRes = unknown>(
 
 export const useMe = () => useQuery({ queryKey: keys.me, queryFn: () => api.get<User>("/auth/me") });
 export const useUsers = () => useQuery({ queryKey: keys.users, queryFn: () => api.get<User[]>("/users") });
-export const useRuntimes = () =>
-  useQuery({ queryKey: keys.runtimes, queryFn: () => api.get<Runtime[]>("/runtimes"), staleTime: Infinity });
+export const useRuntimes = () => useQuery({ queryKey: keys.runtimes, queryFn: () => api.get<Runtime[]>("/runtimes"), staleTime: Infinity });
 
 export const useDomains = () =>
   useQuery({
@@ -83,23 +90,19 @@ export const useDomain = (id: number) =>
     refetchInterval: (q) => (q.state.data?.status === "pending" ? 2000 : false),
   });
 
-export const useRedirects = (id: number) =>
-  useQuery({ queryKey: keys.redirects(id), queryFn: () => api.get<Redirect[]>(`/domains/${id}/redirects`) });
+export const useRedirects = (id: number) => useQuery({ queryKey: keys.redirects(id), queryFn: () => api.get<Redirect[]>(`/domains/${id}/redirects`) });
 
 export const useFiles = (id: number, path: string) =>
   useQuery({
     queryKey: keys.files(id, path),
-    queryFn: () =>
-      api.get<{ path: string; entries: FileEntry[] }>(`/domains/${id}/files?path=${encodeURIComponent(path)}`),
+    queryFn: () => api.get<{ path: string; entries: FileEntry[] }>(`/domains/${id}/files?path=${encodeURIComponent(path)}`),
   });
 
 export const useAPIKeys = () => useQuery({ queryKey: keys.apiKeys, queryFn: () => api.get<APIKey[]>("/api-keys") });
 export const useSSHKeys = () => useQuery({ queryKey: keys.sshKeys, queryFn: () => api.get<SSHKey[]>("/ssh-keys") });
-export const useAudit = () =>
-  useQuery({ queryKey: keys.audit, queryFn: () => api.get<AuditEntry[]>("/audit?limit=200") });
+export const useAudit = () => useQuery({ queryKey: keys.audit, queryFn: () => api.get<AuditEntry[]>("/audit?limit=200") });
 
-export const useSystemInfo = (enabled = true) =>
-  useQuery({ queryKey: keys.info, queryFn: () => api.get<SystemInfo>("/system/info"), enabled });
+export const useSystemInfo = (enabled = true) => useQuery({ queryKey: keys.info, queryFn: () => api.get<SystemInfo>("/system/info"), enabled });
 export const useStatsHistory = (enabled = true) =>
   useQuery({
     queryKey: keys.stats,
@@ -123,8 +126,7 @@ export const useDomainStats = (id: number, enabled: boolean) =>
     retry: false,
   });
 
-export const useEngines = () =>
-  useQuery({ queryKey: keys.engines, queryFn: () => api.get<DatabaseEngine[]>("/database-engines"), staleTime: Infinity });
+export const useEngines = () => useQuery({ queryKey: keys.engines, queryFn: () => api.get<DatabaseEngine[]>("/database-engines"), staleTime: Infinity });
 
 export const useDatabases = () =>
   useQuery({
@@ -141,8 +143,7 @@ export const useDatabaseSizes = (enabled: boolean) =>
     refetchInterval: 30_000,
   });
 
-export const useBackupSettings = () =>
-  useQuery({ queryKey: keys.backupSettings, queryFn: () => api.get<BackupSettings>("/backups/settings"), retry: false });
+export const useBackupSettings = () => useQuery({ queryKey: keys.backupSettings, queryFn: () => api.get<BackupSettings>("/backups/settings"), retry: false });
 
 export const useBackupRuns = () =>
   useQuery({
@@ -159,4 +160,62 @@ export const useItemBackups = (base: string, enabled = true) =>
     enabled,
     retry: false,
     refetchInterval: (q) => (q.state.data?.runs.some((r) => r.status === "running") ? 2000 : false),
+  });
+
+// ---------- Scheduled tasks (cron) ----------
+
+export const useCronJobs = (id: number, enabled = true) =>
+  useQuery({
+    queryKey: keys.cron(id),
+    queryFn: () => api.get<CronList>(`/domains/${id}/cron`),
+    enabled: enabled && id > 0,
+    // Poll quickly while a task runs so its status settles; otherwise keep "next run" fresh.
+    refetchInterval: (q) => (q.state.data?.jobs.some((j) => j.running) ? 5000 : 30_000),
+  });
+
+export const useCronRuns = (id: number, jid: number, enabled = true) =>
+  useQuery({
+    queryKey: keys.cronRuns(id, jid),
+    queryFn: () => api.get<CronRun[]>(`/domains/${id}/cron/${jid}/runs`),
+    enabled: enabled && jid > 0,
+    refetchInterval: (q) => (q.state.data?.[0]?.status === "running" ? 3000 : false),
+  });
+
+/** Next run times of a schedule expression (UTC); errors carry the API's message. */
+export const previewCron = (schedule: string) => api.post<CronPreview>("/cron/preview", { schedule });
+
+export const useCronPreview = (schedule: string) =>
+  useQuery({
+    queryKey: ["cron-preview", schedule],
+    queryFn: () => previewCron(schedule),
+    enabled: schedule.trim() !== "",
+    retry: false,
+    staleTime: 30_000,
+  });
+
+export const useCreateCron = (id: number, onSuccess?: (j: CronJob) => void) =>
+  useAction((body: CronInput) => api.post<CronJob>(`/domains/${id}/cron`, body), {
+    success: t("Task created"),
+    invalidate: [keys.cron(id)],
+    onSuccess,
+  });
+
+export const useUpdateCron = (id: number, onSuccess?: (j: CronJob) => void) =>
+  useAction(({ jid, ...body }: CronInput & { jid: number }) => api.patch<CronJob>(`/domains/${id}/cron/${jid}`, body), {
+    invalidate: [keys.cron(id)],
+    onSuccess,
+  });
+
+export const useDeleteCron = (id: number, onSuccess?: () => void) =>
+  useAction((jid: number) => api.del(`/domains/${id}/cron/${jid}`), {
+    success: t("Task deleted"),
+    invalidate: [keys.cron(id)],
+    onSuccess,
+  });
+
+/** Starts a task now; 409 "busy" surfaces as a toast with the server's message. Invalidating the list also refreshes its run history. */
+export const useRunCron = (id: number) =>
+  useAction((jid: number) => api.post(`/domains/${id}/cron/${jid}/run`), {
+    success: t("Task started"),
+    invalidate: [keys.cron(id)],
   });

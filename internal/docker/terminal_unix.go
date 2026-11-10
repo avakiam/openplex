@@ -46,3 +46,37 @@ func killSession(pid int) {
 		_ = syscall.Kill(p, syscall.SIGKILL)
 	}
 }
+
+// killTree SIGKILLs pid and all of its descendants (host PIDs).
+func killTree(pid int) {
+	children := map[int][]int{}
+	ents, _ := os.ReadDir("/proc")
+	for _, e := range ents {
+		p, err := strconv.Atoi(e.Name())
+		if err != nil {
+			continue
+		}
+		b, err := os.ReadFile("/proc/" + e.Name() + "/stat")
+		if err != nil {
+			continue
+		}
+		s := string(b)
+		i := strings.LastIndexByte(s, ')')
+		if i < 0 {
+			continue
+		}
+		f := strings.Fields(s[i+1:])
+		if len(f) > 1 {
+			if pp, err := strconv.Atoi(f[1]); err == nil {
+				children[pp] = append(children[pp], p)
+			}
+		}
+	}
+	victims := []int{pid}
+	for i := 0; i < len(victims); i++ {
+		victims = append(victims, children[victims[i]]...)
+	}
+	for _, p := range victims {
+		_ = syscall.Kill(p, syscall.SIGKILL)
+	}
+}

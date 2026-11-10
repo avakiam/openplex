@@ -85,6 +85,24 @@ func (d *DB) Snapshot(ctx context.Context, dest string) error {
 	return nil
 }
 
+// nextID reserves the next never-used ID for table ("domains" or "databases").
+func nextID(ctx context.Context, tx *sql.Tx, table string) (int64, error) {
+	var q string
+	switch table {
+	case "domains":
+		q = `UPDATE id_sequences SET value = MAX(value, (SELECT COALESCE(MAX(id), 0) FROM domains)) + 1 WHERE name = 'domains' RETURNING value`
+	case "databases":
+		q = `UPDATE id_sequences SET value = MAX(value, (SELECT COALESCE(MAX(id), 0) FROM databases)) + 1 WHERE name = 'databases' RETURNING value`
+	default:
+		return 0, fmt.Errorf("no id sequence for %q", table)
+	}
+	var id int64
+	if err := tx.QueryRowContext(ctx, q).Scan(&id); err != nil {
+		return 0, fmt.Errorf("reserve %s id: %w", table, err)
+	}
+	return id, nil
+}
+
 func (d *DB) tx(ctx context.Context, fn func(*sql.Tx) error) error {
 	tx, err := d.sql.BeginTx(ctx, nil)
 	if err != nil {

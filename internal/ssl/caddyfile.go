@@ -124,6 +124,10 @@ func Render(c Config) (string, error) {
 			return "", fmt.Errorf("site %s: %w", s.Name, err)
 		}
 	}
+	// Catch-all: plain HTTP to a hostname nobody configured (or to the bare
+	// IP) gets a clear 404 instead of Caddy's empty 200. Host-specific blocks
+	// and the automatic HTTP→HTTPS redirects always take precedence.
+	b.WriteString("# unknown hosts\n:80 {\n\timport opx_common\n\trespond \"No website is configured for this address.\" 404\n}\n")
 	return b.String(), nil
 }
 

@@ -10,7 +10,7 @@ import { StatusBadge } from "@/components/status";
 import { Badge, Button, Card, Empty, ErrorBox, Input, PageHeader, Spinner, Table, Td, Th } from "@/components/ui";
 import { canManageUsers, useAuth } from "@/lib/auth";
 import { useDomains, useUsers } from "@/lib/hooks";
-import { t, tk, useT } from "@/lib/i18n";
+import { t, tk, tServer, useT } from "@/lib/i18n";
 import type { Domain } from "@/lib/types";
 
 const KIND_LABELS: Record<string, string> = {
@@ -103,7 +103,7 @@ function DomainsList() {
                       )}
                     </Td>
                     <Td>
-                      <StatusBadge status={d.status} title={d.status_message} />
+                      <StatusBadge status={d.status} title={tServer(d.status_message)} />
                     </Td>
                     {canManageUsers(user) && <Td className="text-muted-foreground">{owner(d.owner_id) ?? `#${d.owner_id}`}</Td>}
                   </tr>

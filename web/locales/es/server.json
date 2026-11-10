@@ -112,5 +112,14 @@
   "name is required (max 64 chars)": "El nombre es obligatorio (máx. 64 caracteres)",
   "expires_in_days must be 0 (never) to 3650": "La caducidad debe estar entre 0 (nunca) y 3650 días",
   "RSA keys must be at least 2048 bits": "Las claves RSA deben tener al menos 2048 bits",
-  "Static (HTML/CSS/JS)": "Estático (HTML/CSS/JS)"
+  "Static (HTML/CSS/JS)": "Estático (HTML/CSS/JS)",
+  "The app keeps crashing and restarting. Check the website's logs.": "La aplicación se cierra y se reinicia una y otra vez. Revisa los registros del sitio web.",
+  "The app stopped unexpectedly. Check the website's logs, then restart it.": "La aplicación se ha detenido de forma inesperada. Revisa los registros del sitio web y reiníciala.",
+  "this website already has the maximum of 20 scheduled tasks": "este sitio web ya tiene el máximo de 20 tareas programadas",
+  "this task is already running": "esta tarea ya se está ejecutando",
+  "the name is too long (100 characters at most)": "el nombre es demasiado largo (100 caracteres como máximo)",
+  "enter the command to run": "introduce el comando que se ejecutará",
+  "the command is too long (4000 characters at most)": "el comando es demasiado largo (4000 caracteres como máximo)",
+  "the time limit must be between 10 seconds and 6 hours": "el tiempo máximo debe estar entre 10 segundos y 6 horas",
+  "schedule must be 5 cron fields (minute hour day month weekday) or @hourly, @daily, @weekly, @monthly, @yearly": "la programación debe tener 5 campos cron (minuto hora día mes día de la semana) o ser @hourly, @daily, @weekly, @monthly, @yearly"
 }

@@ -87,16 +87,21 @@ func (db *DB) CreateDomain(ctx context.Context, d *Domain) error {
 	if d.Status == "" {
 		d.Status = StatusPending
 	}
-	res, err := db.sql.ExecContext(ctx, `INSERT INTO domains (owner_id, name, kind, parent_id, runtime, runtime_version, document_root, start_command, app_port,
+	return db.tx(ctx, func(tx *sql.Tx) error {
+		id, err := nextID(ctx, tx, "domains")
+		if err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO domains (id, owner_id, name, kind, parent_id, runtime, runtime_version, document_root, start_command, app_port,
 		ssl_enabled, force_https, memory_mb, cpus, env_json, status, status_message, container_id, created_at, updated_at)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		d.OwnerID, d.Name, d.Kind, d.ParentID, d.Runtime, d.RuntimeVersion, d.DocumentRoot, d.StartCommand, d.AppPort,
-		d.SSLEnabled, d.ForceHTTPS, d.MemoryMB, d.CPUs, envJSON, d.Status, d.StatusMessage, d.ContainerID, d.CreatedAt, d.UpdatedAt)
-	if err != nil {
-		return mapErr(err)
-	}
-	d.ID, err = res.LastInsertId()
-	return err
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			id, d.OwnerID, d.Name, d.Kind, d.ParentID, d.Runtime, d.RuntimeVersion, d.DocumentRoot, d.StartCommand, d.AppPort,
+			d.SSLEnabled, d.ForceHTTPS, d.MemoryMB, d.CPUs, envJSON, d.Status, d.StatusMessage, d.ContainerID, d.CreatedAt, d.UpdatedAt); err != nil {
+			return mapErr(err)
+		}
+		d.ID = id
+		return nil
+	})
 }
 
 // GetDomain returns a domain by ID.
@@ -183,6 +188,21 @@ func (db *DB) SetDomainStatus(ctx context.Context, id int64, status, message, co
 	_, err := db.sql.ExecContext(ctx, `UPDATE domains SET status=?, status_message=?, container_id=?, updated_at=? WHERE id=?`,
 		status, message, containerID, now(), id)
 	return err
+}
+
+// SetDomainHealth records a status observed from the website's container. It
+// only moves between running and error, so it never overrides a deploy in
+// progress, a stop or a suspension, and it keeps deploy error messages until
+// the app has proven healthy. Reports whether anything changed.
+func (db *DB) SetDomainHealth(ctx context.Context, id int64, status, message string) (bool, error) {
+	res, err := db.sql.ExecContext(ctx, `UPDATE domains SET status=?, status_message=?, updated_at=?
+		WHERE id=? AND status IN ('running','error') AND (status<>? OR status_message<>?)`,
+		status, message, now(), id, status, message)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
 }
 
 // DeleteDomain removes a domain (its aliases and redirects cascade).

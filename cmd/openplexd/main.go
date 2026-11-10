@@ -19,6 +19,7 @@ import (
 	"openplex.dev/openplex/internal/auth"
 	"openplex.dev/openplex/internal/backup"
 	"openplex.dev/openplex/internal/config"
+	"openplex.dev/openplex/internal/cron"
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/docker"
 	"openplex.dev/openplex/internal/monitor"
@@ -98,6 +99,11 @@ func run(args []string) error {
 			go func() {
 				defer workers.Done()
 				orch.RemoveStaleShells(ctx)
+				workers.Add(1)
+				go func() {
+					defer workers.Done()
+					orch.WatchHealth(ctx, 15*time.Second)
+				}()
 				if err := orch.Reconcile(ctx); err != nil {
 					log.Error("initial reconcile finished with errors", "err", err)
 				}
@@ -132,9 +138,17 @@ func run(args []string) error {
 		go func() { defer workers.Done(); backups.Run(ctx) }()
 	}
 
+	var runner cron.Runner // a nil *Orchestrator must not become a non-nil interface
+	if orch != nil {
+		runner = orch
+	}
+	crons := cron.New(store, runner, log)
+	workers.Add(1)
+	go func() { defer workers.Done(); crons.Run(ctx) }()
+
 	srv := api.New(api.Options{
 		Config: cfg, DB: store, Orchestrator: orch, Monitor: mon, Logger: log,
-		UI: ui.Handler(), Version: version, BaseContext: ctx, Box: box, Backups: backups,
+		UI: ui.Handler(), Version: version, BaseContext: ctx, Box: box, Backups: backups, Cron: crons,
 	})
 	httpSrv := &http.Server{
 		Handler:           srv.Handler(),

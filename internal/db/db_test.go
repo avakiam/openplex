@@ -81,3 +81,46 @@ func TestRefreshRotation(t *testing.T) {
 		t.Fatal("time round-trip broken")
 	}
 }
+
+func TestIDsAreNeverReused(t *testing.T) {
+	ctx := context.Background()
+	d := OpenMemory(t)
+	u := &User{Username: "owner", PasswordHash: "x", Role: RoleCustomer}
+	if err := d.CreateUser(ctx, u); err != nil {
+		t.Fatal(err)
+	}
+	for _, kind := range []string{"domain", "database"} {
+		create := func(name string) int64 {
+			if kind == "domain" {
+				dm := &Domain{OwnerID: u.ID, Name: name, Kind: KindPrimary, Runtime: "static"}
+				if err := d.CreateDomain(ctx, dm); err != nil {
+					t.Fatal(err)
+				}
+				return dm.ID
+			}
+			db := &Database{OwnerID: u.ID, Engine: EngineMariaDB, Name: name, Username: name}
+			if err := d.CreateDatabase(ctx, db); err != nil {
+				t.Fatal(err)
+			}
+			return db.ID
+		}
+		remove := func(id int64) {
+			var err error
+			if kind == "domain" {
+				err = d.DeleteDomain(ctx, id)
+			} else {
+				err = d.DeleteDatabase(ctx, id)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		a := create("a" + kind + ".test")
+		b := create("b" + kind + ".test")
+		remove(b) // the highest ID: plain SQLite would hand it out again
+		c := create("c" + kind + ".test")
+		if c <= b || a >= b {
+			t.Fatalf("%s ids: a=%d b=%d c=%d (c must be > b)", kind, a, b, c)
+		}
+	}
+}

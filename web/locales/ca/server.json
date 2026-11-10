@@ -112,5 +112,14 @@
   "name is required (max 64 chars)": "El nom és obligatori (màx. 64 caràcters)",
   "expires_in_days must be 0 (never) to 3650": "La caducitat ha d'estar entre 0 (mai) i 3650 dies",
   "RSA keys must be at least 2048 bits": "Les claus RSA han de tenir com a mínim 2048 bits",
-  "Static (HTML/CSS/JS)": "Estàtic (HTML/CSS/JS)"
+  "Static (HTML/CSS/JS)": "Estàtic (HTML/CSS/JS)",
+  "The app keeps crashing and restarting. Check the website's logs.": "L'aplicació es tanca i es reinicia una vegada i una altra. Revisa els registres del lloc web.",
+  "The app stopped unexpectedly. Check the website's logs, then restart it.": "L'aplicació s'ha aturat de manera inesperada. Revisa els registres del lloc web i reinicia-la.",
+  "this website already has the maximum of 20 scheduled tasks": "aquest lloc web ja té el màxim de 20 tasques programades",
+  "this task is already running": "aquesta tasca ja s'està executant",
+  "the name is too long (100 characters at most)": "el nom és massa llarg (100 caràcters com a màxim)",
+  "enter the command to run": "introdueix l'ordre que s'executarà",
+  "the command is too long (4000 characters at most)": "l'ordre és massa llarga (4000 caràcters com a màxim)",
+  "the time limit must be between 10 seconds and 6 hours": "el temps màxim ha d'estar entre 10 segons i 6 hores",
+  "schedule must be 5 cron fields (minute hour day month weekday) or @hourly, @daily, @weekly, @monthly, @yearly": "la programació ha de tenir 5 camps cron (minut hora dia mes dia de la setmana) o ser @hourly, @daily, @weekly, @monthly, @yearly"
 }
