@@ -50,6 +50,7 @@ type Orchestrator struct {
 
 	edgeMu  sync.Mutex // serializes edge config writes/reloads
 	buildMu sync.Mutex // serializes local image builds
+	netMu   sync.Mutex // serializes account network creation (subnet allocation)
 	locks   keyedMutex // per-site lifecycle locks
 }
 

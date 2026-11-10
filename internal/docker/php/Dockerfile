@@ -1,5 +1,6 @@
-# OpenPlex PHP-FPM runtime: official image + the extensions common PHP apps
-# (WordPress, Laravel, Symfony, Drupal…) expect. Built locally by openplexd.
+# OpenPlex PHP runtime: official PHP-FPM image + the extensions common PHP apps
+# (WordPress, Laravel, Symfony, Drupal…) expect, and Caddy serving the site.
+# Built locally by openplexd.
 ARG PHP_VERSION
 FROM php:${PHP_VERSION}-fpm-alpine
 
@@ -20,3 +21,11 @@ RUN set -eux; \
     php -m | grep -qi pdo_mysql
 
 COPY openplex.ini $PHP_INI_DIR/conf.d/zz-openplex.ini
+COPY fpm.conf /usr/local/etc/php-fpm.d/zz-openplex.conf
+COPY --from=caddy:2.10-alpine /usr/bin/caddy /usr/bin/caddy
+COPY Caddyfile /etc/openplex/Caddyfile
+COPY entrypoint.sh /usr/local/bin/openplex-entrypoint
+RUN chmod 0755 /usr/local/bin/openplex-entrypoint
+EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/openplex-entrypoint"]
+CMD []

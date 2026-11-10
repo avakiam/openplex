@@ -109,8 +109,8 @@ func (o *Orchestrator) BuildEdgeConfig(ctx context.Context) (ssl.Config, error) 
 			Backend: rt.Backend, SSL: d.SSLEnabled, ForceHTTPS: d.ForceHTTPS, Redirects: rules[d.ID], WWW: www[d.ID],
 		}
 		switch rt.Backend {
-		case ssl.BackendFastCGI:
-			s.Upstream = fmt.Sprintf("%s:%d", SiteContainerName(d.ID), rt.DefaultPort)
+		case ssl.BackendStatic, ssl.BackendFastCGI:
+			s.Upstream = fmt.Sprintf("%s:%d", SiteContainerName(d.ID), WebPort)
 		case ssl.BackendProxy:
 			s.Upstream = fmt.Sprintf("%s:%d", SiteContainerName(d.ID), d.AppPort)
 		}
@@ -197,11 +197,13 @@ func (o *Orchestrator) EnsureEdge(ctx context.Context) error {
 		return err
 	}
 	if existing != nil {
-		if existing.Config.Image == EdgeImage {
+		if existing.Config.Image == EdgeImage && existing.Config.Labels[LabelSpec] == edgeRevision {
 			if !existing.State.Running {
-				return o.cli.ContainerStart(ctx, existing.ID, container.StartOptions{})
+				if err := o.cli.ContainerStart(ctx, existing.ID, container.StartOptions{}); err != nil {
+					return err
+				}
 			}
-			return nil
+			return o.joinTenantNetworks(ctx, EdgeContainer, nil)
 		}
 		o.log.Info("upgrading edge container", "from", existing.Config.Image, "to", EdgeImage)
 		if err := o.cli.ContainerRemove(ctx, existing.ID, container.RemoveOptions{Force: true}); err != nil {
@@ -222,7 +224,6 @@ func (o *Orchestrator) EnsureEdge(ctx context.Context) error {
 			{Type: mount.TypeBind, Source: o.caddyEtcDir(), Target: "/etc/caddy", ReadOnly: true},
 			{Type: mount.TypeBind, Source: filepath.Join(o.cfg.CaddyDir(), "data"), Target: "/data"},
 			{Type: mount.TypeBind, Source: filepath.Join(o.cfg.CaddyDir(), "config"), Target: "/config"},
-			{Type: mount.TypeBind, Source: o.cfg.SitesDir(), Target: ssl.EdgeSitesRoot, ReadOnly: true},
 			{Type: mount.TypeBind, Source: o.cfg.LogsDir(), Target: ssl.EdgeLogsRoot},
 			{Type: mount.TypeBind, Source: o.cfg.RunDir(), Target: filepath.Dir(ssl.EdgePanelSock)},
 		},
@@ -231,10 +232,12 @@ func (o *Orchestrator) EnsureEdge(ctx context.Context) error {
 		SecurityOpt: []string{"no-new-privileges:true"},
 		LogConfig:   container.LogConfig{Type: "json-file", Config: map[string]string{"max-size": "20m", "max-file": "3"}},
 	}
+	labels := managedLabels("edge")
+	labels[LabelSpec] = edgeRevision
 	cc := &container.Config{
 		Image:        EdgeImage,
 		ExposedPorts: exposed,
-		Labels:       managedLabels("edge"),
+		Labels:       labels,
 	}
 	nc := &network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{EdgeNetwork: {}}}
 	created, err := o.cli.ContainerCreate(ctx, cc, hc, nc, nil, EdgeContainer)
@@ -245,8 +248,12 @@ func (o *Orchestrator) EnsureEdge(ctx context.Context) error {
 		return fmt.Errorf("start edge: %w", err)
 	}
 	o.log.Info("edge proxy started", "image", EdgeImage)
-	return nil
+	return o.joinTenantNetworks(ctx, EdgeContainer, nil)
 }
+
+// edgeRevision changes whenever the edge container's mounts or settings do,
+// so an upgrade recreates it (2: tenant files are no longer mounted).
+const edgeRevision = "2"
 
 func writeFileAtomic(path string, data []byte, mode os.FileMode) error {
 	tmp, err := os.CreateTemp(filepath.Dir(path), ".tmp-"+filepath.Base(path)+"-*")

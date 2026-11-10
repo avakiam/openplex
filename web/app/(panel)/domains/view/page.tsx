@@ -225,6 +225,7 @@ function SettingsTab({ d }: { d: Domain }) {
   useEffect(() => setF({ ...d, env: Object.entries(d.env ?? {}) }), [d]);
   const rt = runtimes.data?.find((r) => r.name === f.runtime);
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((s) => ({ ...s, [k]: v }));
+  const admin = isAdmin(useAuth().user); // resource limits are the operator's call
   const save = useAction(
     () =>
       api.patch<Domain>(`/domains/${d.id}`, {
@@ -303,10 +304,10 @@ function SettingsTab({ d }: { d: Domain }) {
           )}
           <div className="grid grid-cols-2 gap-3">
             <Field label={t("Memory limit (MB)")}>
-              <Input type="number" min={64} max={65536} value={f.memory_mb} onChange={(e) => set("memory_mb", Number(e.target.value))} />
+              <Input type="number" min={64} max={65536} value={f.memory_mb} disabled={!admin} onChange={(e) => set("memory_mb", Number(e.target.value))} />
             </Field>
             <Field label={t("CPU limit (cores)")}>
-              <Input type="number" min={0.1} max={64} step={0.1} value={f.cpus} onChange={(e) => set("cpus", Number(e.target.value))} />
+              <Input type="number" min={0.1} max={64} step={0.1} value={f.cpus} disabled={!admin} onChange={(e) => set("cpus", Number(e.target.value))} />
             </Field>
           </div>
         </CardBody>
@@ -646,7 +647,7 @@ function DomainView() {
               <Network /> DNS
             </TabsTrigger>
           )}
-          {acc.can("files") && !acc.readOnly && (
+          {acc.can("files") && acc.can("site") && !acc.readOnly && (
             <TabsTrigger value="terminal">
               <SquareTerminal /> {t("Terminal")}
             </TabsTrigger>

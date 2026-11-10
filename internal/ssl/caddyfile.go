@@ -15,7 +15,7 @@ import (
 
 // Mount points inside the edge container (kept in sync with internal/docker).
 const (
-	EdgeSitesRoot = "/srv/sites"        // read-only view of all site directories
+	EdgeSitesRoot = "/srv/sites"        // where a site directory is mounted in its own containers
 	EdgeLogsRoot  = "/var/log/openplex" // writable per-site access logs
 	EdgePanelSock = "/run/openplex/openplexd.sock"
 )
@@ -24,8 +24,8 @@ const (
 type Backend string
 
 const (
-	BackendStatic   Backend = "static"   // Caddy file_server
-	BackendFastCGI  Backend = "fastcgi"  // php_fastcgi upstream:9000 + file_server
+	BackendStatic   Backend = "static"   // the site's own file server, proxied
+	BackendFastCGI  Backend = "fastcgi"  // the PHP container's web server, proxied
 	BackendProxy    Backend = "proxy"    // reverse_proxy upstream:port
 	BackendDisabled Backend = "disabled" // 503 page
 )
@@ -119,7 +119,7 @@ func Render(c Config) (string, error) {
 		if !ValidHostname(c.PanelDomain) {
 			return "", fmt.Errorf("invalid panel domain %q", c.PanelDomain)
 		}
-		fmt.Fprintf(&b, "%s {\n\timport opx_common\n\treverse_proxy unix/%s {\n\t\tflush_interval -1\n\t}\n}\n\n", c.PanelDomain, EdgePanelSock)
+		fmt.Fprintf(&b, "%s {\n\timport opx_common\n\theader Strict-Transport-Security \"max-age=31536000\"\n\treverse_proxy unix/%s {\n\t\tflush_interval -1\n\t}\n}\n\n", c.PanelDomain, EdgePanelSock)
 	}
 
 	sites := append([]Site(nil), c.Sites...)
@@ -200,16 +200,10 @@ func renderSite(b *strings.Builder, s Site) error {
 		}
 		fmt.Fprintf(b, "\tredir %s %s %d\n", r.Path, r.Target, r.Code)
 	}
-	root := path.Join(EdgeSitesRoot, s.Name, s.DocumentRoot)
 	switch s.Backend {
-	case BackendStatic:
-		fmt.Fprintf(b, "\troot * %s\n\tfile_server\n", root)
-	case BackendFastCGI:
-		if !upstreamRe.MatchString(s.Upstream) {
-			return fmt.Errorf("invalid upstream %q", s.Upstream)
-		}
-		fmt.Fprintf(b, "\troot * %s\n\tphp_fastcgi %s\n\tfile_server\n", root, s.Upstream)
-	case BackendProxy:
+	case BackendStatic, BackendFastCGI, BackendProxy:
+		// Static and PHP sites run their own web server (see docker.WebPort):
+		// the edge only proxies and never reads tenant files.
 		if !upstreamRe.MatchString(s.Upstream) {
 			return fmt.Errorf("invalid upstream %q", s.Upstream)
 		}

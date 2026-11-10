@@ -34,7 +34,7 @@ func (o *Orchestrator) RunSiteCommand(ctx context.Context, d *db.Domain, command
 	if err != nil {
 		return -1, err
 	}
-	if c != nil && c.State.Running {
+	if c != nil && c.State.Running && d.Runtime != "static" { // a static site's container only has its web server
 		target = c.ID
 	}
 	if target == "" {

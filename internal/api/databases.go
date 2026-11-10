@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
+	"mime/multipart"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -13,6 +15,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/docker"
@@ -170,16 +173,12 @@ func (s *Server) handleCreateDatabase(w http.ResponseWriter, r *http.Request) {
 		badRequest(w, "resulting database name "+full+" is not valid")
 		return
 	}
-	if owner.MaxDatabases > 0 {
-		n, err := s.db.CountDatabasesByOwner(ctx, owner.ID)
-		if err != nil {
-			s.fail(w, r, err)
-			return
-		}
-		if n >= owner.MaxDatabases {
-			writeErr(w, http.StatusForbidden, "quota_exceeded", fmt.Sprintf("database quota of %d reached", owner.MaxDatabases))
-			return
-		}
+	if msg, err := s.quotaReached(ctx, owner, true); err != nil {
+		s.fail(w, r, err)
+		return
+	} else if msg != "" {
+		writeErr(w, http.StatusForbidden, "quota_exceeded", msg)
+		return
 	}
 	password := secrets.Password(24)
 	enc, err := s.box.Seal(password)
@@ -231,10 +230,15 @@ func (s *Server) handleDatabaseCredentials(w http.ResponseWriter, r *http.Reques
 	case db.EngineRedis:
 		uri = fmt.Sprintf("redis://:%s@%s:%d/0", pw, v.Host, v.Port)
 	}
+	ticket, err := s.tickets.issueFor(actor(r).ID, 2*time.Minute) // opens Adminer (see adminerSession)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
 	s.audit(r, "database.credentials_viewed", d.Name, "")
 	writeJSON(w, http.StatusOK, map[string]any{
 		"host": v.Host, "port": v.Port, "database": d.Name, "username": d.Username, "password": pw, "url": uri,
-		"adminer": map[string]string{"driver": docker.Engines[d.Engine].Driver, "server": v.Host},
+		"adminer": map[string]string{"driver": docker.Engines[d.Engine].Driver, "server": v.Host, "ticket": ticket},
 	})
 }
 
@@ -282,8 +286,10 @@ func (s *Server) handleDeleteDatabase(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-// adminerProxy serves the Adminer GUI under /tools/adminer/. Adminer itself
-// requires database credentials; the panel's one-click login posts them.
+// adminerProxy serves the Adminer GUI under /tools/adminer/. Only signed-in
+// panel users get there: the dashboard opens it with a one-time ticket that
+// becomes an Adminer-only session cookie. Adminer itself still asks for the
+// database credentials (the one-click login posts them).
 func (s *Server) adminerProxy() http.Handler {
 	target, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", docker.AdminerPort))
 	rp := httputil.NewSingleHostReverseProxy(target)
@@ -292,6 +298,7 @@ func (s *Server) adminerProxy() http.Handler {
 		base(r)
 		r.URL.Path = "/" + strings.TrimPrefix(strings.TrimPrefix(r.URL.Path, "/tools/adminer"), "/")
 		r.Header.Del("Authorization")
+		dropCookie(r, adminerCookie)
 	}
 	rp.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		s.log.Warn("adminer proxy", "err", err)
@@ -302,47 +309,192 @@ func (s *Server) adminerProxy() http.Handler {
 			http.Redirect(w, r, "/tools/adminer/", http.StatusMovedPermanently)
 			return
 		}
-		// Adminer may only talk to OpenPlex database servers with the MySQL or
-		// PostgreSQL drivers — never arbitrary hosts (SSRF) or file-based drivers.
-		q := r.URL.Query()
-		for k := range q {
-			if adminerDriverParams[k] {
-				http.Error(w, "driver not allowed", http.StatusForbidden)
-				return
-			}
+		if !s.adminerSession(w, r) {
+			http.Error(w, "Open the database manager from the OpenPlex panel.", http.StatusForbidden)
+			return
 		}
-		for _, k := range []string{"server", "pgsql"} {
-			if v := q.Get(k); v != "" && !allowedAdminerServer(v) {
-				http.Error(w, "server not allowed", http.StatusForbidden)
-				return
-			}
-		}
-		if r.Method == http.MethodPost && strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
-			body, err := io.ReadAll(io.LimitReader(r.Body, 32<<20))
-			if err != nil {
-				http.Error(w, "bad request", http.StatusBadRequest)
-				return
-			}
-			r.Body = io.NopCloser(bytes.NewReader(body)) // restore for the proxy
-			r.ContentLength = int64(len(body))
-			if form, err := url.ParseQuery(string(body)); err == nil {
-				if drv := form.Get("auth[driver]"); drv != "" && drv != "server" && drv != "pgsql" {
-					http.Error(w, "driver not allowed", http.StatusForbidden)
-					return
-				}
-				if srv, ok := form["auth[server]"]; ok && !allowedAdminerServer(srv[0]) {
-					http.Error(w, "server not allowed", http.StatusForbidden)
-					return
-				}
-			}
+		if err := checkAdminerRequest(r); err != nil {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
 		}
 		w.Header().Set("Cache-Control", "no-store")
 		rp.ServeHTTP(w, r)
 	})
 }
 
+const (
+	adminerCookie     = "opx_adminer"
+	adminerSessionTTL = 8 * time.Hour
+)
+
+// adminerSession admits r when it carries a valid Adminer session cookie, or a
+// one-time ticket (?_opx=) that it turns into one.
+func (s *Server) adminerSession(w http.ResponseWriter, r *http.Request) bool {
+	q := r.URL.Query()
+	if t := q.Get("_opx"); t != "" {
+		uid, ok := s.tickets.redeem(t)
+		if !ok || !s.activeUser(r, uid) {
+			return false
+		}
+		id, err := s.adminerSessions.issueFor(uid, adminerSessionTTL)
+		if err != nil {
+			return false
+		}
+		http.SetCookie(w, &http.Cookie{Name: adminerCookie, Value: id, Path: "/tools/adminer/", HttpOnly: true,
+			Secure: !s.cfg.Dev, SameSite: http.SameSiteStrictMode, MaxAge: int(adminerSessionTTL / time.Second)})
+		q.Del("_opx")
+		r.URL.RawQuery = q.Encode()
+		return true
+	}
+	c, err := r.Cookie(adminerCookie)
+	if err != nil {
+		return false
+	}
+	uid, ok := s.adminerSessions.peek(c.Value)
+	return ok && s.activeUser(r, uid)
+}
+
+func (s *Server) activeUser(r *http.Request, id int64) bool {
+	u, err := s.db.GetUser(r.Context(), id)
+	return err == nil && !u.Disabled
+}
+
+// dropCookie removes one cookie from the request's Cookie header.
+func dropCookie(r *http.Request, name string) {
+	cs := r.Cookies()
+	r.Header.Del("Cookie")
+	for _, c := range cs {
+		if c.Name != name {
+			r.AddCookie(c)
+		}
+	}
+}
+
+// checkAdminerRequest lets Adminer talk only to the OpenPlex database servers
+// with the MySQL or PostgreSQL drivers: never to arbitrary hosts (SSRF) or with
+// file-based drivers. PHP reads parameters differently from Go (last value
+// wins, "a[]" is "a", " a" is "a"), so anything ambiguous is refused.
+func checkAdminerRequest(r *http.Request) error {
+	q, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
+		return errors.New("malformed query")
+	}
+	if err := checkAdminerParams(q, "server", "pgsql"); err != nil {
+		return err
+	}
+	if r.Method == http.MethodGet || r.Method == http.MethodHead {
+		return nil
+	}
+	mt, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil {
+		if r.ContentLength == 0 {
+			return nil
+		}
+		return errors.New("unsupported request body")
+	}
+	var form url.Values
+	switch mt {
+	case "application/x-www-form-urlencoded":
+		body, err := io.ReadAll(io.LimitReader(r.Body, 32<<20))
+		if err != nil {
+			return errors.New("bad request")
+		}
+		r.Body = io.NopCloser(bytes.NewReader(body)) // restore for the proxy
+		r.ContentLength = int64(len(body))
+		if form, err = url.ParseQuery(string(body)); err != nil {
+			return errors.New("malformed form")
+		}
+	case "multipart/form-data":
+		body, err := io.ReadAll(io.LimitReader(r.Body, 128<<20))
+		if err != nil {
+			return errors.New("bad request")
+		}
+		r.Body = io.NopCloser(bytes.NewReader(body))
+		r.ContentLength = int64(len(body))
+		form = url.Values{}
+		mr := multipart.NewReader(bytes.NewReader(body), params["boundary"])
+		for {
+			p, err := mr.NextPart()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return errors.New("malformed form")
+			}
+			if p.FileName() == "" {
+				v, _ := io.ReadAll(io.LimitReader(p, 1<<20))
+				form.Add(p.FormName(), string(v))
+			}
+		}
+	default:
+		return nil // PHP leaves $_POST empty for other bodies
+	}
+	return checkAdminerParams(form, "auth[driver]", "auth[server]")
+}
+
+// checkAdminerParams refuses driver parameters of other database kinds, any
+// array form of the checked keys and any value of them that is not exactly one
+// OpenPlex server (or driver).
+func checkAdminerParams(v url.Values, keys ...string) error {
+	count := map[string]int{}
+	for k, vals := range v {
+		n := phpKey(k)
+		base, _, _ := strings.Cut(n, "[")
+		if adminerDriverParams[base] {
+			return errors.New("driver not allowed")
+		}
+		for _, key := range keys {
+			kb, _, _ := strings.Cut(key, "[")
+			if base == kb && n != key && (kb != "auth" || strings.HasPrefix(n, key+"[")) {
+				return errors.New("parameter not allowed")
+			}
+			if n != key {
+				continue
+			}
+			if count[key] += len(vals); count[key] > 1 {
+				return errors.New("repeated parameter")
+			}
+			for _, val := range vals {
+				if key == "auth[driver]" {
+					if val != "server" && val != "pgsql" {
+						return errors.New("driver not allowed")
+					}
+				} else if val != "" && !allowedAdminerServer(val) {
+					return errors.New("server not allowed")
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// phpKey is the name PHP files a parameter under: leading spaces dropped,
+// spaces and dots in the base name turned into underscores, and anything after
+// the last complete [...] group ignored ("auth[driver]x" is auth[driver]).
+func phpKey(k string) string {
+	k = strings.TrimLeft(k, " ")
+	fix := strings.NewReplacer(" ", "_", ".", "_").Replace
+	i := strings.IndexByte(k, '[')
+	if i < 0 {
+		return fix(k)
+	}
+	out, rest := fix(k[:i]), k[i:]
+	for first := true; strings.HasPrefix(rest, "["); first = false {
+		j := strings.IndexByte(rest, ']')
+		if j < 0 {
+			if first { // an unclosed "[" is kept as "_" in the name
+				return out + "_" + fix(rest[1:])
+			}
+			break
+		}
+		out += rest[:j+1]
+		rest = rest[j+1:]
+	}
+	return out
+}
+
 var adminerDriverParams = map[string]bool{"sqlite": true, "sqlite2": true, "oracle": true, "mssql": true, "mongo": true,
-	"elastic": true, "clickhouse": true, "firebird": true, "simpledb": true}
+	"elastic": true, "elastic5": true, "clickhouse": true, "firebird": true, "simpledb": true, "igdb": true}
 
 func allowedAdminerServer(s string) bool {
 	return slices.Contains([]string{"mariadb", "postgres"}, strings.TrimSpace(strings.ToLower(s)))

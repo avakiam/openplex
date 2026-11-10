@@ -74,6 +74,8 @@ class openplex extends rcube_plugin
             $args['cookiecheck'] = false;
             return $args;
         }
+        // A password login never inherits a panel login's master session.
+        unset($_SESSION['openplex_ticket']);
         $captcha = $this->captcha();
         if ($captcha !== null && !$this->verify_captcha($captcha)) {
             $args['abort'] = true;

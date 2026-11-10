@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -94,7 +95,8 @@ func (s *Server) loadDomain(w http.ResponseWriter, r *http.Request) *db.Domain {
 	case area == areaOwner:
 		writeErr(w, http.StatusForbidden, "forbidden", "only the owner of this website can do this")
 		return nil
-	case area != "" && !g.Has(area):
+	case area == areaShell && !(g.Has(db.AreaFiles) && g.Has(db.AreaSite)),
+		area != "" && area != areaShell && !g.Has(area):
 		writeErr(w, http.StatusForbidden, "forbidden", "you don't have access to this part of the website")
 		return nil
 	case write && g.ReadOnly:
@@ -124,6 +126,10 @@ func (s *Server) siteGrant(ctx context.Context, userID int64, d *db.Domain) (*db
 
 // areaOwner marks requests only the owner may make through a grant (none).
 const areaOwner = "owner"
+
+// areaShell is the web terminal: a shell can change the files and the running
+// app alike, so it needs both the files and the website settings areas.
+const areaShell = "shell"
 
 // siteArea maps a request under /api/v1/domains/{id} to the website area it
 // touches ("" = any grant may see it) and whether it changes anything. The
@@ -155,7 +161,7 @@ func siteArea(r *http.Request) (area string, write bool) {
 	case "files":
 		return db.AreaFiles, write
 	case "terminal":
-		return db.AreaFiles, true
+		return areaShell, true
 	case "dns":
 		return db.AreaDNS, write
 	case "mail":
@@ -182,4 +188,60 @@ func (s *Server) loadManagedUser(w http.ResponseWriter, r *http.Request) *db.Use
 		return nil
 	}
 	return u
+}
+
+// quotaReached says (as an error message) whether owner may not get another
+// website (or database). A reseller's limit covers its customers too, so it
+// can't be bypassed by creating customers without limits.
+func (s *Server) quotaReached(ctx context.Context, owner *db.User, databases bool) (string, error) {
+	check := []*db.User{owner}
+	if owner.ParentID != nil {
+		if p, err := s.db.GetUser(ctx, *owner.ParentID); err == nil && p.Role == db.RoleReseller {
+			check = append(check, p)
+		}
+	}
+	for _, u := range check {
+		limit := u.MaxDomains
+		if databases {
+			limit = u.MaxDatabases
+		}
+		if limit <= 0 {
+			continue
+		}
+		ids := []int64{u.ID}
+		if u.Role == db.RoleReseller {
+			var err error
+			if ids, err = s.visibleOwnerIDs(ctx, u); err != nil {
+				return "", err
+			}
+		}
+		n := 0
+		for _, id := range ids {
+			var c int
+			var err error
+			if databases {
+				c, err = s.db.CountDatabasesByOwner(ctx, id)
+			} else {
+				c, err = s.db.CountDomainsByOwner(ctx, id)
+			}
+			if err != nil {
+				return "", err
+			}
+			n += c
+		}
+		if n < limit {
+			continue
+		}
+		switch {
+		case u.ID != owner.ID && databases:
+			return fmt.Sprintf("the reseller's database quota of %d is reached", limit), nil
+		case u.ID != owner.ID:
+			return fmt.Sprintf("the reseller's website quota of %d is reached", limit), nil
+		case databases:
+			return fmt.Sprintf("database quota of %d reached", limit), nil
+		default:
+			return fmt.Sprintf("website quota of %d reached", limit), nil
+		}
+	}
+	return "", nil
 }

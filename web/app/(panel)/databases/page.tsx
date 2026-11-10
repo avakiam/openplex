@@ -43,7 +43,7 @@ function prefixFor(username: string) {
 function openAdminer(c: DatabaseCredentials) {
   const form = document.createElement("form");
   form.method = "POST";
-  form.action = "/tools/adminer/";
+  form.action = `/tools/adminer/?_opx=${encodeURIComponent(c.adminer.ticket)}`;
   form.target = "_blank";
   const fields: Record<string, string> = {
     "auth[driver]": c.adminer.driver,
@@ -155,8 +155,13 @@ function CredentialsDialog({ db, onClose }: { db: Database | null; onClose: () =
               <Button variant="outline" loading={rotate.isPending} onClick={() => rotate.mutate(undefined)}>
                 <KeyRound /> {t("Rotate password")}
               </Button>
-              {db?.engine !== "redis" && (
-                <Button onClick={() => openAdminer(creds)}>
+              {db && db.engine !== "redis" && (
+                <Button
+                  onClick={() =>
+                    // a fresh one-time ticket: the one in creds may be used or expired
+                    api.get<DatabaseCredentials>(`/databases/${db.id}/credentials`).then(openAdminer, (e: Error) => toast.error(e.message))
+                  }
+                >
                   <SquareArrowOutUpRight /> {t("Open in Adminer")}
                 </Button>
               )}

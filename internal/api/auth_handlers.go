@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -56,6 +57,9 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ip := clientIP(r)
+	if len(in.Username) > 64 || len(in.Password) > 1024 { // no real account has these; keeps the limiter and the logs small
+		in.Username, in.Password = in.Username[:min(len(in.Username), 64)], ""
+	}
 	if !s.loginLimiter.allow("ip:"+ip) || !s.loginLimiter.allow("user:"+strings.ToLower(in.Username)) {
 		writeErr(w, http.StatusTooManyRequests, "rate_limited", "too many login attempts, try again later")
 		return
@@ -233,9 +237,15 @@ func (s *Server) setPassword(r *http.Request, u *db.User, pw string) error {
 	if err != nil {
 		return err
 	}
+	old := u.PasswordHash
 	u.PasswordHash = h
 	if err := s.db.UpdateUser(r.Context(), u); err != nil {
 		return err
+	}
+	// The first-boot password file has served its purpose once that
+	// password is replaced.
+	if b, err := os.ReadFile(s.cfg.AdminPassPath()); err == nil && auth.VerifyPassword(old, strings.TrimSpace(string(b))) {
+		_ = os.Remove(s.cfg.AdminPassPath())
 	}
 	return s.db.RevokeUserRefreshTokens(r.Context(), u.ID)
 }

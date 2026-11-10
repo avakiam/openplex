@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/publicsuffix"
+
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/docker"
 	"openplex.dev/openplex/internal/ssl"
@@ -157,12 +159,16 @@ func (s *Server) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 	if d.Kind == "" {
 		d.Kind = db.KindPrimary
 	}
+	if !s.mayChangeLimits(a, d, &in) {
+		writeErr(w, http.StatusForbidden, "forbidden", "only an administrator can change a website's memory and CPU limits")
+		return
+	}
 	if !ssl.ValidHostname(d.Name) || strings.HasPrefix(d.Name, "*.") {
 		badRequest(w, "name must be a valid lowercase hostname (wildcards are not supported)")
 		return
 	}
-	if s.cfg.PanelDomain != "" && d.Name == s.cfg.PanelDomain {
-		writeErr(w, http.StatusConflict, "conflict", "this hostname is reserved for the panel")
+	if msg := s.reservedName(ctx, a, d.Name); msg != "" {
+		writeErr(w, http.StatusConflict, "conflict", msg)
 		return
 	}
 
@@ -218,16 +224,12 @@ func (s *Server) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 			s.fail(w, r, err)
 			return
 		}
-		if owner.MaxDomains > 0 {
-			n, err := s.db.CountDomainsByOwner(ctx, owner.ID)
-			if err != nil {
-				s.fail(w, r, err)
-				return
-			}
-			if n >= owner.MaxDomains {
-				writeErr(w, http.StatusForbidden, "quota_exceeded", fmt.Sprintf("website quota of %d reached", owner.MaxDomains))
-				return
-			}
+		if msg, err := s.quotaReached(ctx, owner, false); err != nil {
+			s.fail(w, r, err)
+			return
+		} else if msg != "" {
+			writeErr(w, http.StatusForbidden, "quota_exceeded", msg)
+			return
 		}
 	}
 	if err := in.apply(d); err != nil {
@@ -256,6 +258,41 @@ func (s *Server) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 	}
 	s.deployAsync(d)
 	writeJSON(w, http.StatusCreated, d)
+}
+
+// mayChangeLimits: memory and CPU limits protect the other tenants of the
+// server, so only administrators change them (sending the current values is fine).
+func (s *Server) mayChangeLimits(a *db.User, d *db.Domain, in *domainInput) bool {
+	if a.Role == db.RoleAdmin {
+		return true
+	}
+	return (in.MemoryMB == nil || *in.MemoryMB == d.MemoryMB) && (in.CPUs == nil || *in.CPUs == d.CPUs)
+}
+
+// reservedName says why name can't be a website, or "". The panel and mail
+// host names belong to the server: a customer owning one of them, a parent
+// (same-site with the panel: cookies) or a child would get the panel's or the
+// webmail's address. Public suffixes (co.uk, github.io) would block everyone.
+func (s *Server) reservedName(ctx context.Context, a *db.User, name string) string {
+	if ps, _ := publicsuffix.PublicSuffix(name); ps == name {
+		return "this name is a public suffix; add a domain registered under it"
+	}
+	related := func(h string) bool {
+		return h != "" && (name == h || strings.HasSuffix(name, "."+h) || strings.HasSuffix(h, "."+name))
+	}
+	mailHost := ""
+	if ms, err := s.db.GetMailSettings(ctx); err == nil {
+		mailHost = ms.Hostname
+	}
+	switch {
+	case name == s.cfg.PanelDomain && name != "":
+		return "this hostname is reserved for the panel"
+	case name == mailHost && name != "":
+		return "this hostname is reserved for the mail server"
+	case a.Role != db.RoleAdmin && (related(s.cfg.PanelDomain) || related(mailHost)):
+		return "this name belongs to the server's own domain; ask an administrator"
+	}
+	return ""
 }
 
 // checkNameOwnership prevents hijacking: a hostname inside another owner's
@@ -291,6 +328,10 @@ func (s *Server) handleUpdateDomain(w http.ResponseWriter, r *http.Request) {
 	}
 	if d.Kind == db.KindAlias {
 		badRequest(w, "aliases have no settings; edit the parent website")
+		return
+	}
+	if !s.mayChangeLimits(actor(r), d, &in) {
+		writeErr(w, http.StatusForbidden, "forbidden", "only an administrator can change a website's memory and CPU limits")
 		return
 	}
 	if err := in.apply(d); err != nil {

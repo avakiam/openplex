@@ -213,7 +213,7 @@ export interface DatabaseCredentials {
   username: string;
   password: string;
   url: string;
-  adminer: { driver: string; server: string };
+  adminer: { driver: string; server: string; ticket: string };
 }
 
 export interface BackupSettings {

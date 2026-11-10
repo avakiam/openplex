@@ -1,0 +1,31 @@
+# Web server of an OpenPlex PHP site. It runs as the site's uid inside the
+# site's container, serves the files and passes PHP to the local PHP-FPM.
+{
+	admin off
+	auto_https off
+	persist_config off
+	log {
+		level ERROR
+	}
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+:8080 {
+	root * {$OPENPLEX_DOCROOT}
+	# The edge terminates TLS: tell PHP how the visitor arrived.
+	map {header.X-Forwarded-Proto} {opx_https} {opx_port} {opx_scheme} {
+		https on 443 https
+		default off 80 http
+	}
+	php_fastcgi 127.0.0.1:9000 {
+		env HTTPS {opx_https}
+		env SERVER_PORT {opx_port}
+		env REQUEST_SCHEME {opx_scheme}
+		env REMOTE_ADDR {client_ip}
+	}
+	file_server {
+		hide .git .env .htaccess .htpasswd .user.ini
+	}
+}

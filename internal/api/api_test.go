@@ -6,8 +6,12 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -30,6 +34,7 @@ type harness struct {
 	db  *db.DB
 	cfg *config.Config
 	box *secrets.Box
+	srv *Server
 }
 
 func newHarness(t *testing.T) *harness {
@@ -46,7 +51,7 @@ func newHarness(t *testing.T) *harness {
 	srv := New(Options{Config: cfg, DB: store, Monitor: monitor.New(time.Second, 10, dir, log), Logger: log, BaseContext: context.Background(), Box: box, Cron: cron.New(store, nil, log), Firewall: firewall.New(store, log, false), DNS: dnsM, Mail: mail.New(store, nil, dnsM, box, dir, dir, nil, log)})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
-	h := &harness{t: t, ts: ts, db: store, cfg: cfg, box: box}
+	h := &harness{t: t, ts: ts, db: store, cfg: cfg, box: box, srv: srv}
 	h.mkUser("admin", db.RoleAdmin, nil)
 	return h
 }
@@ -305,11 +310,73 @@ func TestAdminerGuard(t *testing.T) {
 	if res.StatusCode != 403 {
 		t.Errorf("POST to foreign server: %d", res.StatusCode)
 	}
-	// An allowed server reaches the proxy (502: no Adminer running in tests).
+	// Even an allowed server needs a panel session.
 	res, _ = http.Get(h.ts.URL + "/tools/adminer/?server=mariadb")
 	res.Body.Close()
+	if res.StatusCode != 403 {
+		t.Errorf("without a session: %d, want 403", res.StatusCode)
+	}
+	// A one-time ticket opens a session cookie; then the proxy is reached
+	// (502: no Adminer running in tests).
+	ticket, _ := h.srv.tickets.issueFor(1, time.Minute)
+	jar, _ := cookiejar.New(nil)
+	c := &http.Client{Jar: jar}
+	res, err = c.Get(h.ts.URL + "/tools/adminer/?_opx=" + ticket + "&server=mariadb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
 	if res.StatusCode != 502 {
-		t.Errorf("allowed server: %d, want 502 from proxy", res.StatusCode)
+		t.Errorf("with a ticket: %d, want 502 from proxy", res.StatusCode)
+	}
+	if res, _ = c.Get(h.ts.URL + "/tools/adminer/?_opx=" + ticket); res.StatusCode != 403 {
+		t.Errorf("reused ticket: %d, want 403", res.StatusCode)
+	}
+	res.Body.Close()
+}
+
+// PHP reads parameters differently from Go; none of these may get through.
+func TestCheckAdminerRequest(t *testing.T) {
+	form := func(v url.Values) *http.Request {
+		r := httptest.NewRequest("POST", "/tools/adminer/", strings.NewReader(v.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		return r
+	}
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	_ = mw.WriteField("auth[driver]", "sqlite")
+	_ = mw.Close()
+	multi := httptest.NewRequest("POST", "/tools/adminer/", &body)
+	multi.Header.Set("Content-Type", mw.FormDataContentType())
+	upper := form(url.Values{"auth[driver]": {"sqlite"}})
+	upper.Header.Set("Content-Type", "Application/X-WWW-Form-Urlencoded")
+	semi := httptest.NewRequest("POST", "/tools/adminer/", strings.NewReader("a=1;b=2&auth[driver]=sqlite"))
+	semi.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	for name, r := range map[string]*http.Request{
+		"last value wins":  form(url.Values{"auth[driver]": {"server", "sqlite"}, "auth[server]": {"mariadb"}}),
+		"trailing garbage": form(url.Values{"auth[driver]": {"server"}, "auth[driver]x": {"sqlite"}, "auth[server]": {"mariadb"}}),
+		"second server":    form(url.Values{"auth[driver]": {"server"}, "auth[server]": {"mariadb", "10.0.0.1"}}),
+		"array server":     form(url.Values{"auth[server][]": {"10.0.0.1"}}),
+		"leading space":    httptest.NewRequest("GET", "/tools/adminer/?%20sqlite=&username=x", nil),
+		"array driver":     httptest.NewRequest("GET", "/tools/adminer/?sqlite[]=x", nil),
+		"repeated server":  httptest.NewRequest("GET", "/tools/adminer/?server=mariadb&server=10.0.0.1", nil),
+		"query semicolon":  httptest.NewRequest("GET", "/tools/adminer/?a=1;server=10.0.0.1", nil),
+		"multipart":        multi,
+		"mixed-case type":  upper,
+		"body semicolon":   semi,
+	} {
+		if err := checkAdminerRequest(r); err == nil {
+			t.Errorf("%s: allowed", name)
+		}
+	}
+	for name, r := range map[string]*http.Request{
+		"login":  form(url.Values{"auth[driver]": {"server"}, "auth[server]": {"mariadb"}, "auth[username]": {"u"}, "auth[password]": {"p"}, "auth[db]": {"d"}}),
+		"browse": httptest.NewRequest("GET", "/tools/adminer/?server=mariadb&username=u&db=d&table=t", nil),
+	} {
+		if err := checkAdminerRequest(r); err != nil {
+			t.Errorf("%s: refused: %v", name, err)
+		}
 	}
 }
 
@@ -556,7 +623,7 @@ func TestMail(t *testing.T) {
 	h.mkUser("carla", db.RoleCustomer, nil)
 	h.mkUser("dani", db.RoleCustomer, nil)
 	admin, carla, dani := h.login("admin").AccessToken, h.login("carla").AccessToken, h.login("dani").AccessToken
-	if c := h.do("PUT", "/mail/settings", admin, map[string]any{"enabled": true, "hostname": "mail.example.com"}, nil); c != 200 {
+	if c := h.do("PUT", "/mail/settings", admin, map[string]any{"enabled": true, "hostname": "mail.provider.test"}, nil); c != 200 {
 		t.Fatalf("settings: %d", c)
 	}
 	var site db.Domain
@@ -736,5 +803,51 @@ func TestAccessGrants(t *testing.T) {
 	}
 	if gs, _ := h.db.ListUserGrants(ctx, dev.ID); len(gs) != 0 {
 		t.Errorf("grants left after deleting the site: %+v", gs)
+	}
+}
+
+func TestTenantLimits(t *testing.T) {
+	h := newHarness(t)
+	h.cfg.PanelDomain = "panel.provider.test"
+	h.mkUser("carla", db.RoleCustomer, nil)
+	admin, carla := h.login("admin").AccessToken, h.login("carla").AccessToken
+	for _, name := range []string{"co.uk", "github.io", "panel.provider.test", "provider.test", "x.panel.provider.test"} {
+		if c := h.do("POST", "/domains", carla, map[string]any{"name": name}, nil); c != 409 {
+			t.Errorf("customer created %s: %d, want 409", name, c)
+		}
+	}
+	var site db.Domain
+	if c := h.do("POST", "/domains", carla, map[string]any{"name": "carla.test"}, &site); c != 201 {
+		t.Fatalf("create: %d", c)
+	}
+	if c := h.do("POST", "/domains", carla, map[string]any{"name": "big.test", "memory_mb": 8192}, nil); c != 403 {
+		t.Errorf("customer chose its memory: %d, want 403", c)
+	}
+	if c := h.do("PATCH", "/domains/"+itoa(site.ID), carla, map[string]any{"memory_mb": 8192, "cpus": 8}, nil); c != 403 {
+		t.Errorf("customer raised its limits: %d, want 403", c)
+	}
+	if c := h.do("PATCH", "/domains/"+itoa(site.ID), carla, map[string]any{"memory_mb": site.MemoryMB, "cpus": site.CPUs, "force_https": false}, nil); c != 200 {
+		t.Errorf("customer saving unchanged limits: %d, want 200", c)
+	}
+	if c := h.do("PATCH", "/domains/"+itoa(site.ID), admin, map[string]any{"memory_mb": 1024}, nil); c != 200 {
+		t.Errorf("admin raising limits: %d", c)
+	}
+	if c := h.do("POST", "/domains", admin, map[string]any{"name": "provider.test"}, nil); c != 201 {
+		t.Errorf("admin creating the provider's own domain: %d", c)
+	}
+
+	// A reseller's quota covers its customers.
+	rs := h.mkUser("res", db.RoleReseller, nil)
+	rs.MaxDomains = 1
+	if err := h.db.UpdateUser(context.Background(), rs); err != nil {
+		t.Fatal(err)
+	}
+	cust := h.mkUser("rcust", db.RoleCustomer, &rs.ID)
+	res := h.login("res").AccessToken
+	if c := h.do("POST", "/domains", res, map[string]any{"name": "one.test", "owner_id": cust.ID}, nil); c != 201 {
+		t.Fatalf("first site: %d", c)
+	}
+	if c := h.do("POST", "/domains", res, map[string]any{"name": "two.test", "owner_id": cust.ID}, nil); c != 403 {
+		t.Errorf("reseller quota bypassed through a customer: %d, want 403", c)
 	}
 }

@@ -264,7 +264,7 @@ log "OpenPlex is installed and running."
 if [[ -f "$DATA_DIR/initial-admin-password" ]]; then
   echo "    Username: admin"
   echo "    Password: $(cat "$DATA_DIR/initial-admin-password")"
-  echo "    (stored in $DATA_DIR/initial-admin-password — delete it after changing the password)"
+  echo "    (stored in $DATA_DIR/initial-admin-password until you change the password)"
 fi
 if [[ -n "$PANEL_DOMAIN" ]]; then
   echo "    Panel:    https://$PANEL_DOMAIN  (point its DNS A/AAAA record at this server)"

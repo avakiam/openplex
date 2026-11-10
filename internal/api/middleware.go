@@ -131,6 +131,8 @@ func securityHeaders(next http.Handler) http.Handler {
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Referrer-Policy", "same-origin")
+		// No framing, plugins, <base> tricks or form posts to other sites.
+		h.Set("Content-Security-Policy", "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'")
 		next.ServeHTTP(w, r)
 	})
 }
@@ -164,6 +166,9 @@ func (l *limiter) allow(key string) bool {
 			if now.Sub(w.start) > l.window {
 				delete(l.hits, k)
 			}
+		}
+		if len(l.hits) > 100000 { // flood of distinct keys: bound the memory
+			l.hits = map[string]*window{}
 		}
 	}
 	w, ok := l.hits[key]
@@ -213,6 +218,17 @@ func (t *ticketStore) issueFor(userID int64, ttl time.Duration) (string, error) 
 	}
 	t.m[id] = ticket{userID: userID, exp: now.Add(ttl)}
 	return id, nil
+}
+
+// peek checks a ticket without using it up (Adminer sessions).
+func (t *ticketStore) peek(id string) (int64, bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	v, ok := t.m[id]
+	if !ok || time.Now().After(v.exp) {
+		return 0, false
+	}
+	return v.userID, true
 }
 
 func (t *ticketStore) redeem(id string) (int64, bool) {

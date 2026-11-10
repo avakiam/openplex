@@ -32,8 +32,8 @@ func (r Runtime) Image(v string) string {
 	return fmt.Sprintf(r.ImageFormat, v)
 }
 
-// Runtimes is the catalog of supported runtimes. Static sites are served by
-// the edge directly and need no container.
+// Runtimes is the catalog of supported runtimes. Static sites run a small
+// web server container (StaticImage); PHP images bundle one.
 var Runtimes = map[string]Runtime{
 	"static": {Name: "static", Label: "Static (HTML/CSS/JS)", Backend: ssl.BackendStatic},
 	"php": {Name: "php", Label: "PHP-FPM", Versions: []string{"7.4", "8.1", "8.2", "8.3", "8.4"}, Default: "8.3",

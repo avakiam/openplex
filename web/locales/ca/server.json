@@ -206,5 +206,9 @@
   "share the website the alias belongs to": "Comparteix el web al qual pertany l'àlies",
   "choose what the user may manage on this website": "Tria què pot gestionar l'usuari en aquest web",
   "kind must be site or database": "El tipus ha de ser un web o una base de dades",
-  "this user already owns it": "Aquest usuari ja n'és el propietari"
+  "this user already owns it": "Aquest usuari ja n'és el propietari",
+  "this name is a public suffix; add a domain registered under it": "Aquest nom és un sufix públic; afegeix un domini registrat a sota",
+  "this hostname is reserved for the mail server": "Aquest nom d'amfitrió està reservat per al servidor de correu",
+  "this name belongs to the server's own domain; ask an administrator": "Aquest nom pertany al domini del mateix servidor; demana-ho a un administrador",
+  "only an administrator can change a website's memory and CPU limits": "Només un administrador pot canviar els límits de memòria i CPU d'un web"
 }

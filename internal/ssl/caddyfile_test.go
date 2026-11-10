@@ -11,10 +11,10 @@ func TestRender(t *testing.T) {
 		PanelDomain: "panel.example.com",
 		Sites: []Site{
 			{ID: 1, Name: "example.com", Aliases: []string{"www.example.com"}, DocumentRoot: "public",
-				Backend: BackendFastCGI, Upstream: "opx-site-1:9000", SSL: true, ForceHTTPS: true,
+				Backend: BackendFastCGI, Upstream: "opx-site-1:8080", SSL: true, ForceHTTPS: true,
 				Redirects: []Redirect{{Path: "/old", Target: "https://example.com/new", Code: 301}}},
 			{ID: 2, Name: "app.example.org", Backend: BackendProxy, Upstream: "opx-site-2:3000", SSL: true},
-			{ID: 3, Name: "plain.test", Backend: BackendStatic, DocumentRoot: "public"},
+			{ID: 3, Name: "plain.test", Backend: BackendStatic, DocumentRoot: "public", Upstream: "opx-site-3:8080"},
 		},
 	})
 	if err != nil {
@@ -23,8 +23,8 @@ func TestRender(t *testing.T) {
 	for _, want := range []string{
 		"email ops@example.com",
 		"example.com, www.example.com {",
-		"php_fastcgi opx-site-1:9000",
-		"root * /srv/sites/example.com/public",
+		"reverse_proxy opx-site-1:8080",
+		"reverse_proxy opx-site-3:8080",
 		"redir /old https://example.com/new 301",
 		"http://app.example.org, https://app.example.org {",
 		"reverse_proxy opx-site-2:3000",
@@ -69,8 +69,8 @@ func TestValidators(t *testing.T) {
 
 func TestRenderWWW(t *testing.T) {
 	out, err := Render(Config{Sites: []Site{
-		{ID: 1, Name: "example.com", Aliases: []string{"example.net"}, Backend: BackendStatic, SSL: true, ForceHTTPS: true, WWW: []string{"example.com", "example.net"}},
-		{ID: 2, Name: "plain.test", Backend: BackendStatic, WWW: []string{"plain.test"}},
+		{ID: 1, Name: "example.com", Aliases: []string{"example.net"}, Backend: BackendStatic, Upstream: "opx-site-1:8080", SSL: true, ForceHTTPS: true, WWW: []string{"example.com", "example.net"}},
+		{ID: 2, Name: "plain.test", Backend: BackendStatic, Upstream: "opx-site-2:8080", WWW: []string{"plain.test"}},
 	}})
 	if err != nil {
 		t.Fatal(err)

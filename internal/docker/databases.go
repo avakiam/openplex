@@ -156,6 +156,9 @@ func (o *Orchestrator) EnsureEngine(ctx context.Context, engine string) (string,
 			return "", err
 		}
 	}
+	if err := o.joinTenantNetworks(ctx, e.container, []string{e.Host}); err != nil {
+		return "", err
+	}
 	return c.ID, o.waitReady(ctx, engine, c.ID, root)
 }
 
@@ -242,7 +245,10 @@ func (o *Orchestrator) ProvisionDatabase(ctx context.Context, d *db.Database, pa
 			fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", d.Name),
 			fmt.Sprintf("CREATE USER IF NOT EXISTS '%s'@'%%' IDENTIFIED BY '%s'", d.Username, password),
 			fmt.Sprintf("ALTER USER '%s'@'%%' IDENTIFIED BY '%s'", d.Username, password),
-			fmt.Sprintf("GRANT ALL PRIVILEGES ON `%s`.* TO '%s'@'%%'", d.Name, d.Username),
+			// Older versions granted on the unescaped name, where "_" is a
+			// wildcard matching other tenants' databases: drop that grant.
+			fmt.Sprintf("DELETE FROM mysql.db WHERE User = '%s' AND Host = '%%' AND Db = '%s'", d.Username, d.Name),
+			mariaGrant(d),
 			"FLUSH PRIVILEGES")
 	case db.EnginePostgres:
 		_, err = o.runSQL(ctx, d.Engine,
@@ -319,7 +325,8 @@ func (o *Orchestrator) deployRedis(ctx context.Context, d *db.Database, password
 	unlock := o.locks.lock(-1000 - d.ID)
 	defer unlock()
 	e := Engines[db.EngineRedis]
-	if err := o.ensureNetwork(ctx, DBNetwork, true); err != nil {
+	tenantNet, err := o.ensureTenantNetwork(ctx, d.OwnerID)
+	if err != nil {
 		return err
 	}
 	if err := o.ensureImage(ctx, e.Image); err != nil {
@@ -354,7 +361,7 @@ func (o *Orchestrator) deployRedis(ctx context.Context, d *db.Database, password
 		SecurityOpt:   []string{"no-new-privileges:true"},
 		LogConfig:     container.LogConfig{Type: "json-file", Config: map[string]string{"max-size": "5m", "max-file": "2"}},
 	}
-	nc := &network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{DBNetwork: {Aliases: []string{name}}}}
+	nc := &network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{tenantNet: {Aliases: []string{name}}}}
 	created, err := o.cli.ContainerCreate(ctx, cc, hc, nc, nil, name)
 	if err != nil {
 		return fmt.Errorf("create redis: %w", err)
@@ -486,7 +493,9 @@ func (o *Orchestrator) ReconcileDatabases(ctx context.Context, box *secrets.Box)
 	for _, d := range dbs {
 		if d.Engine == db.EngineRedis {
 			want[RedisContainerName(d.ID)] = true
-			if c, err := o.findContainer(ctx, RedisContainerName(d.ID)); err == nil && c == nil && d.Status == db.StatusRunning {
+			c, err := o.findContainer(ctx, RedisContainerName(d.ID))
+			moved := c != nil && c.NetworkSettings != nil && c.NetworkSettings.Networks[TenantNetwork(d.OwnerID)] == nil // from before account networks
+			if err == nil && (c == nil || moved) && d.Status == db.StatusRunning {
 				pw, err := box.Open(d.PasswordEnc)
 				if err == nil {
 					err = o.deployRedis(ctx, d, pw)
@@ -547,6 +556,14 @@ func (o *Orchestrator) ResetMariaDB(ctx context.Context, d *db.Database) error {
 	_, err := o.runSQL(ctx, db.EngineMariaDB,
 		fmt.Sprintf("DROP DATABASE IF EXISTS `%s`", d.Name),
 		fmt.Sprintf("CREATE DATABASE `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", d.Name),
-		fmt.Sprintf("GRANT ALL PRIVILEGES ON `%s`.* TO '%s'@'%%'", d.Name, d.Username))
+		mariaGrant(d))
 	return err
+}
+
+// mariaGrant gives d's user all privileges on exactly d's database. In a
+// database-level GRANT "_" and "%" are wildcards, so they are escaped:
+// granting on alice_wp unescaped would also match alicexwp, alice1wp...
+func mariaGrant(d *db.Database) string {
+	name := strings.NewReplacer("_", `\_`, "%", `\%`).Replace(d.Name)
+	return fmt.Sprintf("GRANT ALL PRIVILEGES ON `%s`.* TO '%s'@'%%'", name, d.Username)
 }

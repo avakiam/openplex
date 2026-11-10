@@ -620,18 +620,24 @@ func (m *Manager) restoreSite(ctx context.Context, s *db.BackupSettings, snap *S
 	if !slices.Contains(snap.Paths, src) {
 		return fmt.Errorf("snapshot does not contain %s", src)
 	}
-	// --delete makes the site directory exactly match the snapshot.
-	if _, err := m.restic(ctx, s, true, "restore", snap.ID+":"+src, "--target", src, "--delete"); err != nil {
+	// Nothing of the site may run while its files are rewritten (a process
+	// swapping directories for symlinks could redirect the restore).
+	if err := m.orch.HaltSite(ctx, d.ID); err != nil {
 		return err
 	}
-	uid := docker.SiteUID(d.ID)
-	if err := chownTree(filepath.Join(m.cfg.SitesDir(), d.Name), uid, uid); err != nil {
-		return err
+	// --delete makes the site directory exactly match the snapshot.
+	_, err := m.restic(ctx, s, true, "restore", snap.ID+":"+src, "--target", src, "--delete")
+	if err == nil {
+		uid := docker.SiteUID(d.ID)
+		err = chownTree(filepath.Join(m.cfg.SitesDir(), d.Name), uid, uid)
 	}
 	if d.Status == db.StatusStopped || d.Status == db.StatusDisabled {
-		return nil
+		return err
 	}
-	return m.orch.DeploySite(ctx, d)
+	if derr := m.orch.DeploySite(ctx, d); err == nil {
+		err = derr
+	}
+	return err
 }
 
 func (m *Manager) restoreDatabase(ctx context.Context, s *db.BackupSettings, snap *Snapshot, d *db.Database) error {
@@ -800,11 +806,18 @@ func chownTree(root string, uid, gid int) error {
 	if os.Geteuid() != 0 {
 		return nil
 	}
-	return filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+	// Through an os.Root: a symlink in the (tenant-owned) tree can't point
+	// the chown at a file outside it.
+	r, err := os.OpenRoot(root)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	return fs.WalkDir(r.FS(), ".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		return os.Lchown(p, uid, gid)
+		return r.Lchown(p, uid, gid)
 	})
 }
 

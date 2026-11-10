@@ -13,8 +13,14 @@ import { useT } from "@/lib/i18n";
 import type { CaptchaProvider } from "@/lib/types";
 
 function safeNext(n: string | null) {
-  // Only allow same-site relative paths (no protocol-relative //evil.com).
-  return n && n.startsWith("/") && !n.startsWith("//") ? n : "/";
+  // Only paths on this origin: resolving catches "//evil.com", backslash and tab tricks…
+  if (!n || !n.startsWith("/") || typeof window === "undefined") return "/";
+  try {
+    const u = new URL(n, window.location.origin);
+    return u.origin === window.location.origin ? u.pathname + u.search + u.hash : "/";
+  } catch {
+    return "/";
+  }
 }
 
 function LoginForm() {
@@ -74,30 +80,16 @@ function LoginForm() {
       <Logo className="mb-6 text-lg" />
       <h1 className="text-xl font-semibold">{needTotp ? t("Two-factor verification") : t("Sign in")}</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        {needTotp
-          ? t("Enter the 6-digit code from your authenticator app.")
-          : t("Manage your websites, domains and servers.")}
+        {needTotp ? t("Enter the 6-digit code from your authenticator app.") : t("Manage your websites, domains and servers.")}
       </p>
       <form onSubmit={submit} className="mt-6 grid gap-4">
         {!needTotp ? (
           <>
             <Field label={t("Username")}>
-              <Input
-                autoComplete="username"
-                autoFocus
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
+              <Input autoComplete="username" autoFocus required value={username} onChange={(e) => setUsername(e.target.value)} />
             </Field>
             <Field label={t("Password")}>
-              <Input
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <Input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
             </Field>
           </>
         ) : (

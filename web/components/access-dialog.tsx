@@ -17,7 +17,7 @@ const areaLabels: Record<SiteArea, string> = {
 };
 const areaHints: Record<SiteArea, string> = {
   site: tk("Runtime, HTTPS, start/stop, logs, redirects, scheduled tasks"),
-  files: tk("File manager and web terminal"),
+  files: tk("File manager (with Website settings: also the web terminal)"),
   dns: tk("The domain's DNS records"),
   mail: tk("Mailboxes, forwarding, webmail and mail backups"),
   backups: tk("Backups and restores of the website's files"),

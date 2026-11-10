@@ -78,7 +78,7 @@ func (o *Orchestrator) OpenShell(ctx context.Context, d *db.Domain, asRoot bool,
 	target := ""
 	if c, err := o.findContainer(ctx, SiteContainerName(d.ID)); err != nil {
 		return nil, err
-	} else if c != nil && c.State.Running {
+	} else if c != nil && c.State.Running && d.Runtime != "static" { // a static site's container only has its web server
 		target = c.ID
 	}
 	if target == "" {
@@ -123,10 +123,8 @@ func (o *Orchestrator) ephemeralShell(ctx context.Context, d *db.Domain, user, w
 	if err := o.EnsureShellImage(ctx); err != nil {
 		return "", nil, err
 	}
-	if err := o.ensureNetwork(ctx, EdgeNetwork, false); err != nil {
-		return "", nil, err
-	}
-	if err := o.ensureNetwork(ctx, DBNetwork, true); err != nil {
+	tenantNet, err := o.ensureTenantNetwork(ctx, d.OwnerID)
+	if err != nil {
 		return "", nil, err
 	}
 	b := make([]byte, 4)
@@ -147,7 +145,7 @@ func (o *Orchestrator) ephemeralShell(ctx context.Context, d *db.Domain, user, w
 		SecurityOpt: []string{"no-new-privileges:true"},
 		Init:        boolPtr(true),
 	}
-	nc := &network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{EdgeNetwork: {}, DBNetwork: {}}}
+	nc := &network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{tenantNet: {}}}
 	created, err := o.cli.ContainerCreate(ctx, cc, hc, nc, nil, name)
 	if err != nil {
 		return "", nil, fmt.Errorf("create shell container: %w", err)

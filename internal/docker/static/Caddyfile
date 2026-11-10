@@ -1,0 +1,17 @@
+# Web server of an OpenPlex static site; runs as the site's uid inside the
+# site's container, with the site directory mounted read-only.
+{
+	admin off
+	auto_https off
+	persist_config off
+	log {
+		level ERROR
+	}
+}
+
+:8080 {
+	root * {$OPENPLEX_DOCROOT}
+	file_server {
+		hide .git .env .htaccess .htpasswd .user.ini
+	}
+}

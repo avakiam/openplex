@@ -19,7 +19,7 @@ import (
 	"github.com/docker/docker/pkg/jsonmessage"
 )
 
-//go:embed php/Dockerfile php/openplex.ini shell/Dockerfile
+//go:embed php/Dockerfile php/openplex.ini php/fpm.conf php/Caddyfile php/entrypoint.sh shell/Dockerfile static/Dockerfile static/Caddyfile
 var recipes embed.FS
 
 // recipeHash identifies a build recipe directory; changing it yields a new
@@ -39,8 +39,9 @@ func recipeHash(dir string) string {
 }
 
 var (
-	phpRecipeHash   = recipeHash("php")
-	shellRecipeHash = recipeHash("shell")
+	phpRecipeHash    = recipeHash("php")
+	shellRecipeHash  = recipeHash("shell")
+	staticRecipeHash = recipeHash("static")
 )
 
 // PHPImage is the locally built runtime image for a PHP version.
@@ -50,6 +51,9 @@ func PHPImage(version string) string {
 
 // ShellImage is the locally built image used for web-terminal shells.
 func ShellImage() string { return "openplex/shell:" + shellRecipeHash }
+
+// StaticImage is the locally built web server image of static sites.
+func StaticImage() string { return "openplex/static:" + staticRecipeHash }
 
 func buildContext(dir string) (io.Reader, error) {
 	var buf bytes.Buffer
@@ -78,6 +82,9 @@ func buildContext(dir string) (io.Reader, error) {
 // The first build of a version compiles the extensions and takes a few minutes.
 func (o *Orchestrator) ensurePHPImage(ctx context.Context, version string) error {
 	v := version
+	if err := o.ensureImage(ctx, EdgeImage); err != nil { // the Dockerfile copies its caddy binary
+		return err
+	}
 	if err := o.buildImage(ctx, PHPImage(version), "php", "php:"+version+"-fpm-alpine", map[string]*string{"PHP_VERSION": &v}); err != nil {
 		return err
 	}
@@ -88,6 +95,11 @@ func (o *Orchestrator) ensurePHPImage(ctx context.Context, version string) error
 // EnsureShellImage builds the web-terminal shell image if needed.
 func (o *Orchestrator) EnsureShellImage(ctx context.Context) error {
 	return o.buildImage(ctx, ShellImage(), "shell", "alpine:3.22", nil)
+}
+
+// EnsureStaticImage builds the static-site web server image if missing.
+func (o *Orchestrator) EnsureStaticImage(ctx context.Context) error {
+	return o.buildImage(ctx, StaticImage(), "static", EdgeImage, nil)
 }
 
 // buildImage builds tag from an embedded recipe directory if it is missing.

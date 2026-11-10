@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 
@@ -23,7 +24,7 @@ import (
 	"openplex.dev/openplex/internal/ssl"
 )
 
-// ErrNoContainer is returned for lifecycle actions on container-less (static/alias) sites.
+// ErrNoContainer is returned for lifecycle actions on sites without a container.
 var ErrNoContainer = errors.New("this site has no runtime container")
 
 // SiteDir is the host directory of a site.
@@ -37,22 +38,45 @@ func (o *Orchestrator) PrepareSiteDir(d *db.Domain) error { return PrepareSiteDi
 
 // PrepareSiteDir creates the site (and log) directories of d, owned by the
 // site uid, with a placeholder index page on first creation. It does not need Docker.
+// Everything below the site directory is tenant-controlled, so it is only
+// touched through an os.Root: a symlink there can't make the panel (root)
+// create, chmod or chown anything outside the site.
 func PrepareSiteDir(cfg *config.Config, d *db.Domain) error {
 	root := filepath.Join(cfg.SitesDir(), d.Name)
 	uid := SiteUID(d.ID)
-	docroot := filepath.Join(root, filepath.FromSlash(d.DocumentRoot))
-	created := false
-	if _, err := os.Stat(docroot); errors.Is(err, os.ErrNotExist) {
-		created = true
+	if err := os.MkdirAll(cfg.SitesDir(), 0o750); err != nil {
+		return err
 	}
-	for _, dir := range []string{root, docroot} {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return fmt.Errorf("create site dir: %w", err)
+	if err := os.Mkdir(root, 0o755); err != nil && !errors.Is(err, os.ErrExist) {
+		return fmt.Errorf("create site dir: %w", err)
+	}
+	if fi, err := os.Lstat(root); err != nil {
+		return err
+	} else if !fi.IsDir() {
+		return fmt.Errorf("site dir %s is not a directory", root)
+	}
+	if err := os.Chmod(root, 0o755); err != nil { // independent of the process umask
+		return err
+	}
+	_ = os.Lchown(root, uid, uid) // best effort: fails harmlessly when not root (dev)
+	r, err := os.OpenRoot(root)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	docroot := filepath.FromSlash(d.DocumentRoot)
+	created := false
+	if _, err := r.Stat(docroot); errors.Is(err, os.ErrNotExist) {
+		created = true
+		if err := r.MkdirAll(docroot, 0o755); err != nil {
+			return fmt.Errorf("create document root: %w", err)
 		}
-		if err := os.Chmod(dir, 0o755); err != nil { // independent of the process umask
+		if err := r.Chmod(docroot, 0o755); err != nil {
 			return err
 		}
-		_ = os.Lchown(dir, uid, uid) // best effort: fails harmlessly when not root (dev)
+		_ = r.Lchown(docroot, uid, uid)
+	} else if err != nil {
+		return fmt.Errorf("document root: %w", err)
 	}
 	if err := os.MkdirAll(filepath.Join(cfg.LogsDir(), d.Name), 0o755); err != nil {
 		return err
@@ -62,16 +86,30 @@ func PrepareSiteDir(cfg *config.Config, d *db.Domain) error {
 		page := fmt.Sprintf("<!doctype html><html><head><meta charset=\"utf-8\"><title>%s</title></head>"+
 			"<body style=\"font-family:system-ui;margin:4rem\"><h1>%s</h1><p>This site is hosted with OpenPlex. Upload your content in the file manager.</p></body></html>\n",
 			d.Name, d.Name)
-		if err := os.WriteFile(idx, []byte(page), 0o644); err != nil {
+		f, err := r.OpenFile(idx, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+		if err != nil {
 			return err
 		}
-		if err := os.Chmod(idx, 0o644); err != nil {
+		_, err = f.WriteString(page)
+		if cerr := f.Close(); err == nil {
+			err = cerr
+		}
+		if err != nil {
 			return err
 		}
-		_ = os.Lchown(idx, uid, uid)
+		if err := r.Chmod(idx, 0o644); err != nil {
+			return err
+		}
+		_ = r.Lchown(idx, uid, uid)
 	}
 	return nil
 }
+
+// WebPort is where a static or PHP site's own web server listens. Those sites
+// serve their files from inside their container, as the site's uid: the edge
+// never reads tenant files, so a symlink in a site can't reach another site's
+// files or the edge's TLS keys.
+const WebPort = 8080
 
 // siteSpec is everything that determines a site container; its hash decides
 // whether an existing container must be recreated.
@@ -84,6 +122,7 @@ type siteSpec struct {
 	CPUs     float64
 	UID      int
 	Mount    string
+	ReadOnly bool
 	Networks []string
 }
 
@@ -98,11 +137,26 @@ func (o *Orchestrator) specFor(d *db.Domain) (*siteSpec, error) {
 	if err != nil {
 		return nil, err
 	}
+	inner := path.Join(ssl.EdgeSitesRoot, d.Name) // the site's directory inside its container
+	docroot := path.Join(inner, d.DocumentRoot)
+	if rt.Name == "static" {
+		mem := d.MemoryMB
+		if mem <= 0 || mem > 128 {
+			mem = 128
+		}
+		return &siteSpec{
+			Image: StaticImage(), WorkDir: inner, MemoryMB: mem, CPUs: d.CPUs, UID: SiteUID(d.ID),
+			Mount: o.SiteDir(d.Name), ReadOnly: true, Networks: []string{TenantNetwork(d.OwnerID)},
+			Env: []string{"HOME=/tmp", "OPENPLEX_DOCROOT=" + docroot},
+		}, nil
+	}
 	if rt.ImageFormat == "" {
 		return nil, ErrNoContainer
 	}
-	inner := path.Join(ssl.EdgeSitesRoot, d.Name) // identical path in edge and runtime (php_fastcgi needs this)
 	env := []string{"HOME=/tmp", "OPENPLEX_DOMAIN=" + d.Name}
+	if rt.Build {
+		env = append(env, "OPENPLEX_DOCROOT="+docroot)
+	}
 	keys := make([]string, 0, len(d.Env))
 	for k := range d.Env {
 		keys = append(keys, k)
@@ -113,7 +167,7 @@ func (o *Orchestrator) specFor(d *db.Domain) (*siteSpec, error) {
 	}
 	spec := &siteSpec{
 		Image: rt.Image(ver), Env: env, WorkDir: inner, MemoryMB: d.MemoryMB, CPUs: d.CPUs,
-		UID: SiteUID(d.ID), Mount: o.SiteDir(d.Name), Networks: []string{EdgeNetwork, DBNetwork},
+		UID: SiteUID(d.ID), Mount: o.SiteDir(d.Name), Networks: []string{TenantNetwork(d.OwnerID)},
 	}
 	if rt.NeedsCommand {
 		if d.StartCommand == "" || d.AppPort <= 0 {
@@ -150,20 +204,10 @@ func (o *Orchestrator) deploy(ctx context.Context, d *db.Domain) error {
 		return err
 	}
 	spec, err := o.specFor(d)
-	if errors.Is(err, ErrNoContainer) {
-		// Static site: make sure no stale runtime container lingers.
-		if err := o.removeSiteContainer(ctx, d.ID); err != nil {
-			return err
-		}
-		return o.db.SetDomainStatus(ctx, d.ID, db.StatusRunning, "", "")
-	}
 	if err != nil {
 		return err
 	}
-	if err := o.ensureNetwork(ctx, EdgeNetwork, false); err != nil {
-		return err
-	}
-	if err := o.ensureNetwork(ctx, DBNetwork, true); err != nil {
+	if _, err := o.ensureTenantNetwork(ctx, d.OwnerID); err != nil {
 		return err
 	}
 	if rt := Runtimes[d.Runtime]; rt.Build {
@@ -171,6 +215,10 @@ func (o *Orchestrator) deploy(ctx context.Context, d *db.Domain) error {
 			_ = o.db.SetDomainStatus(ctx, d.ID, db.StatusPending, "building the PHP "+d.RuntimeVersion+" runtime (first use, a few minutes)", d.ContainerID)
 		}
 		if err := o.ensurePHPImage(ctx, d.RuntimeVersion); err != nil {
+			return err
+		}
+	} else if rt.Name == "static" {
+		if err := o.EnsureStaticImage(ctx); err != nil {
 			return err
 		}
 	} else if err := o.ensureImage(ctx, spec.Image); err != nil {
@@ -210,7 +258,7 @@ func (o *Orchestrator) deploy(ctx context.Context, d *db.Domain) error {
 	}
 	hc := &container.HostConfig{
 		RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyUnlessStopped},
-		Mounts:        []mount.Mount{{Type: mount.TypeBind, Source: spec.Mount, Target: spec.WorkDir}},
+		Mounts:        []mount.Mount{{Type: mount.TypeBind, Source: spec.Mount, Target: spec.WorkDir, ReadOnly: spec.ReadOnly}},
 		Tmpfs:         map[string]string{"/tmp": "rw,nosuid,nodev,size=512m"},
 		Resources: container.Resources{
 			Memory:    int64(spec.MemoryMB) * 1024 * 1024,
@@ -261,6 +309,32 @@ func (o *Orchestrator) StopSite(ctx context.Context, d *db.Domain) error {
 	return o.ApplyEdge(ctx)
 }
 
+// HaltSite stops every container that can write to the site's files (its
+// runtime and any open shell) without changing its status: used while a
+// restore rewrites the files. DeploySite starts it again.
+func (o *Orchestrator) HaltSite(ctx context.Context, domainID int64) error {
+	unlock := o.locks.lock(domainID)
+	defer unlock()
+	f := filters.NewArgs(filters.Arg("label", LabelManaged+"=true"), filters.Arg("label", LabelDomainID+"="+strconv.FormatInt(domainID, 10)))
+	list, err := o.cli.ContainerList(ctx, container.ListOptions{All: true, Filters: f})
+	if err != nil {
+		return err
+	}
+	for _, c := range list {
+		if c.Labels[LabelKind] == "shell" {
+			if err := o.cli.ContainerRemove(ctx, c.ID, container.RemoveOptions{Force: true}); err != nil {
+				return fmt.Errorf("close shell: %w", err)
+			}
+			continue
+		}
+		timeout := 15
+		if err := o.cli.ContainerStop(ctx, c.ID, container.StopOptions{Timeout: &timeout}); err != nil {
+			return fmt.Errorf("stop: %w", err)
+		}
+	}
+	return nil
+}
+
 // RestartSite restarts the runtime container.
 func (o *Orchestrator) RestartSite(ctx context.Context, d *db.Domain) error {
 	unlock := o.locks.lock(d.ID)
@@ -285,6 +359,9 @@ func (o *Orchestrator) RemoveSite(ctx context.Context, d *db.Domain, purge bool)
 	}
 	if err := o.ApplyEdge(ctx); err != nil {
 		return err
+	}
+	if err := o.pruneTenantNetworks(ctx); err != nil {
+		o.log.Warn("prune account networks", "err", err)
 	}
 	if purge {
 		if err := os.RemoveAll(o.SiteDir(d.Name)); err != nil {
@@ -353,6 +430,9 @@ func (o *Orchestrator) Reconcile(ctx context.Context) error {
 	}
 	if err := o.ApplyEdge(ctx); err != nil {
 		errs = append(errs, fmt.Errorf("edge config: %w", err))
+	}
+	if err := o.pruneTenantNetworks(ctx); err != nil {
+		errs = append(errs, fmt.Errorf("account networks: %w", err))
 	}
 	o.log.Info("reconcile finished", "sites", len(want), "took", time.Since(start).Round(time.Millisecond), "errors", len(errs))
 	return errors.Join(errs...)

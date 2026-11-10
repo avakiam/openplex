@@ -43,10 +43,11 @@ type Server struct {
 	ui       http.Handler
 	version  string
 
-	loginLimiter  *limiter
-	tickets       ticketStore
-	captchaPasses ticketStore // captcha solved, password right: the 2FA step may skip it
-	captcha       *captcha.Verifier
+	loginLimiter    *limiter
+	tickets         ticketStore
+	captchaPasses   ticketStore // captcha solved, password right: the 2FA step may skip it
+	adminerSessions ticketStore // signed-in panel users allowed into /tools/adminer/
+	captcha         *captcha.Verifier
 
 	baseCtx context.Context
 	bg      sync.WaitGroup

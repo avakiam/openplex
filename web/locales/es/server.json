@@ -206,5 +206,9 @@
   "share the website the alias belongs to": "Comparte la web a la que pertenece el alias",
   "choose what the user may manage on this website": "Elige qué puede gestionar el usuario en esta web",
   "kind must be site or database": "El tipo debe ser una web o una base de datos",
-  "this user already owns it": "Este usuario ya es el propietario"
+  "this user already owns it": "Este usuario ya es el propietario",
+  "this name is a public suffix; add a domain registered under it": "Este nombre es un sufijo público; añade un dominio registrado bajo él",
+  "this hostname is reserved for the mail server": "Este nombre de host está reservado para el servidor de correo",
+  "this name belongs to the server's own domain; ask an administrator": "Este nombre pertenece al dominio del propio servidor; pídeselo a un administrador",
+  "only an administrator can change a website's memory and CPU limits": "Solo un administrador puede cambiar los límites de memoria y CPU de una web"
 }

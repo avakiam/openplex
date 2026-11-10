@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -181,11 +182,17 @@ func (m *Manager) sync(ctx context.Context) error {
 	if err := m.certFiles(s.Hostname, files); err != nil {
 		return err
 	}
+	rspamd := rspamdChanged(m.configDir, files)
 	if _, err := WriteFiles(m.configDir, files); err != nil {
 		return fmt.Errorf("write mail configuration: %w", err)
 	}
 	if err := m.srv.EnsureMail(ctx, s.Hostname, m.configDir); err != nil {
 		return err
+	}
+	if rspamd { // Rspamd reads its DKIM settings only at start
+		if out, err := m.srv.MailExec(ctx, "supervisorctl", "restart", "rspamd"); err != nil {
+			m.log.Warn("restart rspamd", "err", err, "out", out)
+		}
 	}
 	if !s.Webmail {
 		if m.srv.WebmailRunning(ctx) {
@@ -617,4 +624,26 @@ func (m *Manager) Usage(ctx context.Context) map[string]float64 {
 		}
 	}
 	return out
+}
+
+// rspamdChanged reports whether writing files would change Rspamd's settings
+// or DKIM keys (including removing a key).
+func rspamdChanged(dir string, files map[string][]byte) bool {
+	for rel, data := range files {
+		if !strings.HasPrefix(rel, "rspamd/") {
+			continue
+		}
+		if old, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(rel))); err != nil || !bytes.Equal(old, data) {
+			return true
+		}
+	}
+	keys, _ := filepath.Glob(filepath.Join(dir, "rspamd", "dkim", "*.key"))
+	for _, k := range keys {
+		if rel, err := filepath.Rel(dir, k); err == nil {
+			if _, ok := files[filepath.ToSlash(rel)]; !ok {
+				return true
+			}
+		}
+	}
+	return false
 }

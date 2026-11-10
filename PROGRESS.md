@@ -132,6 +132,33 @@ has been verified on the Linux test server. One commit per milestone.
       container (static sites: throwaway tools container), time limit kills the whole process tree, no overlap,
       4 at a time, missed runs skipped, run now, last 50 runs with output, 20 per site, audited; Cron tab in the UI
 
+- [x] Security audit before the first release (2026-11-10, v0.15.0) — four parallel reviews (auth/RBAC, files &
+      containers, config rendering, install & dashboard), every finding checked in the code, fixed:
+      - Tenant isolation: one Docker network per account (`openplex_u<id>`, a /24 from `OPENPLEX_TENANT_NETWORKS`,
+        default 10.213.0.0/16); the edge and the shared MariaDB/PostgreSQL join each, Redis and shells only their
+        owner's; unused account networks are pruned. Before, every site shared `openplex_edge`/`openplex_db`, so a
+        site could send FastCGI to another site's PHP-FPM (:9000) and run code as it.
+      - The edge no longer mounts tenant files: static sites run `openplex/static` (Caddy as the site uid, read-only
+        mount), PHP images bundle Caddy on :8080 with PHP-FPM on 127.0.0.1:9000 (HTTPS/port/scheme/client IP passed
+        from the edge). Before, a symlink in a site made the root edge serve other sites' files and every TLS key.
+        `.git .env .htaccess .htpasswd .user.ini` are hidden.
+      - Adminer needs a panel session (one-time ticket → `opx_adminer` cookie, 8 h) and its driver/server filter
+        reads parameters the way PHP does (last value, arrays, spaces, multipart, mixed-case types, semicolons).
+      - Host chmod/chown through tenant symlinks: `PrepareSiteDir` and the post-restore chown go through `os.Root`;
+        a restore stops the site's containers and shells first.
+      - MariaDB grants escape `_`/`%` (`ali_ice_wp` matched `alice_wp`); old wildcard grants are dropped at start.
+      - DKIM signs only when the From: header and the envelope share a domain; Rspamd restarts when its files change.
+      - Names: public suffixes refused; the panel and mail host names (and, for non-admins, their parents and
+        children) are reserved. Customers can't raise their memory/CPU; a reseller's quota counts its customers.
+      - Web terminal through a grant needs Files + Website settings. Login: username/password length caps, bounded
+        limiter memory, same-origin `next`; CSP (frame-ancestors/base-uri/object-src/form-action) and HSTS on the
+        panel; the initial admin password file is deleted once that password is changed; Roundcube clears the SSO
+        flag on password logins.
+      Known and accepted for now: no proof of domain ownership (as in Plesk/cPanel: a customer can add any
+      unclaimed domain, including enabling local mail for it); per-username login lockout can be triggered by
+      anyone (captcha + Fail2Ban mitigate); TOTP codes are not remembered within their 30 s window; API keys are not
+      scoped and survive a password change; any XSS in Adminer runs on the panel origin.
+
 ## M11 — Backup & restore
 - [x] Backup engine: restic 0.18.1 in throwaway containers — incremental, deduplicated, encrypted;
       one snapshot per site (files), database (mariadb-dump --single-transaction / pg_dump -Fc / Redis SAVE)
@@ -294,3 +321,11 @@ has been verified on the Linux test server. One commit per milestone.
   both sites listed as "shared with you"; node.lan.test shows only Overview, Files, Mail and Terminal with no
   actions; php.lan.test shows its areas without terminal or actions; the API answered 403 for DNS, redirects,
   settings and deletion and 403 for /audit. Test account deleted afterwards (its grants went with it).
+- 2026-11-10 — Security fixes (v0.15.0) on the LAN server and the VPS. Upgrade recreated the edge without tenant
+  files, rebuilt PHP 8.3/8.4 with Caddy and built `openplex/static`; all sites answered 200. With a throwaway
+  customer + PHP site on the LAN: other accounts' containers don't resolve and are unreachable by IP; MariaDB,
+  PostgreSQL and the edge are reachable; symlinks to `/data/caddy`, another site and `secret.key` answer 404; PHP
+  sees HTTPS=on/443 and the visitor IP behind the edge; raising limits 403; `co.uk` 409; unused network pruned.
+  Adminer: 403 without a session or reusing a ticket, panel ticket → logged in, `driver=server&driver=sqlite` 403;
+  grant stored as `admin\_sectest`. VPS: panel sends CSP + HSTS, Adminer 403 anonymously, webmail and captcha
+  load; a matching From: is DKIM-signed, a foreign From: is not.
