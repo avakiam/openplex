@@ -401,3 +401,54 @@ export interface DNSOverview {
   status: DNSStatus;
   zones: (DNSZone & { records: number; delegation: DNSDelegation })[];
 }
+
+// ---------- Mail ----------
+
+export interface MailSettings {
+  enabled: boolean;
+  hostname: string;
+}
+
+export interface MailStatus extends MailSettings {
+  available: boolean;
+  running: boolean;
+  health: string;
+  last_error: string;
+  last_sync: string | null;
+  certificate: "letsencrypt" | "self-signed" | "none";
+  server_ips: string[];
+  ptr: string[];
+  ptr_ok: boolean;
+  forward: string[];
+}
+
+export interface MailOverview {
+  status: MailStatus;
+  domains: { id: number; domain_id: number; name: string; mailboxes: number; aliases: number; created_at: string }[];
+}
+
+export interface Mailbox {
+  id: number;
+  local_part: string;
+  address: string;
+  quota_mb: number;
+  used_mb: number;
+  enabled: boolean;
+  created_at: string;
+}
+
+export interface MailAlias {
+  id: number;
+  local_part: string;
+  destinations: string[];
+}
+
+export interface DomainMail {
+  enabled: boolean;
+  domain: string;
+  hostname: string;
+  server_enabled: boolean;
+  max_mailboxes: number;
+  mailboxes: Mailbox[];
+  aliases: MailAlias[];
+}

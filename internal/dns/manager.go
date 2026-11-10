@@ -191,6 +191,10 @@ func (m *Manager) sync(ctx context.Context, s *db.DNSSettings) error {
 		}
 		time.Sleep(time.Second)
 	}
+	var hosts []string
+	if ms, err := m.db.GetMailSettings(ctx); err == nil && ms.Enabled && ms.Hostname != "" {
+		hosts = append(hosts, ms.Hostname)
+	}
 	zones, err := m.db.ListDNSZones(ctx)
 	if err != nil {
 		return err
@@ -205,7 +209,7 @@ func (m *Manager) sync(ctx context.Context, s *db.DNSSettings) error {
 		if err != nil {
 			return err
 		}
-		desired := Desired(ZoneInput{Zone: z.Name, Settings: *s, Records: recs})
+		desired := Desired(ZoneInput{Zone: z.Name, Settings: *s, Records: recs, Hosts: hosts})
 		soa := SOAContent(*s, z.Name, 1)
 		if !slices.Contains(existing, z.Name) {
 			if err := api.createZone(ctx, z.Name, desired, soa); err != nil {

@@ -331,6 +331,15 @@ func (s *Server) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	var mailNames []string // stored mail to remove once the rows are gone
+	if s.mail != nil {
+		all, _ := s.db.ListDomains(ctx, db.DomainFilter{ParentID: &d.ID})
+		for _, x := range append(all, d) {
+			if _, err := s.db.GetMailDomainByDomain(ctx, x.ID); err == nil {
+				mailNames = append(mailNames, x.Name)
+			}
+		}
+	}
 	if err := s.db.DeleteDomain(ctx, d.ID); err != nil {
 		s.fail(w, r, err)
 		return
@@ -338,6 +347,14 @@ func (s *Server) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	s.audit(r, "domain.deleted", d.Name, fmt.Sprintf("purge=%v", purge))
 	if s.dns != nil {
 		s.dns.Changed() // the zone and subdomain records went with the row
+	}
+	if len(mailNames) > 0 {
+		s.background(func(ctx context.Context) error {
+			for _, n := range mailNames {
+				s.mail.DomainDeleted(ctx, n)
+			}
+			return nil
+		})
 	}
 	if s.orch != nil {
 		s.background(func(ctx context.Context) error {

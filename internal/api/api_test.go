@@ -19,6 +19,7 @@ import (
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/dns"
 	"openplex.dev/openplex/internal/firewall"
+	"openplex.dev/openplex/internal/mail"
 	"openplex.dev/openplex/internal/monitor"
 	"openplex.dev/openplex/internal/secrets"
 )
@@ -41,7 +42,8 @@ func newHarness(t *testing.T) *harness {
 	store := db.OpenMemory(t)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	box, _ := secrets.New(cfg.Secret, "database-passwords")
-	srv := New(Options{Config: cfg, DB: store, Monitor: monitor.New(time.Second, 10, dir, log), Logger: log, BaseContext: context.Background(), Box: box, Cron: cron.New(store, nil, log), Firewall: firewall.New(store, log, false), DNS: dns.New(store, nil, dir, "http://127.0.0.1:1", log)})
+	dnsM := dns.New(store, nil, dir, "http://127.0.0.1:1", log)
+	srv := New(Options{Config: cfg, DB: store, Monitor: monitor.New(time.Second, 10, dir, log), Logger: log, BaseContext: context.Background(), Box: box, Cron: cron.New(store, nil, log), Firewall: firewall.New(store, log, false), DNS: dnsM, Mail: mail.New(store, nil, dnsM, box, dir, dir, nil, log)})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 	h := &harness{t: t, ts: ts, db: store, cfg: cfg, box: box}
@@ -546,5 +548,60 @@ func TestDNSZones(t *testing.T) {
 	}
 	if zs, _ := h.db.ListDNSZones(context.Background()); len(zs) != 0 {
 		t.Errorf("zone left after deleting the website: %+v", zs)
+	}
+}
+
+func TestMail(t *testing.T) {
+	h := newHarness(t)
+	h.mkUser("carla", db.RoleCustomer, nil)
+	h.mkUser("dani", db.RoleCustomer, nil)
+	admin, carla, dani := h.login("admin").AccessToken, h.login("carla").AccessToken, h.login("dani").AccessToken
+	if c := h.do("PUT", "/mail/settings", admin, map[string]any{"enabled": true, "hostname": "mail.example.com"}, nil); c != 200 {
+		t.Fatalf("settings: %d", c)
+	}
+	var site db.Domain
+	if c := h.do("POST", "/domains", carla, map[string]any{"name": "example.com"}, &site); c != 201 {
+		t.Fatalf("create site: %d", c)
+	}
+	base := "/domains/" + itoa(site.ID) + "/mail"
+	if c := h.do("POST", base+"/mailboxes", carla, map[string]any{"local_part": "info", "password": "correct horse battery"}, nil); c != 409 {
+		t.Errorf("mailbox before enabling: %d", c)
+	}
+	if c := h.do("POST", base, carla, nil, nil); c != 201 {
+		t.Fatalf("enable: %d", c)
+	}
+	var mb struct {
+		ID      int64  `json:"id"`
+		Address string `json:"address"`
+		QuotaMB int    `json:"quota_mb"`
+	}
+	if c := h.do("POST", base+"/mailboxes", carla, map[string]any{"local_part": "Info", "password": "correct horse battery"}, &mb); c != 201 || mb.Address != "info@example.com" || mb.QuotaMB != 1024 {
+		t.Fatalf("create mailbox: %d %+v", c, mb)
+	}
+	cases := []struct {
+		name, token, method, path string
+		body                      any
+		want                      int
+	}{
+		{"foreign domain", dani, "GET", base, nil, 404},
+		{"foreign mailbox", dani, "PATCH", base + "/mailboxes/" + itoa(mb.ID), map[string]any{"password": "stolen password!"}, 404},
+		{"duplicate mailbox", carla, "POST", base + "/mailboxes", map[string]any{"local_part": "info", "password": "correct horse battery"}, 409},
+		{"short password", carla, "POST", base + "/mailboxes", map[string]any{"local_part": "a", "password": "short"}, 400},
+		{"bad local part", carla, "POST", base + "/mailboxes", map[string]any{"local_part": "a b", "password": "correct horse battery"}, 400},
+		{"alias over mailbox", carla, "POST", base + "/aliases", map[string]any{"local_part": "info", "destinations": []string{"x@other.net"}}, 409},
+		{"alias to itself", carla, "POST", base + "/aliases", map[string]any{"local_part": "loop", "destinations": []string{"loop@example.com"}}, 400},
+		{"alias bad target", carla, "POST", base + "/aliases", map[string]any{"local_part": "sales", "destinations": []string{"nope"}}, 400},
+		{"alias ok", carla, "POST", base + "/aliases", map[string]any{"local_part": "sales", "destinations": []string{"info@example.com", "Boss@Other.net"}}, 201},
+		{"mailbox over alias", carla, "POST", base + "/mailboxes", map[string]any{"local_part": "sales", "password": "correct horse battery"}, 409},
+		{"change password", carla, "PATCH", base + "/mailboxes/" + itoa(mb.ID), map[string]any{"password": "another long pass", "quota_mb": 2048}, 200},
+		{"quota too big", carla, "PATCH", base + "/mailboxes/" + itoa(mb.ID), map[string]any{"quota_mb": 999999}, 400},
+		{"customer settings", carla, "PUT", "/mail/settings", map[string]any{"enabled": false}, 403},
+		{"delete mailbox", carla, "DELETE", base + "/mailboxes/" + itoa(mb.ID), nil, 204},
+		{"disable", carla, "DELETE", base, nil, 204},
+	}
+	for _, c := range cases {
+		if got := h.do(c.method, c.path, c.token, c.body, nil); got != c.want {
+			t.Errorf("%s: got %d, want %d", c.name, got, c.want)
+		}
 	}
 }

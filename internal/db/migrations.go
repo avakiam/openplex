@@ -271,6 +271,43 @@ CREATE TABLE dns_records (
 );
 CREATE INDEX dns_records_zone ON dns_records(zone_id, name, type);
 `,
+	// v9: mail (docker-mailserver), records added by modules are tagged.
+	`
+ALTER TABLE dns_records ADD COLUMN source TEXT NOT NULL DEFAULT '';
+CREATE TABLE mail_settings (
+	id         INTEGER PRIMARY KEY CHECK (id = 1),
+	enabled    INTEGER NOT NULL DEFAULT 0,
+	hostname   TEXT NOT NULL DEFAULT '',
+	updated_at TIMESTAMP NOT NULL
+);
+CREATE TABLE mail_domains (
+	id            INTEGER PRIMARY KEY AUTOINCREMENT,
+	domain_id     INTEGER NOT NULL UNIQUE REFERENCES domains(id) ON DELETE CASCADE,
+	dkim_selector TEXT NOT NULL,
+	dkim_key_enc  TEXT NOT NULL,
+	created_at    TIMESTAMP NOT NULL
+);
+CREATE TABLE mailboxes (
+	id             INTEGER PRIMARY KEY AUTOINCREMENT,
+	mail_domain_id INTEGER NOT NULL REFERENCES mail_domains(id) ON DELETE CASCADE,
+	local_part     TEXT NOT NULL,
+	password_hash  TEXT NOT NULL,
+	quota_mb       INTEGER NOT NULL DEFAULT 1024,
+	enabled        INTEGER NOT NULL DEFAULT 1,
+	created_at     TIMESTAMP NOT NULL,
+	updated_at     TIMESTAMP NOT NULL,
+	UNIQUE (mail_domain_id, local_part)
+);
+CREATE TABLE mail_aliases (
+	id             INTEGER PRIMARY KEY AUTOINCREMENT,
+	mail_domain_id INTEGER NOT NULL REFERENCES mail_domains(id) ON DELETE CASCADE,
+	local_part     TEXT NOT NULL,
+	destinations   TEXT NOT NULL,
+	created_at     TIMESTAMP NOT NULL,
+	updated_at     TIMESTAMP NOT NULL,
+	UNIQUE (mail_domain_id, local_part)
+);
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

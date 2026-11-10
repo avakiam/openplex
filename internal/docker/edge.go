@@ -75,6 +75,9 @@ func (o *Orchestrator) BuildEdgeConfig(ctx context.Context) (ssl.Config, error) 
 		www[site] = append(www[site], d.Name)
 	}
 	cfg := ssl.Config{ACMEEmail: o.cfg.ACMEEmail, PanelDomain: o.cfg.PanelDomain}
+	if ms, err := o.db.GetMailSettings(ctx); err == nil && ms.Enabled && ms.Hostname != "" && !taken[ms.Hostname] && ms.Hostname != o.cfg.PanelDomain {
+		cfg.MailHost = ms.Hostname
+	}
 	for _, d := range domains {
 		if d.Kind == db.KindAlias {
 			continue

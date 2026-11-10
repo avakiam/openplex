@@ -172,5 +172,19 @@
   "enter a valid e-mail address for the hostmaster": "indica un correo válido para el hostmaster",
   "to turn the DNS server on, set two nameservers and the server's address": "para activar el servidor DNS, indica dos servidores de nombres y la dirección del servidor",
   "a subdomain's records are in the DNS zone of its main domain": "los registros de un subdominio están en la zona DNS de su dominio principal",
-  "this zone already has the maximum of 500 records": "esta zona ya tiene el máximo de 500 registros"
+  "this zone already has the maximum of 500 records": "esta zona ya tiene el máximo de 500 registros",
+  "an address cannot forward to itself": "una dirección no puede reenviarse a sí misma",
+  "mail is already enabled for this domain": "el correo ya está activado para este dominio",
+  "mail is not enabled for this domain": "el correo no está activado para este dominio",
+  "the mailbox size must be between 10 MB and 100 GB": "el tamaño del buzón debe estar entre 10 MB y 100 GB",
+  "this address already exists": "esta dirección ya existe",
+  "this domain already has the maximum of 200 aliases": "este dominio ya tiene el máximo de 200 alias",
+  "this domain already has the maximum of 200 mailboxes": "este dominio ya tiene el máximo de 200 buzones",
+  "the name before the @ may contain letters, digits, dots, hyphens, underscores and +": "el nombre antes de la @ puede contener letras, dígitos, puntos, guiones, guiones bajos y +",
+  "enter valid e-mail addresses, such as name@example.com": "indica direcciones de correo válidas, como nombre@example.com",
+  "the password must have between 10 and 128 characters": "la contraseña debe tener entre 10 y 128 caracteres",
+  "the password contains invalid characters": "la contraseña contiene caracteres no válidos",
+  "enter the mail server's host name, such as mail.example.com": "indica el nombre de host del servidor de correo, como mail.example.com",
+  "to turn mail on, enter the mail server's host name": "para activar el correo, indica el nombre de host del servidor de correo",
+  "enter between 1 and 50 destination addresses": "indica entre 1 y 50 direcciones de destino"
 }

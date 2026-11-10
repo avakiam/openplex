@@ -22,10 +22,12 @@ import type {
   DNSOverview,
   DNSZoneDetail,
   Domain,
+  DomainMail,
   Fail2BanStatus,
   FileEntry,
   FirewallStatus,
   HostSample,
+  MailOverview,
   Redirect,
   Runtime,
   SSHKey,
@@ -59,6 +61,8 @@ export const keys = {
   fail2ban: ["fail2ban"] as const,
   dns: ["dns"] as const,
   zone: (id: number) => ["domains", id, "dns"] as const,
+  mail: ["mail"] as const,
+  domainMail: (id: number) => ["domains", id, "mail"] as const,
 };
 
 /** Wraps useMutation with toast feedback and cache invalidation. */
@@ -246,3 +250,10 @@ export const useDNS = () => useQuery({ queryKey: keys.dns, queryFn: () => api.ge
 
 export const useZone = (id: number, enabled = true) =>
   useQuery({ queryKey: keys.zone(id), queryFn: () => api.get<DNSZoneDetail>(`/domains/${id}/dns`), enabled: enabled && id > 0, retry: false });
+
+// ---------- Mail ----------
+
+export const useMail = () => useQuery({ queryKey: keys.mail, queryFn: () => api.get<MailOverview>("/mail"), refetchInterval: 30_000 });
+
+export const useDomainMail = (id: number, enabled = true) =>
+  useQuery({ queryKey: keys.domainMail(id), queryFn: () => api.get<DomainMail>(`/domains/${id}/mail`), enabled: enabled && id > 0, retry: false });

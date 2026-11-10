@@ -24,6 +24,7 @@ import (
 	"openplex.dev/openplex/internal/dns"
 	"openplex.dev/openplex/internal/docker"
 	"openplex.dev/openplex/internal/firewall"
+	"openplex.dev/openplex/internal/mail"
 	"openplex.dev/openplex/internal/monitor"
 	"openplex.dev/openplex/internal/secrets"
 	"openplex.dev/openplex/internal/ui"
@@ -156,13 +157,27 @@ func run(args []string) error {
 	workers.Add(1)
 	go func() { defer workers.Done(); dnsMgr.Run(ctx) }()
 
+	var mailSrv mail.Server
+	var edge func()
+	if orch != nil {
+		mailSrv = orch
+		edge = func() {
+			if err := orch.ApplyEdge(ctx); err != nil {
+				log.Error("apply edge after mail change", "err", err)
+			}
+		}
+	}
+	mailMgr := mail.New(store, mailSrv, dnsMgr, box, cfg.DataDir, cfg.CaddyDir(), edge, log)
+	workers.Add(1)
+	go func() { defer workers.Done(); mailMgr.Run(ctx) }()
+
 	fw := firewall.New(store, log, cfg.Firewall)
 	workers.Add(1)
 	go func() { defer workers.Done(); fw.Run(ctx) }()
 
 	srv := api.New(api.Options{
 		Config: cfg, DB: store, Orchestrator: orch, Monitor: mon, Logger: log,
-		UI: ui.Handler(), Version: version, BaseContext: ctx, Box: box, Backups: backups, Cron: crons, Firewall: fw, DNS: dnsMgr,
+		UI: ui.Handler(), Version: version, BaseContext: ctx, Box: box, Backups: backups, Cron: crons, Firewall: fw, DNS: dnsMgr, Mail: mailMgr,
 	})
 	httpSrv := &http.Server{
 		Handler:           srv.Handler(),

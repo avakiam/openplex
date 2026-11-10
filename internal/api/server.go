@@ -20,6 +20,7 @@ import (
 	"openplex.dev/openplex/internal/dns"
 	"openplex.dev/openplex/internal/docker"
 	"openplex.dev/openplex/internal/firewall"
+	"openplex.dev/openplex/internal/mail"
 	"openplex.dev/openplex/internal/monitor"
 	"openplex.dev/openplex/internal/secrets"
 )
@@ -36,6 +37,7 @@ type Server struct {
 	cron     *cron.Manager
 	firewall *firewall.Manager
 	dns      *dns.Manager
+	mail     *mail.Manager
 	log      *slog.Logger
 	ui       http.Handler
 	version  string
@@ -62,6 +64,7 @@ type Options struct {
 	Cron         *cron.Manager
 	Firewall     *firewall.Manager
 	DNS          *dns.Manager
+	Mail         *mail.Manager
 }
 
 // New builds the API server.
@@ -74,6 +77,7 @@ func New(o Options) *Server {
 		cron:         o.Cron,
 		firewall:     o.Firewall,
 		dns:          o.DNS,
+		mail:         o.Mail,
 		loginLimiter: newLimiter(10, 5*time.Minute),
 		baseCtx:      o.BaseContext,
 	}
@@ -149,6 +153,15 @@ func (s *Server) Handler() http.Handler {
 				r.Post("/dns/records", s.handleCreateRecord)
 				r.Patch("/dns/records/{rid}", s.handleUpdateRecord)
 				r.Delete("/dns/records/{rid}", s.handleDeleteRecord)
+				r.Get("/mail", s.handleGetDomainMail)
+				r.Post("/mail", s.handleEnableMail)
+				r.Delete("/mail", s.handleDisableMail)
+				r.Post("/mail/mailboxes", s.handleCreateMailbox)
+				r.Patch("/mail/mailboxes/{mid}", s.handleUpdateMailbox)
+				r.Delete("/mail/mailboxes/{mid}", s.handleDeleteMailbox)
+				r.Post("/mail/aliases", s.handleCreateAlias)
+				r.Patch("/mail/aliases/{aid}", s.handleUpdateAlias)
+				r.Delete("/mail/aliases/{aid}", s.handleDeleteAlias)
 
 				r.Get("/files", s.handleListFiles)
 				r.Get("/files/content", s.handleReadFile)
@@ -196,6 +209,8 @@ func (s *Server) Handler() http.Handler {
 				r.Get("/fail2ban", s.handleGetFail2Ban)
 				r.Get("/dns", s.handleGetDNS)
 				r.Put("/dns/settings", s.handlePutDNSSettings)
+				r.Get("/mail", s.handleGetMail)
+				r.Put("/mail/settings", s.handlePutMailSettings)
 				r.Post("/fail2ban/unban", s.handleFail2BanUnban)
 			})
 		})

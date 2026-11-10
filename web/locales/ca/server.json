@@ -172,5 +172,19 @@
   "enter a valid e-mail address for the hostmaster": "indica un correu vàlid per al hostmaster",
   "to turn the DNS server on, set two nameservers and the server's address": "per activar el servidor DNS, indica dos servidors de noms i l'adreça del servidor",
   "a subdomain's records are in the DNS zone of its main domain": "els registres d'un subdomini són a la zona DNS del seu domini principal",
-  "this zone already has the maximum of 500 records": "aquesta zona ja té el màxim de 500 registres"
+  "this zone already has the maximum of 500 records": "aquesta zona ja té el màxim de 500 registres",
+  "an address cannot forward to itself": "una adreça no es pot reenviar a si mateixa",
+  "mail is already enabled for this domain": "el correu ja està activat per a aquest domini",
+  "mail is not enabled for this domain": "el correu no està activat per a aquest domini",
+  "the mailbox size must be between 10 MB and 100 GB": "la mida de la bústia ha d'estar entre 10 MB i 100 GB",
+  "this address already exists": "aquesta adreça ja existeix",
+  "this domain already has the maximum of 200 aliases": "aquest domini ja té el màxim de 200 àlies",
+  "this domain already has the maximum of 200 mailboxes": "aquest domini ja té el màxim de 200 bústies",
+  "the name before the @ may contain letters, digits, dots, hyphens, underscores and +": "el nom abans de l'@ pot contenir lletres, dígits, punts, guions, guions baixos i +",
+  "enter valid e-mail addresses, such as name@example.com": "indica adreces de correu vàlides, com nom@example.com",
+  "the password must have between 10 and 128 characters": "la contrasenya ha de tenir entre 10 i 128 caràcters",
+  "the password contains invalid characters": "la contrasenya conté caràcters no vàlids",
+  "enter the mail server's host name, such as mail.example.com": "indica el nom de host del servidor de correu, com mail.example.com",
+  "to turn mail on, enter the mail server's host name": "per activar el correu, indica el nom de host del servidor de correu",
+  "enter between 1 and 50 destination addresses": "indica entre 1 i 50 adreces de destinació"
 }

@@ -55,6 +55,7 @@ type Redirect struct {
 type Config struct {
 	ACMEEmail   string
 	PanelDomain string // optional hostname proxied to openplexd
+	MailHost    string // mail server host: served so Caddy obtains its certificate
 	Sites       []Site
 }
 
@@ -124,6 +125,12 @@ func Render(c Config) (string, error) {
 		if err := renderSite(&b, s); err != nil {
 			return "", fmt.Errorf("site %s: %w", s.Name, err)
 		}
+	}
+	if c.MailHost != "" {
+		if !ValidHostname(c.MailHost) {
+			return "", fmt.Errorf("invalid mail host %q", c.MailHost)
+		}
+		fmt.Fprintf(&b, "# mail server (certificate for SMTP/IMAP)\n%s {\n\timport opx_common\n\trespond \"This is the mail server. Use it in your e-mail app.\" 200\n}\n\n", c.MailHost)
 	}
 	// Catch-all: plain HTTP to a hostname nobody configured (or to the bare
 	// IP) gets a clear 404 instead of Caddy's empty 200. Host-specific blocks

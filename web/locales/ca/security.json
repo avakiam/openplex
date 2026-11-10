@@ -10,7 +10,7 @@
   "Firewall off": "Tallafocs desactivat",
   "Incoming connections are refused unless a rule below allows them.": "Es rebutgen les connexions entrants llevat que una de les regles de sota les permeti.",
   "Every port of the server is reachable. Blocked addresses still apply.": "Tots els ports del servidor són accessibles. Les adreces bloquejades continuen aplicant-se.",
-  "Web traffic (ports 80 and 443) and DNS (port 53) are always let in and need no rule. To stop a visitor, block their address.": "El trànsit web (ports 80 i 443) i el DNS (port 53) sempre passen i no necessiten cap regla. Per aturar un visitant, bloqueja la seva adreça.",
+  "Web traffic (ports 80 and 443), DNS (53) and mail (25, 465, 587, 993, 995, 143, 110, 4190) are always let in and need no rule. To stop a visitor, block their address.": "El trànsit web (ports 80 i 443), el DNS (53) i el correu (25, 465, 587, 993, 995, 143, 110, 4190) sempre passen i no necessiten cap regla. Per aturar un visitant, bloqueja la seva adreça.",
   "ufw is also active on this server. Its rules were imported here; while both are on, a port must be allowed in both. Once this firewall is on and working, turn ufw off with:": "ufw també és actiu en aquest servidor. Les seves regles s'han importat aquí; mentre tots dos estiguin actius, un port ha d'estar permès en tots dos. Quan aquest tallafocs estigui activat i funcionant, desactiva ufw amb:",
   "Allowed incoming connections": "Connexions entrants permeses",
   "SSH on this server listens on port {ports}.": "En aquest servidor, SSH escolta al port {ports}.",

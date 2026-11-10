@@ -253,6 +253,7 @@ type ZoneInput struct {
 	Zone     string
 	Settings db.DNSSettings
 	Records  []db.DNSRecord
+	Hosts    []string // other server host names (the mail host) that get the server addresses when in the zone
 }
 
 // Hostmaster returns the SOA rname for zone ("hostmaster.example.com.").
@@ -300,8 +301,8 @@ func Desired(in ZoneInput) []RRSet {
 		add(FQDN(r.Name, zone)+".", r.Type, r.TTL, content(r))
 		stored[FQDN(r.Name, zone)] = true
 	}
-	// Glue: nameservers inside this zone need addresses here.
-	for _, ns := range []string{in.Settings.NS1, in.Settings.NS2} {
+	// Glue: nameservers (and the mail host) inside this zone need addresses here.
+	for _, ns := range append([]string{in.Settings.NS1, in.Settings.NS2}, in.Hosts...) {
 		if ns == "" || stored[ns] || (ns != zone && !strings.HasSuffix(ns, "."+zone)) {
 			continue
 		}

@@ -78,9 +78,17 @@ has been verified on the Linux test server. One commit per milestone.
 - [ ] Remote access option (publish a DB port per-IP allow-list) and per-database size limits
 
 ## M8 — Mail
-- [ ] Mail stack containers (Postfix, Dovecot, Rspamd, OpenDKIM) + Roundcube
-- [ ] Mail domains, mailboxes, aliases, forwarders, quotas, password rotation
-- [ ] DKIM key generation, SPF/DKIM/DMARC record generation
+- [x] Mail stack: docker-mailserver 16.0.1 (Postfix 3.10, Dovecot 2.4, Rspamd with Redis; no ClamAV/SpamAssassin),
+      one server-wide mail host (MX target, PTR, its own Let's Encrypt certificate via the edge, self-signed until then),
+      SRS for forwards, spoofing protection, nothing on Docker networks trusted; files rendered from the DB and picked
+      up by the container without restarts (only rewritten when they change)
+- [ ] Roundcube webmail
+- [x] Mail domains (per website, alias or subdomain), mailboxes (SHA512-CRYPT, 10–128 chars, quota, enable/disable,
+      password change), aliases/forwarding (to local or external addresses), usage from Dovecot, 200 each per domain;
+      owners manage their own; deleting a mailbox, turning mail off or deleting the website removes the stored mail
+- [x] DKIM key per domain (RSA 2048, encrypted in the DB), MX/SPF/DKIM/DMARC added to the zone (an existing MX, SPF or
+      DMARC is kept), moved when the mail host changes, removed when mail is turned off; mail host address generated in
+      its zone; admin page checks forward DNS, reverse DNS (PTR) and the certificate
 - [ ] Webmail one-click login
 
 ## M9 — DNS
@@ -143,7 +151,7 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] Views: terminal (xterm.js), databases, backups
 - [x] Views: Firewall (rules with apply/keep/undo, blocked addresses, Fail2Ban), scheduled tasks
 - [x] Views: DNS (admin page + DNS tab per website)
-- [ ] Views for upcoming modules: mail
+- [x] Views: Mail (admin page + Mail tab per website)
 - [x] Interface languages: English, Spanish, Catalan — browser detection, switcher in the header and on
       the login page, per-user preference stored on the account (`users.locale`, `PATCH /auth/me`, set by
       managers too), locale-aware numbers/dates, fixed API error messages translated; the build fails on a
@@ -230,3 +238,13 @@ has been verified on the Linux test server. One commit per milestone.
   www.mailcactus.com (www → 308 to the apex keeping path and query). The panel showed the zone as delegated once the
   check asked the .com servers instead of OVH's caching resolver. DNS tab tested in the UI on the LAN server
   (MX added; a bare "mail" target refused with the translated message).
+- 2026-11-10 — Mail on the public VPS (v0.10.0, migration v9) with mailcactus.com: outbound port 25 open at OVH.
+  Turning mail on with host mail.mailcactus.com started docker-mailserver healthy in ~5 s; Caddy issued the mail host's
+  Let's Encrypt certificate and the panel copied it in without a restart: ports 993, 465, 587 and 25 (STARTTLS) all
+  present it. Enabling mail published MX 10 mail.mailcactus.com, `v=spf1 mx ~all`, the DKIM key and DMARC p=none.
+  Tests from outside the container: inbound mail delivered (a bare test message from an unauthenticated host was
+  filed in Junk by Rspamd), a sender with a null MX refused, relaying to gmail.com refused, no AUTH offered without
+  TLS, a wrong password refused, sending as another address of the domain refused, authenticated submission on 587
+  delivered with `DKIM-Signature: d=mailcactus.com`; quota usage read from Dovecot. Mail tab tested in the UI on the LAN
+  server (turn on, generated password, create, turn off removing only the mail records; the user's own MX was kept).
+  Pending: reverse DNS (PTR) at OVH and a delivery test to an external provider.

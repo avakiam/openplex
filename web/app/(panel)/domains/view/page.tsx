@@ -8,6 +8,7 @@ import {
   FolderOpen,
   Gauge,
   Link2,
+  Mail,
   Network,
   Play,
   Plus,
@@ -28,6 +29,7 @@ import { Suspense, useEffect, useState } from "react";
 import { CreateDomainDialog } from "@/components/create-domain-dialog";
 import { CronJobs } from "@/components/cron-jobs";
 import { DNSRecords } from "@/components/dns-records";
+import { MailTab } from "@/components/mail-tab";
 import { FileManager } from "@/components/file-manager";
 import { ItemBackups } from "@/components/item-backups";
 import { LogViewer } from "@/components/log-viewer";
@@ -608,6 +610,9 @@ function DomainView() {
           <TabsTrigger value="aliases">
             <Plus /> {t("Aliases")}
           </TabsTrigger>
+          <TabsTrigger value="mail">
+            <Mail /> {t("Mail")}
+          </TabsTrigger>
           <TabsTrigger value="dns">
             <Network /> DNS
           </TabsTrigger>
@@ -641,6 +646,7 @@ function DomainView() {
         <TabsContent value="aliases">
           <AliasesTab d={d} />
         </TabsContent>
+        <TabsContent value="mail">{tab === "mail" && <MailTab domain={d} />}</TabsContent>
         <TabsContent value="dns">{tab === "dns" && <DNSRecords domain={d} />}</TabsContent>
         <TabsContent value="terminal">
           <Card>

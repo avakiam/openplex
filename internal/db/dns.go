@@ -37,6 +37,7 @@ type DNSRecord struct {
 	Content   string    `json:"content"`
 	Priority  int       `json:"priority"` // MX and SRV
 	TTL       int       `json:"ttl"`
+	Source    string    `json:"source"` // module that added it ("mail:<domain id>"), "" = user
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -128,12 +129,12 @@ func (db *DB) TouchDNSZone(ctx context.Context, id int64) error {
 	return err
 }
 
-const dnsRecordCols = `id, zone_id, domain_id, name, type, content, priority, ttl, created_at, updated_at`
+const dnsRecordCols = `id, zone_id, domain_id, name, type, content, priority, ttl, source, created_at, updated_at`
 
 func insertRecord(ctx context.Context, tx *sql.Tx, r *DNSRecord) error {
 	r.CreatedAt, r.UpdatedAt = now(), now()
-	res, err := tx.ExecContext(ctx, `INSERT INTO dns_records (zone_id, domain_id, name, type, content, priority, ttl, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)`,
-		r.ZoneID, r.DomainID, r.Name, r.Type, r.Content, r.Priority, r.TTL, r.CreatedAt, r.UpdatedAt)
+	res, err := tx.ExecContext(ctx, `INSERT INTO dns_records (zone_id, domain_id, name, type, content, priority, ttl, source, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)`,
+		r.ZoneID, r.DomainID, r.Name, r.Type, r.Content, r.Priority, r.TTL, r.Source, r.CreatedAt, r.UpdatedAt)
 	if err != nil {
 		return mapErr(err)
 	}
@@ -164,7 +165,7 @@ func (db *DB) ListDNSRecords(ctx context.Context, zoneID int64) ([]DNSRecord, er
 	for rows.Next() {
 		var r DNSRecord
 		var dom sql.NullInt64
-		if err := rows.Scan(&r.ID, &r.ZoneID, &dom, &r.Name, &r.Type, &r.Content, &r.Priority, &r.TTL, &r.CreatedAt, &r.UpdatedAt); err != nil {
+		if err := rows.Scan(&r.ID, &r.ZoneID, &dom, &r.Name, &r.Type, &r.Content, &r.Priority, &r.TTL, &r.Source, &r.CreatedAt, &r.UpdatedAt); err != nil {
 			return nil, err
 		}
 		r.DomainID = ptrInt(dom)
@@ -178,7 +179,7 @@ func (db *DB) GetDNSRecord(ctx context.Context, id int64) (*DNSRecord, error) {
 	var r DNSRecord
 	var dom sql.NullInt64
 	err := db.sql.QueryRowContext(ctx, `SELECT `+dnsRecordCols+` FROM dns_records WHERE id = ?`, id).
-		Scan(&r.ID, &r.ZoneID, &dom, &r.Name, &r.Type, &r.Content, &r.Priority, &r.TTL, &r.CreatedAt, &r.UpdatedAt)
+		Scan(&r.ID, &r.ZoneID, &dom, &r.Name, &r.Type, &r.Content, &r.Priority, &r.TTL, &r.Source, &r.CreatedAt, &r.UpdatedAt)
 	if err != nil {
 		return nil, mapErr(err)
 	}
@@ -220,4 +221,16 @@ func (db *DB) ReplaceDNSAddress(ctx context.Context, typ, old, new string) (int6
 		return 0, err
 	}
 	return res.RowsAffected()
+}
+
+// DeleteDNSRecordsBySource removes the records a module added.
+func (db *DB) DeleteDNSRecordsBySource(ctx context.Context, source string) error {
+	_, err := db.sql.ExecContext(ctx, `DELETE FROM dns_records WHERE source = ?`, source)
+	return err
+}
+
+// RetargetMX points the MX records a module added at a new host.
+func (db *DB) RetargetMX(ctx context.Context, source, host string) error {
+	_, err := db.sql.ExecContext(ctx, `UPDATE dns_records SET content=?, updated_at=? WHERE source=? AND type='MX'`, host, now(), source)
+	return err
 }
