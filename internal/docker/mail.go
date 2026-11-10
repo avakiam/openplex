@@ -12,6 +12,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
@@ -202,4 +203,15 @@ func (o *Orchestrator) VolumePath(ctx context.Context, name string) (string, err
 		return "", fmt.Errorf("inspect volume %s: %w", name, err)
 	}
 	return v.Mountpoint, nil
+}
+
+// EnsureVolume creates a named, managed volume if it does not exist.
+func (o *Orchestrator) EnsureVolume(ctx context.Context, name string) error {
+	if p, err := o.VolumePath(ctx, name); err != nil || p != "" {
+		return err
+	}
+	if _, err := o.cli.VolumeCreate(ctx, volume.CreateOptions{Name: name, Labels: managedLabels("volume")}); err != nil {
+		return fmt.Errorf("create volume %s: %w", name, err)
+	}
+	return nil
 }

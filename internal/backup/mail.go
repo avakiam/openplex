@@ -262,6 +262,9 @@ func mkdirLike(p string, info fs.FileInfo) error {
 	if err := os.MkdirAll(p, info.Mode().Perm()); err != nil {
 		return err
 	}
+	if err := os.Chmod(p, info.Mode().Perm()); err != nil { // not narrowed by the umask
+		return err
+	}
 	if uid, gid, ok := owner(info); ok {
 		return os.Lchown(p, uid, gid)
 	}
@@ -270,6 +273,10 @@ func mkdirLike(p string, info fs.FileInfo) error {
 
 func copyLike(src, dst string, info fs.FileInfo) error {
 	if err := copyFile(src, dst, info.Mode().Perm()); err != nil {
+		return err
+	}
+	// copyFile keeps files private (panel secrets); restored data keeps its own mode.
+	if err := os.Chmod(dst, info.Mode().Perm()); err != nil {
 		return err
 	}
 	if uid, gid, ok := owner(info); ok {

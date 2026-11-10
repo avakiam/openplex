@@ -28,6 +28,12 @@ Usage: install.sh [options]
   --listen ADDR           direct panel listen address (default: 127.0.0.1:7080)
   --no-firewall           leave the host firewall alone (no nftables rules, no Fail2Ban)
   -h, --help              show this help
+
+Rebuilding a lost server: install with the same options, then
+  systemctl stop openplexd
+  openplexd restore-panel --repo /path/to/repository   (or s3:https://host/bucket/prefix)
+  systemctl start openplexd
+(see: openplexd restore-panel --help)
 EOF
 }
 
@@ -266,3 +272,4 @@ else
   echo "    Panel:    ssh -L 7080:$LISTEN root@<server>  then open http://localhost:7080"
 fi
 echo "    Logs:     journalctl -u openplexd -f"
+echo "    Rebuilding a lost server instead? See: openplexd restore-panel --help"

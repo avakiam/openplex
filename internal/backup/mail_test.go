@@ -44,6 +44,7 @@ func TestMergeMaildirs(t *testing.T) {
 	write(t, src, "info/dovecot-uidlist", "old uids")
 	write(t, src, "info/dovecot.index", "old index")
 	write(t, src, "info/home/.dovecot.sieve", "old rules")
+	_ = os.Chmod(filepath.Join(src, "info/.Archive/cur/1003.M4.host:2,"), 0o646)
 	old := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 	_ = os.Chtimes(filepath.Join(src, "info/cur/1001.M2.host:2,S"), old, old)
 	// Now: one message re-flagged, one moved new→cur, one new message, new rules.
@@ -87,6 +88,9 @@ func TestMergeMaildirs(t *testing.T) {
 	}
 	if st, err := os.Stat(filepath.Join(dst, "info/cur/1001.M2.host:2,S")); err != nil || !st.ModTime().Equal(old) {
 		t.Errorf("received date not kept: %v %v", st, err)
+	}
+	if st, err := os.Stat(filepath.Join(dst, "info/.Archive/cur/1003.M4.host:2,")); err != nil || st.Mode().Perm() != 0o646 {
+		t.Errorf("mode not kept: %v %v", st.Mode(), err)
 	}
 	if st, err := os.Stat(filepath.Join(dst, "info/tmp")); err != nil || !st.IsDir() {
 		t.Error("tmp/ folder missing")

@@ -499,9 +499,26 @@ func (o *Orchestrator) ReconcileDatabases(ctx context.Context, box *secrets.Box)
 		}
 		engines[d.Engine] = true
 	}
+	ready := map[string]bool{}
 	for eng := range engines {
 		if _, err := o.EnsureEngine(ctx, eng); err != nil {
 			errs = append(errs, err)
+		} else {
+			ready[eng] = true
+		}
+	}
+	// A fresh engine (new server, lost volume) has none of the databases and
+	// users the panel knows about; creating them is idempotent.
+	for _, d := range dbs {
+		if d.Engine == db.EngineRedis || d.Status != db.StatusRunning || !ready[d.Engine] {
+			continue
+		}
+		pw, err := box.Open(d.PasswordEnc)
+		if err == nil {
+			err = o.ProvisionDatabase(ctx, d, pw)
+		}
+		if err != nil {
+			errs = append(errs, fmt.Errorf("database %s: %w", d.Name, err))
 		}
 	}
 	if len(dbs) > 0 {

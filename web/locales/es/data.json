@@ -128,5 +128,6 @@
   "Websites, databases and panel configuration — each restorable on its own from its page.": "Sitios web, bases de datos y configuración del panel; cada uno se puede restaurar por separado desde su página.",
   "AES-256 encrypted": "Cifrado AES-256",
   "What to restore": "Qué restaurar",
-  "Everything in this backup": "Todo lo que hay en esta copia"
+  "Everything in this backup": "Todo lo que hay en esta copia",
+  "If this server is lost: install OpenPlex on a new one, stop it, and run this command with the repository and this key. Websites, databases and mail are then restored when it starts.": "Si pierdes este servidor: instala OpenPlex en uno nuevo, detenlo y ejecuta este comando con el repositorio y esta clave. Al arrancar se restauran las webs, las bases de datos y el correo."
 }

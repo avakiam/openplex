@@ -41,6 +41,8 @@ func main() {
 		return
 	case len(args) > 0 && args[0] == "reset-password":
 		err = resetPassword(args[1:])
+	case len(args) > 0 && args[0] == "restore-panel":
+		err = restorePanel(args[1:])
 	default:
 		err = run(args)
 	}
@@ -89,6 +91,7 @@ func run(args []string) error {
 	}
 
 	var orch *docker.Orchestrator
+	var backups *backup.Manager
 	if cfg.EnableDocker {
 		pingCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		orch, err = docker.New(pingCtx, cfg, store, log)
@@ -98,6 +101,7 @@ func run(args []string) error {
 			orch = nil
 		} else {
 			defer orch.Close()
+			backups = backup.New(cfg, store, orch, box, log)
 			workers.Add(1)
 			go func() {
 				defer workers.Done()
@@ -113,6 +117,8 @@ func run(args []string) error {
 				if err := orch.ReconcileDatabases(ctx, box); err != nil {
 					log.Error("database reconcile finished with errors", "err", err)
 				}
+				// After `openplexd restore-panel`: bring the data back too.
+				backups.RecoverPending(ctx)
 			}()
 		}
 	}
@@ -134,9 +140,7 @@ func run(args []string) error {
 		}
 	}()
 
-	var backups *backup.Manager
 	if orch != nil {
-		backups = backup.New(cfg, store, orch, box, log)
 		workers.Add(1)
 		go func() { defer workers.Done(); backups.Run(ctx) }()
 	}

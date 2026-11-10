@@ -160,6 +160,12 @@ function RecoveryKeyCard() {
         ) : (
           <Button variant="outline" loading={reveal.isPending} onClick={() => reveal.mutate(undefined)}><Eye /> {t("Reveal recovery key")}</Button>
         )}
+        <p className="mt-4 text-sm text-muted-foreground">
+          {t("If this server is lost: install OpenPlex on a new one, stop it, and run this command with the repository and this key. Websites, databases and mail are then restored when it starts.")}
+        </p>
+        <pre className="mt-2 overflow-x-auto rounded-md bg-muted p-3 font-mono text-xs">
+          {"systemctl stop openplexd\nopenplexd restore-panel --repo <repository>\nsystemctl start openplexd"}
+        </pre>
       </CardBody>
     </Card>
   );

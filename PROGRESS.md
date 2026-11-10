@@ -144,7 +144,12 @@ has been verified on the Linux test server. One commit per milestone.
       on the Mail tab); Roundcube's database and the webmail keys go with the panel. Restore of the whole domain or
       one mailbox merges: messages missing now come back (owner, mode and received date kept), nothing received
       since is removed, nothing is duplicated (Maildir unique names), then Dovecot resyncs
-- [ ] Disaster recovery: `openplexd restore-panel` CLI to rebuild a new server from the repository
+- [x] Disaster recovery: `openplexd restore-panel --repo PATH|s3:URL` on a fresh install (service stopped, recovery
+      key from OPENPLEX_RECOVERY_KEY or stdin) puts back the panel DB, signing secret, engine passwords, certificates,
+      webmail keys and env file (this install's files kept aside), points backups at that repository, turns the
+      firewall off (rules were for the old host), moves DNS records to this host's public addresses; on start the
+      daemon restores every website, database, mail domain and the webmail DB from the same backup run
+- [x] Database reconcile re-creates missing databases/users on a fresh engine (idempotent)
 - [ ] Off-site copy check: warn when the repository is on the same disk as the data
 
 ## M12 — Telemetry
@@ -275,3 +280,10 @@ has been verified on the Linux test server. One commit per milestone.
   Emptied the Junk folder and received a new message, then restored prueba@: the deleted message came back, the new
   one stayed (INBOX 3, Junk 1); restoring again put back 0 messages (no duplicates). The nightly "all" backup now
   holds 6 items: sites, database, `mail:3`, `webmail` (Roundcube DB) and the panel.
+- 2026-11-10 — Disaster recovery rehearsal (v0.13.0): the VPS repository and recovery key copied to an isolated
+  Docker-in-Docker "new server" on the LAN machine. `restore-panel` found the panel backup and restored it; on start
+  the daemon pulled the images, reconciled and restored 6 items with no errors. The three websites answer with
+  byte-identical pages, prueba@mailcactus.com has the same messages (INBOX 3, Junk 1), the webmail login works and
+  the database exists with its user. Found and fixed on the way: restore took a lock on the read-only repository
+  (now --no-lock), a fresh MariaDB had no user for the restored database (reconcile now provisions), restored
+  webmail/mail files lost their mode (now kept). Rehearsal environment and copies deleted afterwards.
