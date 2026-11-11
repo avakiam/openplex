@@ -18,7 +18,7 @@ script en un servidor nou pot lliurar OpenPlex. Amb cloud-init:
 ```yaml
 #cloud-config
 runcmd:
-  - curl -fsSL https://get.openplex.dev | bash -s -- --panel-domain "$(hostname -f)" --acme-email ops@provider.example
+  - curl -fsSL https://github.com/avakiam/openplex/releases/latest/download/install.sh | bash -s -- --panel-domain "$(hostname -f)" --acme-email ops@provider.example
 ```
 
 El nom del mateix servidor (per exemple el que assignes, com ara

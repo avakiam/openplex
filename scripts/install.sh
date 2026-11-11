@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # OpenPlex unattended installer for Ubuntu 22.04+/Debian 12+ (amd64, arm64).
 #
-#   curl -fsSL https://get.openplex.dev | sudo bash -s -- --panel-domain panel.example.com --acme-email you@example.com
+#   curl -fsSL https://github.com/avakiam/openplex/releases/latest/download/install.sh | sudo bash -s -- --panel-domain panel.example.com --acme-email you@example.com
 #
 # Idempotent: re-running upgrades the binary and keeps all data.
 set -Eeuo pipefail

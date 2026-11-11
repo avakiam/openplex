@@ -18,7 +18,7 @@ server can deliver OpenPlex. With cloud-init:
 ```yaml
 #cloud-config
 runcmd:
-  - curl -fsSL https://get.openplex.dev | bash -s -- --panel-domain "$(hostname -f)" --acme-email ops@provider.example
+  - curl -fsSL https://github.com/avakiam/openplex/releases/latest/download/install.sh | bash -s -- --panel-domain "$(hostname -f)" --acme-email ops@provider.example
 ```
 
 The server's own host name (for example the one you assign, such as

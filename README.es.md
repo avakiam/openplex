@@ -52,7 +52,7 @@ copias de seguridad y seguridad.
 Cuando se publique la primera versión:
 
 ```bash
-curl -fsSL https://get.openplex.dev | sudo bash -s -- \
+curl -fsSL https://github.com/avakiam/openplex/releases/latest/download/install.sh | sudo bash -s -- \
   --panel-domain panel.example.com --acme-email tu@example.com
 ```
 
