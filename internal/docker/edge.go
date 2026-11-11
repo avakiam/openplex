@@ -184,7 +184,8 @@ func (o *Orchestrator) applyEdgePolicies(ctx context.Context, cfg *ssl.Config) e
 	if len(guards) > 0 {
 		gws, err := o.edgeGateways(ctx)
 		if err != nil || len(gws) == 0 {
-			// Without the gateway, a guard could block every IPv6 visit
+			// Without the gateway, a guard could block the host's own
+			// requests or, on an IPv4-only edge network, every IPv6 visit
 			// (Docker forwards them from it): leave the hosts open.
 			o.log.Warn("extension edge policy: not restricting hosts, edge network gateway unknown", "err", err)
 			guards = nil
@@ -204,7 +205,9 @@ func (o *Orchestrator) applyEdgePolicies(ctx context.Context, cfg *ssl.Config) e
 	return nil
 }
 
-// edgeGateways are the gateway addresses of the edge network.
+// edgeGateways are the gateway addresses of the edge network. Connections
+// from the host itself (to localhost or its own public address) reach the
+// edge from them, as do IPv6 visits if the network has no IPv6.
 func (o *Orchestrator) edgeGateways(ctx context.Context) ([]string, error) {
 	n, err := o.cli.NetworkInspect(ctx, EdgeNetwork, network.InspectOptions{})
 	if err != nil {
@@ -279,7 +282,7 @@ func (o *Orchestrator) ApplyEdge(ctx context.Context) error {
 
 // EnsureEdge makes sure the edge network and Caddy container exist and run.
 func (o *Orchestrator) EnsureEdge(ctx context.Context) error {
-	if err := o.ensureNetwork(ctx, EdgeNetwork, false); err != nil {
+	if err := o.ensureEdgeNetwork(ctx); err != nil {
 		return err
 	}
 	for _, d := range []string{o.caddyEtcDir(), filepath.Join(o.cfg.CaddyDir(), "data"), filepath.Join(o.cfg.CaddyDir(), "config")} {

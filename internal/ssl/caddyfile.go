@@ -66,9 +66,9 @@ type Config struct {
 	TrustedProxies  []string            // CIDRs whose forwarding headers are believed
 	ClientIPHeaders []string            // headers with the visitor's address, in order
 	Guards          map[string][]string // website host → the only CIDRs it accepts
-	// GuardExempt are sources a guard never blocks: Docker's gateway, from
-	// which the edge sees connections whose real source Docker hides (IPv6
-	// visits while the edge network has no IPv6).
+	// GuardExempt are sources a guard never blocks: the edge network's
+	// gateways, from which the edge sees connections whose real source Docker
+	// hides (the host's own requests; IPv6 visits if the network has no IPv6).
 	GuardExempt []string
 }
 

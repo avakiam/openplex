@@ -178,8 +178,10 @@ PUT /api/v1/extension/edge
   altra xarxa (els reptes de certificat continuen passant). Restringeix un
   host només mentre totes les seves visites arribin per aquestes xarxes, o
   els visitants veuran l'error. Les connexions de les quals el servidor
-  d'entrada no pot veure l'origen (visites IPv6 que Docker reenvia mentre la
-  xarxa d'entrada no té IPv6) no es bloquegen mai.
+  d'entrada no pot veure l'origen no es bloquegen mai: les peticions que el
+  servidor es fa a si mateix i les visites IPv6 en un motor Docker que no pot
+  donar IPv6 a la xarxa d'entrada (anterior a la 27), que Docker reenvia des
+  de la passarel·la de la xarxa.
 - Un `PUT` substitueix tota la teva política (`{}` l'esborra) i la retorna
   normalitzada; `GET` la retorna. Les xarxes no poden ser més àmplies que /8
   (IPv4) o /16 (IPv6), com a màxim 256 per llista. OpenPlex combina les

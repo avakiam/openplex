@@ -50,8 +50,11 @@ type Orchestrator struct {
 
 	edgeMu  sync.Mutex // serializes edge config writes/reloads
 	buildMu sync.Mutex // serializes local image builds
-	netMu   sync.Mutex // serializes account network creation (subnet allocation)
-	locks   keyedMutex // per-site lifecycle locks
+	netMu   sync.Mutex // serializes network creation (subnet allocation, edge network rebuild)
+	// edgeNoIPv6 is set (under netMu) once the engine failed to create an
+	// IPv6 network, so an IPv4-only edge network isn't rebuilt on every pass.
+	edgeNoIPv6 bool
+	locks      keyedMutex // per-site lifecycle locks
 }
 
 // New connects to the Docker Engine and verifies it responds.
@@ -90,12 +93,18 @@ func managedLabels(kind string) map[string]string {
 	return map[string]string{LabelManaged: "true", LabelKind: kind}
 }
 
-// ensureNetwork creates a labelled bridge network if missing.
+// ensureNetwork creates a labelled bridge network if missing (the edge
+// network dual-stack, see edgenet.go).
 func (o *Orchestrator) ensureNetwork(ctx context.Context, name string, internal bool) error {
+	o.netMu.Lock()
+	defer o.netMu.Unlock()
 	if _, err := o.cli.NetworkInspect(ctx, name, network.InspectOptions{}); err == nil {
 		return nil
 	} else if !client.IsErrNotFound(err) {
 		return fmt.Errorf("inspect network %s: %w", name, err)
+	}
+	if name == EdgeNetwork && !internal {
+		return o.createEdgeNetwork(ctx, name, nil, false)
 	}
 	_, err := o.cli.NetworkCreate(ctx, name, network.CreateOptions{
 		Driver: "bridge", Internal: internal, Labels: managedLabels("network"),

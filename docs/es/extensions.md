@@ -177,8 +177,9 @@ PUT /api/v1/extension/edge
   otra red (los retos de certificado siguen pasando). Restringe un host solo
   mientras todas sus visitas lleguen por esas redes, o los visitantes verán
   el error. Las conexiones cuyo origen el servidor de entrada no puede ver
-  (visitas IPv6 que Docker reenvía mientras la red de entrada no tiene IPv6)
-  nunca se bloquean.
+  nunca se bloquean: las peticiones que el servidor se hace a sí mismo y las
+  visitas IPv6 en un motor Docker que no puede dar IPv6 a la red de entrada
+  (anterior a la 27), que Docker reenvía desde la pasarela de la red.
 - Un `PUT` sustituye toda tu política (`{}` la borra) y la devuelve
   normalizada; `GET` la devuelve. Las redes no pueden ser más amplias que /8
   (IPv4) o /16 (IPv6), como máximo 256 por lista. OpenPlex combina las

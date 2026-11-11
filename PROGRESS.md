@@ -221,7 +221,10 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] Developer guide `docs/{en,es,ca}/extensions.md` + `examples/extension-hello` (0BSD)
 - [x] Edge policies (`edge:write`, v0.17.0): extensions declare trusted proxies and per-host network restrictions
       on their socket; validated, merged across enabled extensions, re-validated when rendering the Caddyfile
-- [ ] IPv6 on the edge network, so the edge sees IPv6 visitors' addresses (logs, PHP, Fail2Ban, restrictions)
+- [x] IPv6 on the edge network (v0.17.1), so the edge sees IPv6 visitors' addresses (logs, PHP, Fail2Ban,
+      restrictions): created dual-stack (engine pool, then a fixed ULA, then IPv4 only); an IPv4-only network is
+      rebuilt once, keeping its IPv4 range, removing the edge and reconnecting the other members
+- [ ] IPv6 for the DNS and mail containers' published ports (they don't answer over IPv6 behind ufw)
 - [ ] Marketplace service (catalog + paid downloads) — the client side is done (`OPENPLEX_MARKETPLACE_URL`)
 
 ## M14 — Installer & packaging
@@ -374,3 +377,12 @@ has been verified on the Linux test server. One commit per milestone.
   every change is audited. "Only through Cloudflare" on mailcactus.com (zone pending) restricts nothing and shows
   why. Found: IPv6 visits reach the edge through Docker's proxy with the gateway's address (the edge network has
   no IPv6), so restrictions never block the gateway — IPv6 visits can't be filtered yet.
+- 2026-11-11 — IPv6 edge network (v0.17.1) on the VPS (Docker 29.9). The upgrade rebuilt `openplex_edge` with
+  `fd39:ff54:8444::/64` and its old 172.18.0.0/16, recreated the edge and reconnected the webmail in ~4 s; every
+  site, the www redirects and the webmail answered on IPv4 and IPv6 after it (the edge still reaches Roundcube over
+  IPv4, which its proxy whitelist trusts). Visits to the public IPv6 now log the real address (Mythic Beasts'
+  IPv6 checker as `2a00:1098:0:86:1000:1a:0:1`) instead of 172.18.0.1. A restriction set through the extension
+  socket gave 403 to direct IPv4 and IPv6 visits and to the external IPv6 checker; only the host's own requests
+  to localhost, which docker-proxy forwards from the gateways (172.18.0.1, fd39:ff54:8444::1), pass — so the
+  gateway exemption stays. Found: DNS (53) and SMTP (25) don't answer over IPv6 from outside — their networks have
+  no IPv6, so docker-proxy receives them through the host input chain, where ufw doesn't allow those ports.

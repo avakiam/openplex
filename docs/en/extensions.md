@@ -173,8 +173,10 @@ PUT /api/v1/extension/edge
 - `restrict`: a host of a website on this server answers `403` to any other
   network (certificate challenges still pass). Restrict a host only while all
   its visits arrive through those networks, or visitors get the error.
-  Connections whose source the edge can't see (IPv6 visits that Docker
-  forwards while the edge network has no IPv6) are never blocked.
+  Connections whose source the edge can't see are never blocked: requests
+  the server makes to itself, and IPv6 visits on a Docker engine that can't
+  give the edge network IPv6 (older than 27), which Docker forwards from the
+  network's gateway.
 - A `PUT` replaces your whole policy (`{}` clears it) and answers it
   normalized; `GET` returns it. Networks may not be broader than /8 (IPv4) or
   /16 (IPv6), 256 per list at most. OpenPlex merges the policies of all
