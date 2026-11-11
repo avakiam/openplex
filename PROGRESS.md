@@ -236,7 +236,12 @@ has been verified on the Linux test server. One commit per milestone.
       licensing) in en/es/ca
 - [ ] Image mode for providers (prepare a template without initialising; first boot generates secrets),
       one-time sign-in link, signed releases + update channel, published API reference
-- [ ] Release build (`linux/amd64`, `linux/arm64`) + checksums
+- [x] Release build (`linux/amd64`, `linux/arm64`) + checksums: `.github/workflows/release.yml` builds a draft on a
+      `v*` tag; `scripts/sign-release.sh` signs `SHA256SUMS` offline (key `avakiam-release-2026`) and publishes
+      (see `RELEASING.md`); CI runs `make check` + the dashboard build on every push
+- [x] One-click updates (`internal/update`, v0.18.0): stable release check twice a day, signature + checksum
+      verification, install through a transient systemd unit (`openplexd update apply`) with binary and database
+      backup, confirmation by the new version and automatic rollback; **Updates** page, audit entries
 - [x] Verified end-to-end on the Linux test server and on a clean public VPS
 
 ---
@@ -386,3 +391,8 @@ has been verified on the Linux test server. One commit per milestone.
   to localhost, which docker-proxy forwards from the gateways (172.18.0.1, fd39:ff54:8444::1), pass — so the
   gateway exemption stays. Found: DNS (53) and SMTP (25) don't answer over IPv6 from outside — their networks have
   no IPv6, so docker-proxy receives them through the host input chain, where ufw doesn't allow those ports.
+- 2026-11-11 — Panel updates (v0.18.0, migration v14) on the LAN server against a local fake GitHub serving releases
+  signed with the real release key: 0.18.0 → 0.18.1 from the API in 6 s (backup of binary and database, new
+  version confirmed, outcome audited); a broken 0.18.2 (reports its version, refuses to start) was rolled back to
+  0.18.1 after 3 minutes with its database, and the panel showed why. The installer's OpenSSL check accepts the
+  real signature and rejects a modified SHA256SUMS.

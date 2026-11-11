@@ -1,6 +1,7 @@
 "use client";
 import {
   Activity,
+  ArrowUpCircle,
   Archive,
   Database,
   Globe,
@@ -23,7 +24,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { logout } from "@/lib/api";
-import { useExtensionsUI } from "@/lib/hooks";
+import { useExtensionsUI, useUpdate } from "@/lib/hooks";
 import { canManageUsers, isAdmin, useAuth } from "@/lib/auth";
 import { tk, useT } from "@/lib/i18n";
 import { extText, type User } from "@/lib/types";
@@ -52,6 +53,7 @@ const nav: NavItem[] = [
   { href: "/security/", label: tk("Firewall"), icon: Shield, show: isAdmin },
   { href: "/audit/", label: tk("Audit log"), icon: ScrollText, show: isAdmin },
   { href: "/extensions/", label: tk("Extensions"), icon: Puzzle, show: isAdmin },
+  { href: "/updates/", label: tk("Updates"), icon: ArrowUpCircle, show: isAdmin },
   { href: "/account/", label: tk("Account & security"), icon: UserCog },
 ];
 
@@ -89,6 +91,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const { dark, toggle } = useTheme();
   const extPages = (useExtensionsUI(!!user).data ?? []).flatMap((e) => e.pages.map((p) => ({ ext: e, page: p })));
+  const updateAvailable = !!useUpdate(user?.role === "admin").data?.can_install;
 
   useEffect(() => {
     if (ready && !user) router.replace(`/login/?next=${encodeURIComponent(pathname)}`);
@@ -130,6 +133,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <n.icon className="size-4" />
                 {t(n.label)}
+                {n.href === "/updates/" && updateAvailable && (
+                  <span className="ml-auto size-2 rounded-full bg-primary" aria-label={t("Update available")} />
+                )}
               </Link>
             ))}
           {extPages.length > 0 && (

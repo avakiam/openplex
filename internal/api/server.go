@@ -25,6 +25,7 @@ import (
 	"openplex.dev/openplex/internal/mail"
 	"openplex.dev/openplex/internal/monitor"
 	"openplex.dev/openplex/internal/secrets"
+	"openplex.dev/openplex/internal/update"
 )
 
 // Server holds API dependencies.
@@ -41,6 +42,7 @@ type Server struct {
 	dns      *dns.Manager
 	mail     *mail.Manager
 	ext      *extensions.Manager
+	updates  *update.Manager
 	log      *slog.Logger
 	ui       http.Handler
 	version  string
@@ -74,6 +76,7 @@ type Options struct {
 	DNS          *dns.Manager
 	Mail         *mail.Manager
 	Extensions   *extensions.Manager
+	Updates      *update.Manager // nil in tests that don't need it
 }
 
 // New builds the API server.
@@ -88,6 +91,7 @@ func New(o Options) *Server {
 		dns:          o.DNS,
 		mail:         o.Mail,
 		ext:          o.Extensions,
+		updates:      o.Updates,
 		loginLimiter: newLimiter(10, 5*time.Minute),
 		captcha:      captcha.NewVerifier(),
 		baseCtx:      o.BaseContext,
@@ -221,6 +225,10 @@ func (s *Server) routes() http.Handler {
 				r.Get("/system/stats/ws", s.handleStatsWS)
 				r.Get("/system/containers", s.handleContainers)
 				r.Post("/system/reconcile", s.handleReconcile)
+				r.Get("/system/update", s.handleGetUpdate)
+				r.Post("/system/update/check", s.handleCheckUpdate)
+				r.Post("/system/update/install", s.handleInstallUpdate)
+				r.Put("/system/update/settings", s.handlePutUpdateSettings)
 				r.Get("/audit", s.handleAudit)
 				r.Get("/backups/settings", s.handleGetBackupSettings)
 				r.Put("/backups/settings", s.handlePutBackupSettings)

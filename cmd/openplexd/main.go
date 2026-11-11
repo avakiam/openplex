@@ -29,6 +29,7 @@ import (
 	"openplex.dev/openplex/internal/monitor"
 	"openplex.dev/openplex/internal/secrets"
 	"openplex.dev/openplex/internal/ui"
+	"openplex.dev/openplex/internal/update"
 )
 
 var version = "dev"
@@ -46,6 +47,10 @@ func main() {
 		err = restorePanel(args[1:])
 	case len(args) > 0 && args[0] == "ext":
 		err = extCommand(args[1:])
+	case len(args) > 0 && args[0] == "update":
+		err = updateCommand(args[1:])
+	case len(args) > 0 && args[0] == "release":
+		err = releaseCommand(args[1:])
 	default:
 		err = run(args)
 	}
@@ -189,10 +194,20 @@ func run(args []string) error {
 	exts := extensions.New(ctx, cfg, store, box, extRT, version, log)
 	defer exts.Close()
 
+	updates := update.New(update.Options{
+		Current: version, DataDir: cfg.DataDir, DBPath: cfg.DBPath(), URL: cfg.UpdateURL, Log: log,
+		Enabled: func(ctx context.Context) bool {
+			s, err := store.GetUpdateSettings(ctx)
+			return err == nil && s.CheckEnabled
+		},
+	})
+	workers.Add(1)
+	go func() { defer workers.Done(); updates.Run(ctx) }()
+
 	srv := api.New(api.Options{
 		Config: cfg, DB: store, Orchestrator: orch, Monitor: mon, Logger: log,
 		UI: ui.Handler(), Version: version, BaseContext: ctx, Box: box, Backups: backups, Cron: crons, Firewall: fw, DNS: dnsMgr, Mail: mailMgr,
-		Extensions: exts,
+		Extensions: exts, Updates: updates,
 	})
 	exts.SetAPI(srv.ExtensionAPI)
 	workers.Add(1)
@@ -227,6 +242,30 @@ func run(args []string) error {
 			}
 		}(l)
 	}
+
+	// Serving: if this start is an update being installed, confirm it.
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-time.After(10 * time.Second):
+		}
+		if !updates.Confirm() {
+			return
+		}
+		// The installer records the outcome just after the confirmation.
+		for range 30 {
+			if o := updates.LastOutcome(); o != nil && o.To == version && !o.Audited {
+				srv.AuditUpdateOutcome(ctx)
+				return
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Second):
+			}
+		}
+	}()
+	srv.AuditUpdateOutcome(ctx)
 
 	select {
 	case <-ctx.Done():

@@ -40,6 +40,30 @@ EOF
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[1;31mxx\033[0m %s\n' "$*" >&2; exit 1; }
+
+# Releases are signed with Avakiam's release key (also trusted by the panel's
+# updater, internal/update/keys.go).
+RELEASE_KEY_ID="avakiam-release-2026"
+RELEASE_PUBKEY="-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEA0/RuzQESO+QqAcg7qOQN4NrWOgypqSsjZ5p9F3F4osI=
+-----END PUBLIC KEY-----"
+
+# verify_signature SUMS SIG: Ed25519 signature of SHA256SUMS (needs OpenSSL 3).
+verify_signature() {
+  local sums=$1 sig=$2 id b64
+  id=$(sed -n 's/.*"key_id": *"\([^"]*\)".*/\1/p' "$sig")
+  b64=$(sed -n 's/.*"signature": *"\([^"]*\)".*/\1/p' "$sig")
+  [[ "$id" == "$RELEASE_KEY_ID" && -n "$b64" ]] || die "the release is not signed with the OpenPlex release key"
+  if ! openssl pkeyutl -help 2>&1 | grep -q -- -rawin; then
+    warn "OpenSSL 3 is not available: the release signature was not checked (the checksum still is)"
+    return 0
+  fi
+  printf '%s\n' "$RELEASE_PUBKEY" > "$TMP/release.pem"
+  printf '%s' "$b64" | base64 -d > "$TMP/sums.sig.bin" || die "unreadable release signature"
+  openssl pkeyutl -verify -pubin -inkey "$TMP/release.pem" -rawin -in "$sums" -sigfile "$TMP/sums.sig.bin" >/dev/null 2>&1 \
+    || die "the release signature is not valid"
+  log "Release signature verified ($RELEASE_KEY_ID)"
+}
 trap 'die "failed at line $LINENO: $BASH_COMMAND"' ERR
 
 while [[ $# -gt 0 ]]; do
@@ -123,6 +147,8 @@ else
   log "Downloading openplexd ($OPENPLEX_VERSION, linux/$ARCH)"
   curl -fsSL "$base/openplexd-linux-$ARCH" -o "$TMP/openplexd-linux-$ARCH"
   curl -fsSL "$base/SHA256SUMS" -o "$TMP/SHA256SUMS"
+  curl -fsSL "$base/SHA256SUMS.sig" -o "$TMP/SHA256SUMS.sig" || die "the release has no signature"
+  verify_signature "$TMP/SHA256SUMS" "$TMP/SHA256SUMS.sig"
   (cd "$TMP" && grep " openplexd-linux-$ARCH\$" SHA256SUMS | sha256sum -c --quiet -) || die "checksum verification failed"
   mv "$TMP/openplexd-linux-$ARCH" "$TMP/openplexd"
 fi

@@ -98,9 +98,29 @@ sudo systemctl restart openplexd
 
 ## Actualitzar
 
-Torna a executar l'instal·lador (amb les mateixes opcions). Substitueix el
-binari i conserva totes les dades; en engegar, el servei migra la seva base
-de dades i actualitza els contenidors que gestiona. Fes una còpia abans.
+**Des del tauler** (OpenPlex 0.18 o posterior): **Actualitzacions** mostra la
+versió instal·lada i, dues vegades al dia, cerca una nova versió estable a
+GitHub; l'entrada del menú mostra un punt quan n'hi ha. **Actualitzar a …**
+llavors:
+
+1. descarrega la versió i la comprova: la suma de control i la signatura feta
+   amb la clau de versions d'Avakiam (una versió signada d'una altra manera es
+   rebutja);
+2. atura el tauler aproximadament un minut (els webs, les bases de dades i el
+   correu continuen funcionant), desa una còpia del binari actual i de la seva
+   base de dades a `/var/lib/openplex/updates/`, instal·la la nova versió i
+   l'engega;
+3. si la nova versió no arrenca correctament en tres minuts, torna a posar
+   sola el binari i la base de dades anteriors.
+
+El resultat, i qui la va iniciar, queda al registre d'auditoria. Desactiva
+**Cercar actualitzacions automàticament** si gestiones tu les versions (la
+comprovació només es farà en prémer **Comprovar ara**).
+
+**Amb l'instal·lador**: torna a executar-lo amb les mateixes opcions.
+Substitueix el binari (comprovant també la signatura) i conserva totes les
+dades; en engegar, el servei migra la seva base de dades i actualitza els
+contenidors que gestiona. Fes una còpia abans.
 
 ## Còpies de seguretat i reconstruir un servidor perdut
 

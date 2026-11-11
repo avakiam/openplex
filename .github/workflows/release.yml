@@ -1,0 +1,46 @@
+# Builds a release when a version tag (v1.2.3) is pushed and leaves it as a
+# DRAFT. A maintainer then signs SHA256SUMS offline and publishes it with
+# scripts/sign-release.sh: panels only install releases signed with a
+# trusted release key (internal/update/keys.go), which never reaches GitHub.
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Check
+        run: make check
+      - name: Dashboard
+        run: make web
+      - name: Binaries
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          for arch in amd64 arm64; do
+            CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -trimpath \
+              -ldflags "-s -w -X main.version=$version" -o "dist/openplexd-linux-$arch" ./cmd/openplexd
+          done
+          cp scripts/install.sh dist/install.sh
+          cd dist && sha256sum openplexd-linux-* install.sh > SHA256SUMS
+      - name: Draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* --draft --verify-tag \
+            --title "OpenPlex ${GITHUB_REF_NAME#v}" --notes-from-tag

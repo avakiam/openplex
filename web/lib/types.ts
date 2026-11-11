@@ -579,3 +579,32 @@ export interface ExtensionUI {
   pages: { id: string; title: ExtText }[];
   site_tabs: { id: string; title: ExtText; area?: SiteArea }[];
 }
+
+export interface UpdateRelease {
+  version: string;
+  name: string;
+  notes: string;
+  url: string;
+  published_at: string;
+}
+
+export interface UpdateOutcome {
+  from: string;
+  to: string;
+  result: "updated" | "rolled_back" | "failed";
+  message?: string;
+  time: string;
+}
+
+export interface UpdateStatus {
+  current: string;
+  enabled: boolean;
+  latest: UpdateRelease | null;
+  available: boolean;
+  can_install: boolean;
+  reason?: string;
+  checked_at?: string;
+  check_error?: string;
+  state: "idle" | "installing";
+  last?: UpdateOutcome;
+}

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { api } from "./api";
 import { t } from "./i18n";
 import type {
+  UpdateStatus,
   AccessGrant,
   APIKey,
   BackupRun,
@@ -71,6 +72,7 @@ export const keys = {
   captcha: ["captcha"] as const,
   domainMail: (id: number) => ["domains", id, "mail"] as const,
   extensions: ["extensions"] as const,
+  update: ["system", "update"] as const,
   extensionsUI: ["extensions", "ui"] as const,
   marketplace: ["extensions", "marketplace"] as const,
 };
@@ -284,3 +286,16 @@ export const useExtensionsUI = (enabled = true) =>
   useQuery({ queryKey: keys.extensionsUI, queryFn: () => api.get<ExtensionUI[]>("/extensions/ui"), staleTime: 60_000, enabled });
 export const useMarketplace = (enabled: boolean) =>
   useQuery({ queryKey: keys.marketplace, queryFn: () => api.get<CatalogEntry[]>("/extensions/marketplace"), enabled, retry: false, staleTime: 300_000 });
+
+/** Panel update status; polled every few seconds while an update installs
+ * (the panel restarts meanwhile, so failed requests are retried). */
+export const useUpdate = (enabled: boolean, installing = false) =>
+  useQuery({
+    queryKey: keys.update,
+    queryFn: () => api.get<UpdateStatus>("/system/update"),
+    enabled,
+    staleTime: 300_000,
+    refetchInterval: installing ? 3000 : false,
+    retry: installing ? true : 1,
+    retryDelay: 3000,
+  });

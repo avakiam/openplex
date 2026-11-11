@@ -224,5 +224,11 @@
   "the marketplace did not accept this licence key": "El marketplace no ha aceptado esta clave de licencia",
   "the downloaded package is not signed by OpenPlex; it was not installed": "El paquete descargado no está firmado por OpenPlex; no se ha instalado",
   "extension not found": "Extensión no encontrada",
-  "no such page": "Esa página no existe"
+  "no such page": "Esa página no existe",
+  "this is a development build; install releases with the installer": "esta es una versión de desarrollo; instala las versiones con el instalador",
+  "no newer release to install": "no hay ninguna versión más nueva para instalar",
+  "an update is already being installed": "ya se está instalando una actualización",
+  "installing updates needs systemd (systemd-run was not found)": "instalar actualizaciones necesita systemd (no se ha encontrado systemd-run)",
+  "the release has no binary for this server's architecture": "la versión no tiene binario para la arquitectura de este servidor",
+  "updates are not available on this server": "las actualizaciones no están disponibles en este servidor"
 }

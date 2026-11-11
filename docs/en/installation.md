@@ -97,9 +97,26 @@ sudo systemctl restart openplexd
 
 ## Upgrades
 
-Run the installer again (with the same options). It replaces the binary and
-keeps all data; at start the daemon migrates its database and updates the
-containers it manages. Take a backup first.
+**From the panel** (OpenPlex 0.18 or later): **Updates** shows the installed
+version and, twice a day, looks for a new stable release on GitHub; the menu
+entry gets a dot when there is one. **Update to …** then:
+
+1. downloads the release and checks it: the checksum, and the signature made
+   with Avakiam's release key (a release signed otherwise is refused);
+2. stops the panel for about a minute (websites, databases and mail keep
+   running), backs up the current binary and its database to
+   `/var/lib/openplex/updates/`, installs the new version and starts it;
+3. if the new version doesn't start correctly within three minutes, puts the
+   previous binary and database back on its own.
+
+The result, and who started it, is in the audit log. Turn off **Check for
+updates automatically** if you manage versions yourself (the check then only
+runs when you click **Check now**).
+
+**With the installer**: run it again with the same options. It replaces the
+binary (also checking the signature) and keeps all data; at start the daemon
+migrates its database and updates the containers it manages. Take a backup
+first.
 
 ## Backups and rebuilding a lost server
 

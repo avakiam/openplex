@@ -32,6 +32,8 @@ type Config struct {
 	TenantNetworks string
 	// MarketplaceURL is where the Extensions page finds official extensions.
 	MarketplaceURL string
+	// UpdateURL answers with the latest stable release (GitHub's API format).
+	UpdateURL string
 
 	Secret []byte // HMAC key for JWTs, loaded from DataDir/secret.key
 }
@@ -63,6 +65,7 @@ func Load(args []string) (*Config, error) {
 	fsFlags.BoolVar(&c.Firewall, "firewall", envBool("OPENPLEX_FIREWALL", true), "manage the host firewall (nftables table inet openplex)")
 	fsFlags.BoolVar(&c.Captcha, "captcha", envBool("OPENPLEX_CAPTCHA", true), "ask the configured captcha on the panel login (false turns it off, e.g. after a wrong key)")
 	fsFlags.StringVar(&c.TenantNetworks, "tenant-networks", env("OPENPLEX_TENANT_NETWORKS", "10.213.0.0/16"), "address pool for the per-account website networks (one /24 each)")
+	fsFlags.StringVar(&c.UpdateURL, "update-url", env("OPENPLEX_UPDATE_URL", "https://api.github.com/repos/avakiam/openplex/releases/latest"), "latest stable release of OpenPlex")
 	fsFlags.StringVar(&c.MarketplaceURL, "marketplace-url", env("OPENPLEX_MARKETPLACE_URL", "https://marketplace.openplex.dev"), "extension marketplace (empty: none)")
 	fsFlags.DurationVar(&c.AccessTTL, "access-ttl", 15*time.Minute, "access token lifetime")
 	fsFlags.DurationVar(&c.RefreshTTL, "refresh-ttl", 30*24*time.Hour, "refresh token lifetime")
