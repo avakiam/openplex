@@ -22,6 +22,7 @@ import (
 	"openplex.dev/openplex/internal/cron"
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/dns"
+	"openplex.dev/openplex/internal/extensions"
 	"openplex.dev/openplex/internal/firewall"
 	"openplex.dev/openplex/internal/mail"
 	"openplex.dev/openplex/internal/monitor"
@@ -48,7 +49,8 @@ func newHarness(t *testing.T) *harness {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	box, _ := secrets.New(cfg.Secret, "database-passwords")
 	dnsM := dns.New(store, nil, dir, "http://127.0.0.1:1", log)
-	srv := New(Options{Config: cfg, DB: store, Monitor: monitor.New(time.Second, 10, dir, log), Logger: log, BaseContext: context.Background(), Box: box, Cron: cron.New(store, nil, log), Firewall: firewall.New(store, log, false), DNS: dnsM, Mail: mail.New(store, nil, dnsM, box, dir, dir, nil, log)})
+	srv := New(Options{Config: cfg, DB: store, Monitor: monitor.New(time.Second, 10, dir, log), Logger: log, BaseContext: context.Background(), Box: box, Cron: cron.New(store, nil, log), Firewall: firewall.New(store, log, false), DNS: dnsM, Mail: mail.New(store, nil, dnsM, box, dir, dir, nil, log),
+		Extensions: extensions.New(context.Background(), cfg, store, box, nil, "dev", log)})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 	h := &harness{t: t, ts: ts, db: store, cfg: cfg, box: box, srv: srv}
@@ -849,5 +851,91 @@ func TestTenantLimits(t *testing.T) {
 	}
 	if c := h.do("POST", "/domains", res, map[string]any{"name": "two.test", "owner_id": cust.ID}, nil); c != 403 {
 		t.Errorf("reseller quota bypassed through a customer: %d, want 403", c)
+	}
+}
+
+func TestExtensionSocket(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+	carla := h.mkUser("carla", db.RoleCustomer, nil)
+	dani := h.mkUser("dani", db.RoleCustomer, nil)
+	for _, d := range []*db.Domain{{Name: "carla.test", OwnerID: carla.ID}, {Name: "dani.test", OwnerID: dani.ID}} {
+		d.Kind, d.Runtime, d.DocumentRoot, d.MemoryMB, d.CPUs = db.KindPrimary, "static", "public", 128, 1
+		if err := h.db.CreateDomain(ctx, d); err != nil {
+			t.Fatal(err)
+		}
+	}
+	man := `{"schema":1,"id":"acme.test","name":"Test","version":"1.0.0","publisher":{"name":"Acme"},
+		"permissions":["domains:read"],"backend":{"image":"acme/test:1","port":8080},
+		"settings":[{"key":"token","type":"secret","label":"Token"}],
+		"pages":[{"id":"main","title":"Main","path":"/"}],
+		"site_tabs":[{"id":"dns","title":"DNS","path":"/site","area":"dns"}]}`
+	sealed, _ := h.box.Seal(`{"token":"s3cret"}`)
+	if err := h.db.SaveExtension(ctx, &db.Extension{ID: "acme.test", Version: "1.0.0", Manifest: man, Source: "upload", Enabled: true,
+		SettingsEnc: sealed, Token: "tok", Status: "running"}); err != nil {
+		t.Fatal(err)
+	}
+	api := h.srv.ExtensionAPI("acme.test")
+	call := func(method, path, user string) (int, string) {
+		r := httptest.NewRequest(method, path, nil)
+		if user != "" {
+			r.Header.Set("X-OpenPlex-User", user)
+		}
+		w := httptest.NewRecorder()
+		api.ServeHTTP(w, r)
+		return w.Code, w.Body.String()
+	}
+	if c, body := call("GET", "/api/v1/domains", ""); c != 200 || !strings.Contains(body, "carla.test") || !strings.Contains(body, "dani.test") {
+		t.Errorf("list domains: %d %s", c, body)
+	}
+	if c, body := call("GET", "/api/v1/domains", itoa(carla.ID)); c != 200 || !strings.Contains(body, "carla.test") || strings.Contains(body, "dani.test") {
+		t.Errorf("acting as carla: %d %s", c, body)
+	}
+	for _, rq := range [][2]string{{"POST", "/api/v1/domains"}, {"GET", "/api/v1/users"}, {"GET", "/api/v1/audit"},
+		{"POST", "/api/v1/api-keys"}, {"GET", "/api/v1/domains/1/files"}, {"GET", "/api/v1/backups/recovery-key"}} {
+		if c, _ := call(rq[0], rq[1], ""); c != 403 {
+			t.Errorf("%s %s: %d, want 403", rq[0], rq[1], c)
+		}
+	}
+	if c, body := call("GET", "/api/v1/extension", ""); c != 200 || !strings.Contains(body, "s3cret") {
+		t.Errorf("self: %d %s", c, body)
+	}
+
+	// Dashboard side: secrets never come back; customers get the site tab
+	// for their own site only, admins the page.
+	admin, ct := h.login("admin").AccessToken, h.login("carla").AccessToken
+	var list []map[string]any
+	if c := h.do("GET", "/extensions", admin, nil, &list); c != 200 || len(list) != 1 {
+		t.Fatalf("list: %d %v", c, list)
+	}
+	if b, _ := json.Marshal(list); strings.Contains(string(b), "s3cret") {
+		t.Error("a secret setting reached the dashboard")
+	}
+	if c := h.do("GET", "/extensions", ct, nil, nil); c != 403 {
+		t.Errorf("customer listing extensions: %d", c)
+	}
+	var out map[string]string
+	if c := h.do("POST", "/extensions/acme.test/session", ct, map[string]any{"page": "main"}, nil); c != 404 {
+		t.Errorf("customer opening an admin page: %d", c)
+	}
+	doms, _ := h.db.ListDomains(ctx, db.DomainFilter{})
+	ids := map[string]int64{}
+	for _, d := range doms {
+		ids[d.Name] = d.ID
+	}
+	if c := h.do("POST", "/extensions/acme.test/session", ct, map[string]any{"site_tab": "dns", "domain_id": ids["dani.test"]}, nil); c != 404 {
+		t.Errorf("site tab of someone else's site: %d", c)
+	}
+	if c := h.do("POST", "/extensions/acme.test/session", ct, map[string]any{"site_tab": "dns", "domain_id": ids["carla.test"]}, &out); c != 200 || !strings.HasPrefix(out["url"], "/ext/acme.test/s/") {
+		t.Errorf("own site tab: %d %v", c, out)
+	}
+	if c := h.do("POST", "/extensions/acme.test/session", admin, map[string]any{"page": "main"}, &out); c != 200 {
+		t.Errorf("admin page: %d", c)
+	}
+	// Without Docker the page can't be served, but the session is checked first.
+	res, _ := http.Get(h.ts.URL + "/ext/acme.test/s/forged/")
+	res.Body.Close()
+	if res.StatusCode != 403 {
+		t.Errorf("forged session: %d", res.StatusCode)
 	}
 }

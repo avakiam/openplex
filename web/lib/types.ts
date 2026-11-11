@@ -494,3 +494,88 @@ export interface DomainMail {
   mailboxes: Mailbox[];
   aliases: MailAlias[];
 }
+
+// ---------- extensions ----------
+/** Translatable text from an extension: language → text ("en" always present). */
+export type ExtText = Record<string, string>;
+export const extText = (t: ExtText | undefined, locale: string) => (t ? (t[locale] ?? t.en ?? "") : "");
+
+export interface ExtensionSetting {
+  key: string;
+  type: "text" | "secret" | "boolean" | "select";
+  label: ExtText;
+  help?: ExtText;
+  required?: boolean;
+  default?: string;
+  options?: { value: string; label: ExtText }[];
+}
+
+export interface ExtensionPage {
+  id: string;
+  title: ExtText;
+  path: string;
+  roles?: Role[];
+  area?: SiteArea;
+}
+
+export interface ExtensionManifest {
+  id: string;
+  name: ExtText;
+  description?: ExtText;
+  version: string;
+  publisher: { name: string; url?: string };
+  homepage?: string;
+  openplex?: string;
+  permissions?: string[] | null;
+  events?: string[] | null;
+  settings?: ExtensionSetting[] | null;
+  pages?: ExtensionPage[] | null;
+  site_tabs?: ExtensionPage[] | null;
+}
+
+export type ExtensionStatus = "starting" | "running" | "disabled" | "error";
+
+export interface Extension {
+  id: string;
+  version: string;
+  source: "upload" | "marketplace";
+  signer: string;
+  enabled: boolean;
+  status: ExtensionStatus;
+  status_message: string;
+  installed_at: string;
+  updated_at: string;
+  manifest: ExtensionManifest;
+  settings: Record<string, string>;
+  secrets_set: string[] | null;
+  has_license: boolean;
+}
+
+/** A package received for review before installing. */
+export interface PendingExtension {
+  token: string;
+  manifest: ExtensionManifest;
+  signer: string;
+  source: "upload" | "marketplace";
+  installed_version?: string;
+}
+
+export interface CatalogEntry {
+  id: string;
+  version: string;
+  name: ExtText;
+  description: ExtText;
+  publisher: { name: string; url?: string };
+  homepage?: string;
+  icon?: string;
+  permissions?: string[] | null;
+  price?: { amount: string; currency: string } | null;
+  buy_url?: string;
+}
+
+export interface ExtensionUI {
+  id: string;
+  name: ExtText;
+  pages: { id: string; title: ExtText }[];
+  site_tabs: { id: string; title: ExtText; area?: SiteArea }[];
+}

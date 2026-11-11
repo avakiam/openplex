@@ -205,6 +205,22 @@ has been verified on the Linux test server. One commit per milestone.
 - [ ] Turn dynamic API messages (quotas, overlaps, invalid JSON) into fixed, translatable strings
 - [ ] Trim the embedded Monaco bundle (~25 MB of the 41 MB binary) to the languages we need
 
+## M15 — Extensions (`internal/extensions`, design in `docs/adr/0001-extensions.md`)
+- [x] Manifest `openplex-extension.json` (schema 1, localized texts, permissions, events, settings, pages,
+      site tabs) + `.opx` package (tar of package.tar.gz + optional Ed25519 `signature.json`)
+- [x] `openplexd ext pack` / `ext keygen`; trusted key `avakiam-2026` marks official packages
+- [x] Runtime: one container per extension on its own network, own uid (400000+n), no capabilities,
+      read-only rootfs, `/data` + `/tmp`, memory/CPU/pids limits; loaded from the package or pulled
+- [x] Per-extension API socket (`/run/openplex/panel.sock`), scope table per permission, `X-OpenPlex-User`
+      to act as a user; settings (secrets sealed) and licence key via `GET /api/v1/extension`
+- [x] Events (installed, settings.changed, domain.created/deleted, dns.changed) with retries
+- [x] Pages and website tabs: session URL `/ext/<id>/s/<token>/…`, proxied with user headers, sandboxed
+      iframe + CSP sandbox; access checked like the website areas
+- [x] Dashboard: Extensions (installed, marketplace, upload → review → install, settings, licence),
+      menu entries and website tabs; audit log entries
+- [x] Developer guide `docs/{en,es,ca}/extensions.md` + `examples/extension-hello` (0BSD)
+- [ ] Marketplace service (catalog + paid downloads) — the client side is done (`OPENPLEX_MARKETPLACE_URL`)
+
 ## M14 — Installer & packaging
 - [x] `scripts/install.sh`: unattended Ubuntu/Debian install (Docker, user, dirs, binary, systemd, firewall)
 - [x] `deploy/openplexd.service` (hardened systemd unit)
@@ -335,3 +351,10 @@ has been verified on the Linux test server. One commit per milestone.
   Adminer: 403 without a session or reusing a ticket, panel ticket → logged in, `driver=server&driver=sqlite` 403;
   grant stored as `admin\_sectest`. VPS: panel sends CSP + HSTS, Adminer 403 anonymously, webmail and captcha
   load; a matching From: is DKIM-signed, a foreign From: is not.
+- 2026-11-11 — Extensions (v0.16.0, migration v12) on the LAN server with `examples/extension-hello`. Unsigned
+  upload → review shows no signer → install: running as uid 400001, read-only rootfs, CapDrop ALL, 32 MB, socket
+  0600 owned by that uid. Admin page rendered with the domain list and a CSP sandbox header; a forged session URL
+  403; the website tab listed static.lan.test's DNS. Settings change, domain create/delete → events delivered;
+  extension network reaches the internet but not tenant sites or MariaDB. Disable removes the container, enable
+  restarts it; upgrade with the signed package shows `avakiam-2026` and keeps settings; uninstall removes the
+  container, network and data; audit entries recorded.

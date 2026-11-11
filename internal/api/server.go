@@ -20,6 +20,7 @@ import (
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/dns"
 	"openplex.dev/openplex/internal/docker"
+	"openplex.dev/openplex/internal/extensions"
 	"openplex.dev/openplex/internal/firewall"
 	"openplex.dev/openplex/internal/mail"
 	"openplex.dev/openplex/internal/monitor"
@@ -39,6 +40,7 @@ type Server struct {
 	firewall *firewall.Manager
 	dns      *dns.Manager
 	mail     *mail.Manager
+	ext      *extensions.Manager
 	log      *slog.Logger
 	ui       http.Handler
 	version  string
@@ -49,8 +51,10 @@ type Server struct {
 	adminerSessions ticketStore // signed-in panel users allowed into /tools/adminer/
 	captcha         *captcha.Verifier
 
-	baseCtx context.Context
-	bg      sync.WaitGroup
+	baseCtx     context.Context
+	bg          sync.WaitGroup
+	handler     http.Handler // built once by Handler; also serves extension sockets
+	handlerOnce sync.Once
 }
 
 // Options configures New.
@@ -69,6 +73,7 @@ type Options struct {
 	Firewall     *firewall.Manager
 	DNS          *dns.Manager
 	Mail         *mail.Manager
+	Extensions   *extensions.Manager
 }
 
 // New builds the API server.
@@ -82,6 +87,7 @@ func New(o Options) *Server {
 		firewall:     o.Firewall,
 		dns:          o.DNS,
 		mail:         o.Mail,
+		ext:          o.Extensions,
 		loginLimiter: newLimiter(10, 5*time.Minute),
 		captcha:      captcha.NewVerifier(),
 		baseCtx:      o.BaseContext,
@@ -93,6 +99,13 @@ func (s *Server) Wait() { s.bg.Wait() }
 
 // Handler returns the root HTTP handler (API + embedded dashboard).
 func (s *Server) Handler() http.Handler {
+	s.handlerOnce.Do(func() { s.handler = s.routes() })
+	return s.handler
+}
+
+func (s *Server) root() http.Handler { return s.Handler() }
+
+func (s *Server) routes() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer, s.requestLogger, securityHeaders)
 
@@ -186,6 +199,9 @@ func (s *Server) Handler() http.Handler {
 				}
 			})
 
+			r.Get("/extensions/ui", s.handleExtensionsUI)
+			r.Post("/extensions/{id}/session", s.handleExtensionSession)
+
 			r.Get("/database-engines", s.handleListEngines)
 			r.Get("/databases", s.handleListDatabases)
 			r.Post("/databases", s.handleCreateDatabase)
@@ -227,6 +243,16 @@ func (s *Server) Handler() http.Handler {
 				r.Get("/captcha", s.handleGetCaptcha)
 				r.Put("/captcha", s.handlePutCaptcha)
 				r.Post("/fail2ban/unban", s.handleFail2BanUnban)
+				r.Get("/extensions", s.handleListExtensions)
+				r.Post("/extensions/upload", s.handleUploadExtension)
+				r.Get("/extensions/marketplace", s.handleMarketplace)
+				r.Post("/extensions/marketplace/download", s.handleMarketplaceDownload)
+				r.Post("/extensions/install", s.handleInstallExtension)
+				r.Delete("/extensions/pending/{token}", s.handleDiscardExtension)
+				r.Patch("/extensions/{id}", s.handleUpdateExtension)
+				r.Put("/extensions/{id}/settings", s.handlePutExtensionSettings)
+				r.Put("/extensions/{id}/license", s.handlePutExtensionLicense)
+				r.Delete("/extensions/{id}", s.handleDeleteExtension)
 			})
 		})
 
@@ -235,6 +261,9 @@ func (s *Server) Handler() http.Handler {
 		})
 	})
 
+	if s.ext != nil {
+		r.Handle("/ext/*", s.extensionPages())
+	}
 	r.Handle("/tools/adminer", s.adminerProxy())
 	r.Handle("/tools/adminer/*", s.adminerProxy())
 	if s.ui != nil {

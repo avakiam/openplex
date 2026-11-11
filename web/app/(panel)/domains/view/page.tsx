@@ -1,6 +1,7 @@
 "use client";
 import {
   Archive,
+  Puzzle,
   ArrowLeft,
   CalendarClock,
   ExternalLink,
@@ -30,6 +31,7 @@ import { Suspense, useEffect, useState } from "react";
 import { CreateDomainDialog } from "@/components/create-domain-dialog";
 import { CronJobs } from "@/components/cron-jobs";
 import { DNSRecords } from "@/components/dns-records";
+import { ExtensionFrame } from "@/components/extension-frame";
 import { MailTab } from "@/components/mail-tab";
 import { FileManager } from "@/components/file-manager";
 import { ItemBackups } from "@/components/item-backups";
@@ -69,9 +71,9 @@ const WebTerminal = dynamic(() => import("@/components/web-terminal").then((m) =
     </div>
   ),
 });
-import { keys, useAction, useDomain, useDomainStats, useDomains, useRedirects, useRuntimes } from "@/lib/hooks";
+import { keys, useAction, useDomain, useDomainStats, useDomains, useExtensionsUI, useRedirects, useRuntimes } from "@/lib/hooks";
 import { fmtNumber, tk, tServer, useT } from "@/lib/i18n";
-import { type Domain, type SiteArea, siteAccess } from "@/lib/types";
+import { type Domain, extText, type SiteArea, siteAccess } from "@/lib/types";
 import { bytes, dateTime, pct } from "@/lib/utils";
 
 const KIND_LABELS: Record<string, string> = {
@@ -581,7 +583,11 @@ function DomainView() {
   const [tab, setTab] = useState("overview");
   const [logKind, setLogKind] = useState<"access" | "error">("access");
   const { user } = useAuth();
+  const { locale } = useT();
   const acc = d ? siteAccess(d) : null;
+  const extTabs = (useExtensionsUI().data ?? []).flatMap((e) =>
+    e.site_tabs.filter((tb) => !tb.area || acc?.can(tb.area)).map((tb) => ({ value: `ext:${e.id}:${tb.id}`, ext: e.id, tab: tb })),
+  );
 
   if (isLoading)
     return (
@@ -667,7 +673,17 @@ function DomainView() {
               <Archive /> {t("Backups")}
             </TabsTrigger>
           )}
+          {extTabs.map((x) => (
+            <TabsTrigger key={x.value} value={x.value}>
+              <Puzzle /> {extText(x.tab.title, locale)}
+            </TabsTrigger>
+          ))}
         </TabsList>
+        {extTabs.map((x) => (
+          <TabsContent key={x.value} value={x.value}>
+            {tab === x.value && <ExtensionFrame ext={x.ext} siteTab={x.tab.id} domainId={d.id} />}
+          </TabsContent>
+        ))}
         <TabsContent value="overview">
           <Overview d={d} />
         </TabsContent>

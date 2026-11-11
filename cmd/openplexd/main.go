@@ -23,6 +23,7 @@ import (
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/dns"
 	"openplex.dev/openplex/internal/docker"
+	"openplex.dev/openplex/internal/extensions"
 	"openplex.dev/openplex/internal/firewall"
 	"openplex.dev/openplex/internal/mail"
 	"openplex.dev/openplex/internal/monitor"
@@ -43,6 +44,8 @@ func main() {
 		err = resetPassword(args[1:])
 	case len(args) > 0 && args[0] == "restore-panel":
 		err = restorePanel(args[1:])
+	case len(args) > 0 && args[0] == "ext":
+		err = extCommand(args[1:])
 	default:
 		err = run(args)
 	}
@@ -179,10 +182,21 @@ func run(args []string) error {
 	workers.Add(1)
 	go func() { defer workers.Done(); fw.Run(ctx) }()
 
+	var extRT extensions.Runtime // a nil *Orchestrator must not become a non-nil interface
+	if orch != nil {
+		extRT = orch
+	}
+	exts := extensions.New(ctx, cfg, store, box, extRT, version, log)
+	defer exts.Close()
+
 	srv := api.New(api.Options{
 		Config: cfg, DB: store, Orchestrator: orch, Monitor: mon, Logger: log,
 		UI: ui.Handler(), Version: version, BaseContext: ctx, Box: box, Backups: backups, Cron: crons, Firewall: fw, DNS: dnsMgr, Mail: mailMgr,
+		Extensions: exts,
 	})
+	exts.SetAPI(srv.ExtensionAPI)
+	workers.Add(1)
+	go func() { defer workers.Done(); exts.Reconcile(ctx) }()
 	httpSrv := &http.Server{
 		Handler:           srv.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,

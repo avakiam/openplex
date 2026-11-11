@@ -69,6 +69,7 @@ les actualitzacions i com reconstruir un servidor perdut.
 - [Instal·lació, actualitzacions i recuperació](docs/ca/installation.md)
 - [OpenPlex per a proveïdors d'allotjament](docs/ca/hosting-providers.md)
 - [Llicència, extensions i marca](docs/ca/licensing.md)
+- [Crear una extensió](docs/ca/extensions.md)
 
 ## Compilar des del codi
 

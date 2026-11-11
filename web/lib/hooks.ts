@@ -29,6 +29,9 @@ import type {
   FirewallStatus,
   HostSample,
   CaptchaSettings,
+  CatalogEntry,
+  Extension,
+  ExtensionUI,
   MailOverview,
   Redirect,
   Runtime,
@@ -67,6 +70,9 @@ export const keys = {
   mail: ["mail"] as const,
   captcha: ["captcha"] as const,
   domainMail: (id: number) => ["domains", id, "mail"] as const,
+  extensions: ["extensions"] as const,
+  extensionsUI: ["extensions", "ui"] as const,
+  marketplace: ["extensions", "marketplace"] as const,
 };
 
 /** Wraps useMutation with toast feedback and cache invalidation. */
@@ -267,3 +273,14 @@ export const useMail = () => useQuery({ queryKey: keys.mail, queryFn: () => api.
 
 export const useDomainMail = (id: number, enabled = true) =>
   useQuery({ queryKey: keys.domainMail(id), queryFn: () => api.get<DomainMail>(`/domains/${id}/mail`), enabled: enabled && id > 0, retry: false });
+
+export const useExtensions = () =>
+  useQuery({
+    queryKey: keys.extensions,
+    queryFn: () => api.get<Extension[]>("/extensions"),
+    refetchInterval: (q) => (q.state.data?.some((e) => e.status === "starting") ? 2000 : false),
+  });
+export const useExtensionsUI = (enabled = true) =>
+  useQuery({ queryKey: keys.extensionsUI, queryFn: () => api.get<ExtensionUI[]>("/extensions/ui"), staleTime: 60_000, enabled });
+export const useMarketplace = (enabled: boolean) =>
+  useQuery({ queryKey: keys.marketplace, queryFn: () => api.get<CatalogEntry[]>("/extensions/marketplace"), enabled, retry: false, staleTime: 300_000 });

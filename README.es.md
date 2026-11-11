@@ -69,6 +69,7 @@ las actualizaciones y cómo reconstruir un servidor perdido.
 - [Instalación, actualizaciones y recuperación](docs/es/installation.md)
 - [OpenPlex para proveedores de hosting](docs/es/hosting-providers.md)
 - [Licencia, extensiones y marca](docs/es/licensing.md)
+- [Crear una extensión](docs/es/extensions.md)
 
 ## Compilar desde el código
 

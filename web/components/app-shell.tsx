@@ -11,6 +11,7 @@ import {
   Menu,
   Moon,
   Network,
+  Puzzle,
   ScrollText,
   Shield,
   Sun,
@@ -22,9 +23,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { logout } from "@/lib/api";
+import { useExtensionsUI } from "@/lib/hooks";
 import { canManageUsers, isAdmin, useAuth } from "@/lib/auth";
 import { tk, useT } from "@/lib/i18n";
-import type { User } from "@/lib/types";
+import { extText, type User } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { LanguageSelect } from "./language-select";
@@ -49,6 +51,7 @@ const nav: NavItem[] = [
   { href: "/dns/", label: "DNS", icon: Network, show: isAdmin },
   { href: "/security/", label: tk("Firewall"), icon: Shield, show: isAdmin },
   { href: "/audit/", label: tk("Audit log"), icon: ScrollText, show: isAdmin },
+  { href: "/extensions/", label: tk("Extensions"), icon: Puzzle, show: isAdmin },
   { href: "/account/", label: tk("Account & security"), icon: UserCog },
 ];
 
@@ -80,11 +83,12 @@ function useTheme() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, ready } = useAuth();
-  const { t } = useT();
+  const { t, locale } = useT();
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { dark, toggle } = useTheme();
+  const extPages = (useExtensionsUI(!!user).data ?? []).flatMap((e) => e.pages.map((p) => ({ ext: e, page: p })));
 
   useEffect(() => {
     if (ready && !user) router.replace(`/login/?next=${encodeURIComponent(pathname)}`);
@@ -99,7 +103,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  const isActive = (href: string) => (href === "/" || href === "/extensions/" ? pathname === href : pathname.startsWith(href));
 
   return (
     <div className="flex min-h-dvh">
@@ -128,6 +132,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {t(n.label)}
               </Link>
             ))}
+          {extPages.length > 0 && (
+            <>
+              <p className="px-3 pt-4 pb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">{t("Extensions")}</p>
+              {extPages.map(({ ext, page }) => (
+                <Link
+                  key={ext.id + page.id}
+                  href={`/extensions/app/?id=${encodeURIComponent(ext.id)}&page=${encodeURIComponent(page.id)}`}
+                  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  <Puzzle className="size-4" />
+                  {extText(page.title, locale)}
+                </Link>
+              ))}
+            </>
+          )}
         </nav>
         <div className="flex items-center gap-2 border-t px-5 py-3 text-xs text-muted-foreground">
           <Activity className="size-3.5" /> openplex.dev

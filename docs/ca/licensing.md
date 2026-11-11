@@ -28,9 +28,10 @@ Affero General Public License, versió 3 (només aquesta versió)**.
 
 L'[excepció per a extensions d'OpenPlex](../../LICENSE-EXCEPTION.md) és un
 permís addicional sobre l'AGPL: una **extensió** que funciona amb OpenPlex
-només a través de la seva interfície d'extensions documentada (avui, l'API
-HTTP; més endavant també el manifest d'extensions, els hooks i els espais
-del tauler) pot tenir **qualsevol llicència**, també de codi tancat i de
+només a través de la seva interfície d'extensions documentada (l'API HTTP, el
+manifest i el paquet d'extensió, el sòcol de l'API d'extensions, els
+esdeveniments i les pàgines d'extensió: mira
+[crear una extensió](extensions.md)) pot tenir **qualsevol llicència**, també de codi tancat i de
 pagament, encara que s'instal·li i s'executi juntament amb OpenPlex.
 
 - Pots crear i vendre les teves pròpies extensions, o regalar-les.

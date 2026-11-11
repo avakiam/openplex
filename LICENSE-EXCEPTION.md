@@ -17,9 +17,11 @@ exception.
 - **"Extension Interface"** means the interfaces that the copyright holders
   document as intended for extensions, in the OpenPlex documentation for the
   version you use. At the time of writing these are: the HTTP API served under
-  `/api/` and the WebSocket endpoints it documents; and, once published, the
-  extension manifest, hooks and user-interface slots described in the
-  extension documentation.
+  `/api/` and the WebSocket endpoints it documents; the extension manifest
+  (`openplex-extension.json`) and package format (`.opx`); the per-extension
+  API socket; the events OpenPlex sends to an extension; and the pages and
+  website tabs OpenPlex displays from an extension, together with the request
+  headers it adds to them, all as described in the extension documentation.
 - **"Extension"** means a work that adds functionality to OpenPlex and that
   interacts with OpenPlex only through the Extension Interface, for example a
   program running in its own process or container that calls the HTTP API.

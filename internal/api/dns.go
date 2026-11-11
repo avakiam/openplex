@@ -172,6 +172,7 @@ func (s *Server) handleCreateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, "dns.record_created", z.Name, rec.Name+" "+rec.Type+" "+rec.Content)
+	s.emit("dns.changed", map[string]any{"domain_id": z.DomainID, "zone": z.Name, "change": "created", "record_id": rec.ID})
 	writeJSON(w, http.StatusCreated, rec)
 }
 
@@ -206,6 +207,7 @@ func (s *Server) handleUpdateRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, "dns.record_updated", z.Name, rec.Name+" "+rec.Type+" "+rec.Content)
+	s.emit("dns.changed", map[string]any{"domain_id": z.DomainID, "zone": z.Name, "change": "updated", "record_id": rec.ID})
 	writeJSON(w, http.StatusOK, rec)
 }
 
@@ -222,5 +224,6 @@ func (s *Server) handleDeleteRecord(w http.ResponseWriter, r *http.Request) {
 	s.dns.Changed()
 	s.applyEdgeAsync() // a www record decides whether the edge serves www.<domain>
 	s.audit(r, "dns.record_deleted", z.Name, rec.Name+" "+rec.Type+" "+rec.Content)
+	s.emit("dns.changed", map[string]any{"domain_id": z.DomainID, "zone": z.Name, "change": "deleted", "record_id": rec.ID})
 	w.WriteHeader(http.StatusNoContent)
 }

@@ -67,6 +67,7 @@ upgrades and rebuilding a lost server.
 - [Installation, upgrades and recovery](docs/en/installation.md)
 - [OpenPlex for hosting providers](docs/en/hosting-providers.md)
 - [Licensing, extensions and trademark](docs/en/licensing.md)
+- [Building an extension](docs/en/extensions.md)
 
 ## Building from source
 

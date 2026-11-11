@@ -54,10 +54,12 @@ internal/monitor/     host + container telemetry sampling
 internal/dns/          authoritative DNS: zones/records in the panel DB, pushed to a PowerDNS container via its API
 internal/mail/         mail domains, mailboxes, aliases, DKIM → docker-mailserver files + DNS records; Roundcube webmail + its plugin
 internal/captcha/      login captcha verification (Turnstile, hCaptcha, reCAPTCHA)
+internal/extensions/  extension manifest, .opx packages + signatures, lifecycle, API sockets, events, marketplace
 internal/backup/ terminal/   (see PROGRESS.md for status)
 internal/ui/          go:embed of the built dashboard (dist/)
 web/                  Next.js App Router dashboard (static export)
 docs/{en,es,ca}/      user documentation (README.md / README.es.md / README.ca.md at the root)
+docs/adr/             architecture decision records     examples/   sample extension (extension-hello)
 scripts/install.sh    unattended installer      deploy/   systemd unit, sample config
 ```
 

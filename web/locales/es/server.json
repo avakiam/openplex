@@ -210,5 +210,19 @@
   "this name is a public suffix; add a domain registered under it": "Este nombre es un sufijo público; añade un dominio registrado bajo él",
   "this hostname is reserved for the mail server": "Este nombre de host está reservado para el servidor de correo",
   "this name belongs to the server's own domain; ask an administrator": "Este nombre pertenece al dominio del propio servidor; pídeselo a un administrador",
-  "only an administrator can change a website's memory and CPU limits": "Solo un administrador puede cambiar los límites de memoria y CPU de una web"
+  "only an administrator can change a website's memory and CPU limits": "Solo un administrador puede cambiar los límites de memoria y CPU de una web",
+  "extensions need Docker, which is unavailable on this server": "Las extensiones necesitan Docker, que no está disponible en este servidor",
+  "the extension marketplace is unavailable right now": "El marketplace de extensiones no está disponible ahora mismo",
+  "this upload has expired; upload the package again": "Esta subida ha caducado; vuelve a subir el paquete",
+  "the package's signature is invalid (it was changed after signing)": "La firma del paquete no es válida (se modificó después de firmarlo)",
+  "not an OpenPlex extension package": "No es un paquete de extensión de OpenPlex",
+  "not an OpenPlex extension package (no package.tar.gz)": "No es un paquete de extensión de OpenPlex (falta package.tar.gz)",
+  "send the package as multipart/form-data": "Envía el paquete como multipart/form-data",
+  "no package in the upload": "La subida no contiene ningún paquete",
+  "the package is too big": "El paquete es demasiado grande",
+  "this extension is paid: enter the licence key you received when buying it": "Esta extensión es de pago: escribe la clave de licencia que recibiste al comprarla",
+  "the marketplace did not accept this licence key": "El marketplace no ha aceptado esta clave de licencia",
+  "the downloaded package is not signed by OpenPlex; it was not installed": "El paquete descargado no está firmado por OpenPlex; no se ha instalado",
+  "extension not found": "Extensión no encontrada",
+  "no such page": "Esa página no existe"
 }

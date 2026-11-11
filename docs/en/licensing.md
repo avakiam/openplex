@@ -26,8 +26,9 @@ General Public License, version 3 only**.
 
 The [OpenPlex Extension Exception](../../LICENSE-EXCEPTION.md) is an extra
 permission on top of the AGPL: an **extension** that works with OpenPlex only
-through its documented extension interface (today, the HTTP API; later also
-the extension manifest, hooks and dashboard slots) may use **any licence**,
+through its documented extension interface (the HTTP API, the extension
+manifest and package, the extension API socket, events, and extension pages:
+see [building an extension](extensions.md)) may use **any licence**,
 including closed source and paid, even when installed and run together with
 OpenPlex.
 

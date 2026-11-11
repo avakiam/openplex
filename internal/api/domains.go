@@ -251,6 +251,7 @@ func (s *Server) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	s.audit(r, "domain.created", d.Name, d.Kind)
+	s.emit("domain.created", map[string]any{"domain_id": d.ID, "name": d.Name, "kind": d.Kind, "owner_id": d.OwnerID})
 	if s.dns != nil {
 		if err := s.dns.DomainCreated(ctx, d); err != nil {
 			s.log.Warn("dns records for new website", "domain", d.Name, "err", err)
@@ -381,6 +382,7 @@ func (s *Server) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, "domain.deleted", d.Name, fmt.Sprintf("purge=%v", purge))
+	s.emit("domain.deleted", map[string]any{"domain_id": d.ID, "name": d.Name, "kind": d.Kind, "owner_id": d.OwnerID})
 	if s.dns != nil {
 		s.dns.Changed() // the zone and subdomain records went with the row
 	}

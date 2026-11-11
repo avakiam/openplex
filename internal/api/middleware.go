@@ -23,8 +23,9 @@ const principalKey ctxKey = iota
 
 // Principal is the authenticated caller.
 type Principal struct {
-	User     *db.User
-	APIKeyID int64 // non-zero when authenticated by API key
+	User      *db.User
+	APIKeyID  int64  // non-zero when authenticated by API key
+	Extension string // set on an extension's panel socket (see ExtensionAPI)
 }
 
 func principalFrom(ctx context.Context) *Principal {
@@ -54,6 +55,10 @@ func clientIP(r *http.Request) string {
 func (s *Server) authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		if p := principalFrom(ctx); p != nil && p.Extension != "" { // already identified by its socket
+			next.ServeHTTP(w, r)
+			return
+		}
 		var userID, keyID int64
 		tok := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 		switch {

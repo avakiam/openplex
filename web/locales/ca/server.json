@@ -210,5 +210,19 @@
   "this name is a public suffix; add a domain registered under it": "Aquest nom és un sufix públic; afegeix un domini registrat a sota",
   "this hostname is reserved for the mail server": "Aquest nom d'amfitrió està reservat per al servidor de correu",
   "this name belongs to the server's own domain; ask an administrator": "Aquest nom pertany al domini del mateix servidor; demana-ho a un administrador",
-  "only an administrator can change a website's memory and CPU limits": "Només un administrador pot canviar els límits de memòria i CPU d'un web"
+  "only an administrator can change a website's memory and CPU limits": "Només un administrador pot canviar els límits de memòria i CPU d'un web",
+  "extensions need Docker, which is unavailable on this server": "Les extensions necessiten Docker, que no està disponible en aquest servidor",
+  "the extension marketplace is unavailable right now": "El marketplace d'extensions no està disponible ara mateix",
+  "this upload has expired; upload the package again": "Aquesta pujada ha caducat; torna a pujar el paquet",
+  "the package's signature is invalid (it was changed after signing)": "La signatura del paquet no és vàlida (es va modificar després de signar-lo)",
+  "not an OpenPlex extension package": "No és un paquet d'extensió d'OpenPlex",
+  "not an OpenPlex extension package (no package.tar.gz)": "No és un paquet d'extensió d'OpenPlex (falta package.tar.gz)",
+  "send the package as multipart/form-data": "Envia el paquet com a multipart/form-data",
+  "no package in the upload": "La pujada no conté cap paquet",
+  "the package is too big": "El paquet és massa gran",
+  "this extension is paid: enter the licence key you received when buying it": "Aquesta extensió és de pagament: escriu la clau de llicència que vas rebre en comprar-la",
+  "the marketplace did not accept this licence key": "El marketplace no ha acceptat aquesta clau de llicència",
+  "the downloaded package is not signed by OpenPlex; it was not installed": "El paquet baixat no està signat per OpenPlex; no s'ha instal·lat",
+  "extension not found": "Extensió no trobada",
+  "no such page": "Aquesta pàgina no existeix"
 }

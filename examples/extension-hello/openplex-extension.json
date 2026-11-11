@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "id": "example.hello",
+  "name": { "en": "Hello example", "es": "Ejemplo Hola", "ca": "Exemple Hola" },
+  "description": {
+    "en": "A minimal extension: a page, a website tab, settings and events.",
+    "es": "Una extensión mínima: una página, una pestaña de web, ajustes y eventos.",
+    "ca": "Una extensió mínima: una pàgina, una pestanya de web, configuració i esdeveniments."
+  },
+  "version": "1.0.0",
+  "publisher": { "name": "OpenPlex examples", "url": "https://github.com/avakiam/openplex" },
+  "openplex": ">=0.16.0",
+  "permissions": ["domains:read", "dns:read"],
+  "events": ["installed", "settings.changed", "domain.created", "domain.deleted", "dns.changed"],
+  "backend": {
+    "image": "openplex-examples/hello:1.0.0",
+    "archives": { "amd64": "images/amd64.tar" },
+    "port": 8080,
+    "memory_mb": 32,
+    "cpus": 0.2
+  },
+  "settings": [
+    {
+      "key": "greeting",
+      "type": "text",
+      "label": { "en": "Greeting", "es": "Saludo", "ca": "Salutació" },
+      "help": { "en": "Shown at the top of the page.", "es": "Se muestra arriba de la página.", "ca": "Es mostra a dalt de la pàgina." },
+      "default": "Hello"
+    }
+  ],
+  "pages": [{ "id": "main", "title": { "en": "Hello", "es": "Hola", "ca": "Hola" }, "path": "/" }],
+  "site_tabs": [{ "id": "dns", "title": { "en": "Hello DNS", "es": "Hola DNS", "ca": "Hola DNS" }, "path": "/site", "area": "dns" }]
+}

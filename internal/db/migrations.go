@@ -343,6 +343,26 @@ CREATE TRIGGER access_grants_database_gone AFTER DELETE ON databases BEGIN
 	DELETE FROM access_grants WHERE kind = 'database' AND resource_id = OLD.id;
 END;
 `,
+	// v12: extensions (see docs/adr/0001-extensions.md).
+	`
+CREATE TABLE extensions (
+	id             TEXT PRIMARY KEY,
+	uid            INTEGER NOT NULL UNIQUE,
+	version        TEXT NOT NULL,
+	manifest       TEXT NOT NULL,
+	source         TEXT NOT NULL CHECK (source IN ('upload', 'marketplace')),
+	signer         TEXT NOT NULL DEFAULT '',
+	enabled        INTEGER NOT NULL DEFAULT 1,
+	settings_enc   TEXT NOT NULL DEFAULT '',
+	license_enc    TEXT NOT NULL DEFAULT '',
+	token          TEXT NOT NULL,
+	status         TEXT NOT NULL DEFAULT 'pending',
+	status_message TEXT NOT NULL DEFAULT '',
+	installed_at   TIMESTAMP NOT NULL,
+	updated_at     TIMESTAMP NOT NULL
+);
+INSERT INTO id_sequences (name, value) VALUES ('extensions', 0);
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

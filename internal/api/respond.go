@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -84,8 +85,11 @@ func idParam(w http.ResponseWriter, r *http.Request, name string) (int64, bool) 
 
 func (s *Server) audit(r *http.Request, action, target, detail string) {
 	e := db.AuditEntry{Action: action, Target: target, Detail: detail, IP: clientIP(r)}
-	if p := principalFrom(r.Context()); p != nil {
+	if p := principalFrom(r.Context()); p != nil && p.User.ID != 0 {
 		e.UserID = &p.User.ID
+	}
+	if p := principalFrom(r.Context()); p != nil && p.Extension != "" {
+		e.Detail = strings.TrimSpace(e.Detail + " (by extension " + p.Extension + ")")
 	}
 	if err := s.db.Audit(r.Context(), e); err != nil {
 		s.log.Warn("audit write failed", "action", action, "err", err)
