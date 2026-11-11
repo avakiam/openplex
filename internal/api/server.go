@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"openplex.dev/openplex/internal/alerts"
 	"openplex.dev/openplex/internal/auth"
 	"openplex.dev/openplex/internal/captcha"
 	"openplex.dev/openplex/internal/config"
@@ -44,6 +45,7 @@ type Server struct {
 	ext      *extensions.Manager
 	updates  *update.Manager
 	sftp     *SFTPInfo
+	alerts   *alerts.Manager
 	log      *slog.Logger
 	ui       http.Handler
 	version  string
@@ -79,6 +81,7 @@ type Options struct {
 	Extensions   *extensions.Manager
 	Updates      *update.Manager // nil in tests that don't need it
 	SFTP         *SFTPInfo       // nil when the SFTP server is off
+	Alerts       *alerts.Manager // nil in tests that don't need it
 }
 
 // New builds the API server.
@@ -95,6 +98,7 @@ func New(o Options) *Server {
 		ext:          o.Extensions,
 		updates:      o.Updates,
 		sftp:         o.SFTP,
+		alerts:       o.Alerts,
 		loginLimiter: newLimiter(10, 5*time.Minute),
 		captcha:      captcha.NewVerifier(),
 		baseCtx:      o.BaseContext,
@@ -241,6 +245,9 @@ func (s *Server) routes() http.Handler {
 				r.Post("/system/update/check", s.handleCheckUpdate)
 				r.Post("/system/update/install", s.handleInstallUpdate)
 				r.Put("/system/update/settings", s.handlePutUpdateSettings)
+				r.Get("/system/alerts", s.handleGetAlerts)
+				r.Put("/system/alerts", s.handlePutAlerts)
+				r.Post("/system/alerts/test", s.handleTestAlert)
 				r.Get("/audit", s.handleAudit)
 				r.Get("/backups/settings", s.handleGetBackupSettings)
 				r.Put("/backups/settings", s.handlePutBackupSettings)

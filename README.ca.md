@@ -42,7 +42,7 @@ còpies de seguretat i seguretat.
 | **Còpies de seguretat** | Còpies xifrades i deduplicades (restic) en un disc local o a S3, programades; restauració d'un web, una base de dades, un domini de correu o una sola bústia; reconstrucció completa del servidor amb `openplexd restore-panel` |
 | **Seguretat** | Tallafocs del servidor (nftables) amb aplicació segura i marxa enrere, Fail2Ban, captcha a l'inici de sessió (Turnstile, hCaptcha, reCAPTCHA), verificació en dos passos, registre d'auditoria |
 | **Usuaris** | Administradors, revenedors i clients amb quotes; compartir un web (només algunes àrees, opcionalment en només lectura) o una base de dades amb un altre usuari; claus d'API |
-| **Tasques i monitoratge** | Tasques programades per web; CPU, memòria, disc i xarxa del servidor i dels contenidors |
+| **Tasques i monitoratge** | Tasques programades per web; CPU, memòria, disc i xarxa del servidor i dels contenidors; alertes per correu (còpia fallida, web caigut, disc gairebé ple, certificat sense renovar, actualitzacions) |
 | **Idiomes** | Anglès, castellà i català |
 
 ## Requisits

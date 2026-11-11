@@ -42,7 +42,7 @@ copias de seguridad y seguridad.
 | **Copias de seguridad** | Copias cifradas y deduplicadas (restic) en un disco local o en S3, programadas; restauración de una web, una base de datos, un dominio de correo o un solo buzón; reconstrucción completa del servidor con `openplexd restore-panel` |
 | **Seguridad** | Cortafuegos del servidor (nftables) con aplicación segura y vuelta atrás, Fail2Ban, captcha en el inicio de sesión (Turnstile, hCaptcha, reCAPTCHA), verificación en dos pasos, registro de auditoría |
 | **Usuarios** | Administradores, revendedores y clientes con cuotas; compartir una web (solo algunas áreas, opcionalmente en solo lectura) o una base de datos con otro usuario; claves de API |
-| **Tareas y monitorización** | Tareas programadas por web; CPU, memoria, disco y red del servidor y de los contenedores |
+| **Tareas y monitorización** | Tareas programadas por web; CPU, memoria, disco y red del servidor y de los contenedores; alertas por correo (copia fallida, web caída, disco casi lleno, certificado sin renovar, actualizaciones) |
 | **Idiomas** | Inglés, español y catalán |
 
 ## Requisitos

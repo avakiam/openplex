@@ -40,7 +40,7 @@ dashboard for websites, databases, mail, DNS, backups and security.
 | **Backups** | Encrypted, deduplicated backups (restic) to a local disk or S3, scheduled; restore of a site, database, mail domain or single mailbox; full server rebuild with `openplexd restore-panel` |
 | **Security** | Host firewall (nftables) with safe apply/rollback, Fail2Ban, login captcha (Turnstile, hCaptcha, reCAPTCHA), two-factor authentication, audit log |
 | **Users** | Administrators, resellers and customers with quotas; share a website (only some areas, optionally read-only) or a database with another user; API keys |
-| **Tasks & monitoring** | Scheduled tasks per website; server and container CPU, memory, disk and network |
+| **Tasks & monitoring** | Scheduled tasks per website; server and container CPU, memory, disk and network; e-mail alerts (failed backup, website down, disk almost full, certificate not renewing, updates) |
 | **Languages** | English, Spanish and Catalan |
 
 ## Requirements

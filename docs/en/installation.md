@@ -89,6 +89,32 @@ service after a change). The most useful ones:
 | `OPENPLEX_TENANT_NETWORKS` | `10.213.0.0/16` | Address pool for the private network of each account (one /24 each) |
 | `OPENPLEX_SFTP_LISTEN` | `:2222` | SFTP server for website files (empty turns it off) |
 
+## E-mail alerts
+
+**Alerts** (administrators) e-mails the addresses you choose when something
+needs attention. It checks every minute:
+
+| Alert | When |
+|---|---|
+| A backup fails | each failed backup, once |
+| A website is down | after two minutes in error, and again when it is back up |
+| The disk is almost full | above 90 % of the data disk, and again below 85 % |
+| A certificate is not renewing | when one for a name still in use is close to expiring (renewal has failed for a while: usually DNS or port 80) |
+| A new OpenPlex version | once per version |
+| An OpenPlex update fails | when an update is undone or fails |
+
+An ongoing problem is sent once, reminded every day while it lasts and
+reported when it is over; restarting the panel sends nothing twice. The
+e-mails are in English, Spanish or Catalan.
+
+They go out through this server's mail service (when **Mail** is on) or
+through an SMTP server such as your provider's (STARTTLS, TLS or none; the
+password is stored encrypted). With the local mail service, use a sender
+address of a mail domain hosted here whose SPF record allows the server, or
+messages may land in spam. **Send a test e-mail** checks the settings before
+you save them; the page also lists the last 90 days of alerts and why one
+could not be sent.
+
 ## Managing the service
 
 ```bash

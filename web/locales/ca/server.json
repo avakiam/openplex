@@ -245,5 +245,17 @@
   "the website is stopped": "el web està aturat",
   "use a different password from your panel password": "fes servir una contrasenya diferent de la del tauler",
   "post_max_size must be at least upload_max_filesize, or uploads of that size fail": "post_max_size ha de ser com a mínim upload_max_filesize, o les pujades d'aquesta mida fallaran",
-  "this website does not run PHP": "aquest web no fa servir PHP"
+  "this website does not run PHP": "aquest web no fa servir PHP",
+  "add at least one recipient to turn alerts on": "afegeix com a mínim un destinatari per activar les alertes",
+  "at most 10 recipients": "com a màxim 10 destinataris",
+  "the sender address is not a valid e-mail address": "l'adreça del remitent no és vàlida",
+  "the SMTP server must be a host name such as smtp.example.com": "el servidor SMTP ha de ser un nom de host com smtp.example.com",
+  "the SMTP port must be between 1 and 65535": "el port SMTP ha d'estar entre 1 i 65535",
+  "the SMTP security must be starttls, tls or none": "la seguretat SMTP ha de ser starttls, tls o none",
+  "the SMTP user is not valid": "l'usuari SMTP no és vàlid",
+  "transport must be local or smtp": "l'enviament ha de ser local o smtp",
+  "the SMTP password is too long": "la contrasenya SMTP és massa llarga",
+  "alerts are not available on this server": "les alertes no estan disponibles en aquest servidor",
+  "add at least one recipient": "afegeix com a mínim un destinatari",
+  "this server's mail service is off: turn it on under Mail, or send through an SMTP server": "el servei de correu d'aquest servidor està aturat: activa'l a Correu, o envia mitjançant un servidor SMTP"
 }

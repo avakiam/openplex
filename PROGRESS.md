@@ -270,8 +270,13 @@ has been verified on the Linux test server. One commit per milestone.
       PHP-FPM, cron and the terminal all use it; saving recreates the container. Websites without settings keep
       the same container spec (no restart on upgrade). Card in the website's Settings tab; user guide
       `docs/*/websites.md` (sites, applications, PHP settings, SFTP)
-- [ ] E-mail alerts: failed backup, website down / crash loop, disk almost full, certificate not renewing,
-      update available; per-admin recipients, rate-limited, sent through the panel's own mail server
+- [x] E-mail alerts (`internal/alerts`, v0.21.0, migration v18): failed backup, website down (>= 2 min in error),
+      data disk >= 90 % (clears < 85 %), certificate of a served name with < 1/6 of its lifetime left (Caddy renews at
+      1/3), new release, update rolled back/failed. Checked every minute; ongoing problems sent once, reminded every
+      24 h and reported when over; state in the `alerts` table so restarts don't resend; 90 days of history.
+      Up to 10 recipients, e-mails in en/es/ca, sent through the server's mail service (sendmail in the mail
+      container) or an SMTP server (STARTTLS/TLS/none, password sealed); header-injection-proof messages, test
+      e-mail, Alerts page for administrators
 - [ ] Manage installed applications: update core and plugins/extensions (WP-CLI, Joomla/Drupal CLIs),
       clone to a staging subdomain and push back, security hardening checks
 - [ ] Git deploy: clone a repository into a website (deploy key), pull on a webhook or by hand, optional
@@ -445,3 +450,9 @@ has been verified on the Linux test server. One commit per milestone.
 - 2026-11-11 — v0.20.0 published and installed on the LAN and the VPS with the panel updater. The VPS uses ufw, which
   kept 2222 closed (an update from the panel does not run the installer): opened with `ufw allow 2222/tcp`, both
   servers then answered `SSH-2.0-OpenPlex` from outside; the SFTP card now warns about this case.
+- 2026-11-11 — E-mail alerts (0.20.91): on the VPS a test e-mail reached prueba@mailcactus.com both through the local
+  mail service and over SMTP with STARTTLS (the first SMTP try was refused for HELO "localhost": the client now
+  introduces itself with the server name; local messages are not DKIM-signed, the page no longer says they are);
+  on the LAN (no mail service) the test failed with a clear message, a website kept in error raised "Web caída"
+  after 2 minutes with the send error recorded, and it was resolved when the site came back; settings
+  validation refused an empty recipient list, a CRLF in an address and a bad SMTP host. Alerts page checked.

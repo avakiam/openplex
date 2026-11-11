@@ -2,6 +2,7 @@
 import {
   Activity,
   ArrowUpCircle,
+  BellRing,
   Archive,
   Database,
   Globe,
@@ -51,6 +52,7 @@ const nav: NavItem[] = [
   { href: "/mail/", label: tk("Mail"), icon: Mail, show: isAdmin },
   { href: "/dns/", label: "DNS", icon: Network, show: isAdmin },
   { href: "/security/", label: tk("Firewall"), icon: Shield, show: isAdmin },
+  { href: "/alerts/", label: tk("Alerts"), icon: BellRing, show: isAdmin },
   { href: "/audit/", label: tk("Audit log"), icon: ScrollText, show: isAdmin },
   { href: "/extensions/", label: tk("Extensions"), icon: Puzzle, show: isAdmin },
   { href: "/updates/", label: tk("Updates"), icon: ArrowUpCircle, show: isAdmin },

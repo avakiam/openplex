@@ -52,6 +52,7 @@ internal/files/       jailed filesystem ops for the web file manager
 internal/sftpd/       built-in SFTP server for website files (keys / SFTP password, one folder per website)
 internal/firewall/    host firewall (own nftables table inet openplex, apply/keep/rollback) + Fail2Ban client
 internal/monitor/     host + container telemetry sampling
+internal/alerts/      e-mail alerts (backups, websites down, disk, certificates, updates) via local mail or SMTP
 internal/dns/          authoritative DNS: zones/records in the panel DB, pushed to a PowerDNS container via its API
 internal/mail/         mail domains, mailboxes, aliases, DKIM → docker-mailserver files + DNS records; Roundcube webmail + its plugin
 internal/captcha/      login captcha verification (Turnstile, hCaptcha, reCAPTCHA)

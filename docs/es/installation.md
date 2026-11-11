@@ -90,6 +90,32 @@ servicio después de cambiarlos). Los más útiles:
 | `OPENPLEX_TENANT_NETWORKS` | `10.213.0.0/16` | Rango de direcciones para la red privada de cada cuenta (una /24 cada una) |
 | `OPENPLEX_SFTP_LISTEN` | `:2222` | Servidor SFTP para los archivos de las webs (vacío lo desactiva) |
 
+## Alertas por correo
+
+**Alertas** (administradores) envía un correo a las direcciones que elijas
+cuando algo necesita atención. Lo comprueba cada minuto:
+
+| Alerta | Cuándo |
+|---|---|
+| Falla una copia de seguridad | cada copia fallida, una vez |
+| Una web está caída | tras dos minutos con error, y otra vez cuando se recupera |
+| El disco está casi lleno | por encima del 90 % del disco de datos, y otra vez por debajo del 85 % |
+| Un certificado no se renueva | cuando el de un nombre en uso está a punto de caducar (la renovación lleva tiempo fallando: suele ser el DNS o el puerto 80) |
+| Nueva versión de OpenPlex | una vez por versión |
+| Falla una actualización de OpenPlex | cuando una actualización se deshace o falla |
+
+Un problema en curso se envía una vez, se recuerda cada día mientras dura y se
+avisa cuando termina; reiniciar el panel no reenvía nada. Los correos están en
+inglés, español o catalán.
+
+Se envían mediante el servicio de correo de este servidor (si **Correo** está
+activado) o mediante un servidor SMTP, como el de tu proveedor (STARTTLS, TLS o
+ninguna; la contraseña se guarda cifrada). Con el correo local, usa un
+remitente de un dominio de correo alojado aquí cuyo registro SPF autorice al
+servidor, o los mensajes pueden acabar en spam. **Enviar un correo de prueba**
+comprueba la configuración antes de guardarla; la página también muestra las
+alertas de los últimos 90 días y por qué no se pudo enviar alguna.
+
 ## Gestionar el servicio
 
 ```bash

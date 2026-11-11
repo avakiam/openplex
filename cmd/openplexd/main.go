@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"openplex.dev/openplex/internal/alerts"
 	"openplex.dev/openplex/internal/api"
 	"openplex.dev/openplex/internal/auth"
 	"openplex.dev/openplex/internal/backup"
@@ -230,10 +232,51 @@ func run(args []string) error {
 	workers.Add(1)
 	go func() { defer workers.Done(); updates.Run(ctx) }()
 
+	serverName := cfg.PanelDomain
+	if serverName == "" {
+		serverName, _ = os.Hostname()
+	}
+	panelURL := cfg.PublicURL
+	if panelURL == "" && cfg.PanelDomain != "" {
+		panelURL = "https://" + cfg.PanelDomain
+	}
+	alertOpts := alerts.Options{
+		DB: store, Box: box, Log: log, Server: serverName, URL: panelURL,
+		CertDir: filepath.Join(cfg.CaddyDir(), "data", "caddy", "certificates"),
+		ExtraHosts: func(ctx context.Context) []string {
+			hosts := []string{cfg.PanelDomain}
+			if ms, err := store.GetMailSettings(ctx); err == nil && ms.Enabled && ms.Hostname != "" {
+				hosts = append(hosts, ms.Hostname)
+			}
+			return hosts
+		},
+		Disk: func() (uint64, uint64, bool) {
+			h := mon.History()
+			if len(h) == 0 {
+				return 0, 0, false
+			}
+			last := h[len(h)-1]
+			return last.DiskUsed, last.DiskTotal, last.DiskTotal > 0
+		},
+		Update: func(ctx context.Context) *update.Status { st := updates.Status(ctx); return &st },
+	}
+	if orch != nil {
+		alertOpts.LocalSend = func(ctx context.Context, from string, to []string, msg []byte) error {
+			if running, _ := orch.MailStatus(ctx); !running {
+				return errors.New("this server's mail service is off: turn it on under Mail, or send through an SMTP server")
+			}
+			cmd := append([]string{"sendmail", "-i", "-f", from, "--"}, to...)
+			return orch.ExecFromReader(ctx, docker.MailContainer, cmd, nil, bytes.NewReader(msg))
+		}
+	}
+	alertMgr := alerts.New(alertOpts)
+	workers.Add(1)
+	go func() { defer workers.Done(); alertMgr.Run(ctx) }()
+
 	srv = api.New(api.Options{
 		Config: cfg, DB: store, Orchestrator: orch, Monitor: mon, Logger: log,
 		UI: ui.Handler(), Version: version, BaseContext: ctx, Box: box, Backups: backups, Cron: crons, Firewall: fw, DNS: dnsMgr, Mail: mailMgr,
-		Extensions: exts, Updates: updates, SFTP: sftpInfo,
+		Extensions: exts, Updates: updates, SFTP: sftpInfo, Alerts: alertMgr,
 	})
 	if sftpSrv != nil {
 		workers.Add(1)

@@ -90,6 +90,32 @@ servei després de canviar-los). Els més útils:
 | `OPENPLEX_TENANT_NETWORKS` | `10.213.0.0/16` | Rang d'adreces per a la xarxa privada de cada compte (una /24 cadascuna) |
 | `OPENPLEX_SFTP_LISTEN` | `:2222` | Servidor SFTP per als fitxers dels webs (buit el desactiva) |
 
+## Alertes per correu
+
+**Alertes** (administradors) envia un correu a les adreces que triïs quan
+alguna cosa necessita atenció. Ho comprova cada minut:
+
+| Alerta | Quan |
+|---|---|
+| Falla una còpia de seguretat | cada còpia fallida, un cop |
+| Un web està caigut | després de dos minuts amb error, i un altre cop quan es recupera |
+| El disc és gairebé ple | per sobre del 90 % del disc de dades, i un altre cop per sota del 85 % |
+| Un certificat no es renova | quan el d'un nom en ús és a punt de caducar (la renovació fa temps que falla: sol ser el DNS o el port 80) |
+| Nova versió d'OpenPlex | un cop per versió |
+| Falla una actualització d'OpenPlex | quan una actualització es desfà o falla |
+
+Un problema en curs s'envia un cop, es recorda cada dia mentre dura i s'avisa
+quan s'acaba; reiniciar el tauler no reenvia res. Els correus són en anglès,
+castellà o català.
+
+S'envien mitjançant el servei de correu d'aquest servidor (si **Correu** està
+activat) o mitjançant un servidor SMTP, com el del teu proveïdor (STARTTLS, TLS
+o cap; la contrasenya es desa xifrada). Amb el correu local, fes servir un
+remitent d'un domini de correu allotjat aquí el registre SPF del qual autoritzi
+el servidor, o els missatges poden acabar al correu brossa. **Enviar un correu
+de prova** comprova la configuració abans de desar-la; la pàgina també mostra
+les alertes dels darrers 90 dies i per què no se'n va poder enviar alguna.
+
 ## Gestionar el servei
 
 ```bash

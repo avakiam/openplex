@@ -245,5 +245,17 @@
   "the website is stopped": "la web está detenida",
   "use a different password from your panel password": "usa una contraseña distinta de la del panel",
   "post_max_size must be at least upload_max_filesize, or uploads of that size fail": "post_max_size debe ser al menos upload_max_filesize, o las subidas de ese tamaño fallarán",
-  "this website does not run PHP": "esta web no usa PHP"
+  "this website does not run PHP": "esta web no usa PHP",
+  "add at least one recipient to turn alerts on": "añade al menos un destinatario para activar las alertas",
+  "at most 10 recipients": "como máximo 10 destinatarios",
+  "the sender address is not a valid e-mail address": "la dirección del remitente no es válida",
+  "the SMTP server must be a host name such as smtp.example.com": "el servidor SMTP debe ser un nombre de host como smtp.example.com",
+  "the SMTP port must be between 1 and 65535": "el puerto SMTP debe estar entre 1 y 65535",
+  "the SMTP security must be starttls, tls or none": "la seguridad SMTP debe ser starttls, tls o none",
+  "the SMTP user is not valid": "el usuario SMTP no es válido",
+  "transport must be local or smtp": "el envío debe ser local o smtp",
+  "the SMTP password is too long": "la contraseña SMTP es demasiado larga",
+  "alerts are not available on this server": "las alertas no están disponibles en este servidor",
+  "add at least one recipient": "añade al menos un destinatario",
+  "this server's mail service is off: turn it on under Mail, or send through an SMTP server": "el servicio de correo de este servidor está apagado: actívalo en Correo, o envía mediante un servidor SMTP"
 }

@@ -406,6 +406,35 @@ CREATE TABLE php_settings (
 	updated_at    TIMESTAMP NOT NULL
 );
 `,
+	// v18: e-mail alerts (settings, and the state of each alert so restarts don't resend).
+	`
+CREATE TABLE alert_settings (
+	id                INTEGER PRIMARY KEY CHECK (id = 1),
+	enabled           INTEGER NOT NULL DEFAULT 0,
+	recipients        TEXT NOT NULL DEFAULT '',
+	language          TEXT NOT NULL DEFAULT 'en',
+	events            TEXT NOT NULL DEFAULT 'backup_failed,site_down,disk_full,cert_expiring,update_available,update_failed',
+	transport         TEXT NOT NULL DEFAULT 'local' CHECK (transport IN ('local', 'smtp')),
+	from_address      TEXT NOT NULL DEFAULT '',
+	smtp_host         TEXT NOT NULL DEFAULT '',
+	smtp_port         INTEGER NOT NULL DEFAULT 587,
+	smtp_security     TEXT NOT NULL DEFAULT 'starttls' CHECK (smtp_security IN ('starttls', 'tls', 'none')),
+	smtp_user         TEXT NOT NULL DEFAULT '',
+	smtp_password_enc TEXT NOT NULL DEFAULT '',
+	updated_at        TIMESTAMP NOT NULL
+);
+CREATE TABLE alerts (
+	key          TEXT PRIMARY KEY,
+	kind         TEXT NOT NULL,
+	subject      TEXT NOT NULL,
+	state        TEXT NOT NULL CHECK (state IN ('firing', 'resolved', 'sent')),
+	first_at     TIMESTAMP NOT NULL,
+	last_sent_at TIMESTAMP,
+	resolved_at  TIMESTAMP,
+	send_error   TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX alerts_recent ON alerts(first_at);
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

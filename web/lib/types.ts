@@ -659,3 +659,39 @@ export interface PHPSettings {
   options: PHPOption[];
   memory_mb: number;
 }
+
+export interface AlertSettings {
+  enabled: boolean;
+  recipients: string[];
+  language: string;
+  events: string[];
+  transport: "local" | "smtp";
+  from_address: string;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_security: "starttls" | "tls" | "none";
+  smtp_user: string;
+  updated_at: string;
+}
+
+export interface AlertEntry {
+  key: string;
+  kind: string;
+  subject: string;
+  state: "firing" | "resolved" | "sent";
+  first_at: string;
+  last_sent_at: string | null;
+  resolved_at: string | null;
+  send_error: string;
+}
+
+export interface AlertsStatus {
+  settings: AlertSettings;
+  smtp_password_set: boolean;
+  kinds: string[];
+  mail_running: boolean;
+  default_from: string;
+  admin_emails: string[];
+  recent: AlertEntry[];
+  available: boolean;
+}
