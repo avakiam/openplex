@@ -9,6 +9,7 @@ import (
 	"openplex.dev/openplex/internal/auth"
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/docker"
+	"openplex.dev/openplex/internal/firewall"
 	"openplex.dev/openplex/internal/sftpd"
 )
 
@@ -54,12 +55,14 @@ type sftpView struct {
 	PasswordSet bool   `json:"password_set"`
 	Keys        int    `json:"keys"`
 	Sites       int    `json:"sites"`
+	UFWBlocked  bool   `json:"ufw_blocked"` // ufw is active and does not let the port in
 }
 
 func (s *Server) sftpStatus(ctx context.Context, u *db.User) (*sftpView, error) {
 	v := &sftpView{Enabled: s.sftp != nil, Username: u.Username}
 	if s.sftp != nil {
 		v.Port, v.Fingerprint = s.sftp.Port, s.sftp.Fingerprint
+		v.UFWBlocked = firewall.UFWBlocksTCP("/", s.sftp.Port)
 	}
 	h, err := s.db.SFTPPasswordHash(ctx, u.ID)
 	if err != nil {

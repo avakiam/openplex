@@ -1,5 +1,5 @@
 "use client";
-import { Check, Copy, FolderSync, KeyRound, Plus, RefreshCw, Terminal, Trash2 } from "lucide-react";
+import { Check, Copy, FolderSync, KeyRound, Plus, RefreshCw, Terminal, Trash2, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -194,6 +194,15 @@ function SFTPAccess() {
           <p className="text-muted-foreground">{t("SFTP is turned off on this server.")}</p>
         ) : (
           <>
+            {data.ufw_blocked && (
+              <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-destructive">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+                <p>
+                  {t("The server's firewall (ufw) does not let port {port} in, so SFTP clients cannot connect. An administrator must run on the server:", { port: String(data.port) })}{" "}
+                  <code className="font-mono text-xs">ufw allow {data.port}/tcp</code>
+                </p>
+              </div>
+            )}
             <div className="grid gap-3 sm:grid-cols-[1fr_7rem_1fr]">
               <Field label={t("Host")}>
                 <CopyField value={host} />

@@ -108,4 +108,7 @@ que en el panel.
 
 El servidor escucha en el puerto 2222 (`OPENPLEX_SFTP_LISTEN`, ver
 [instalación](installation.md#configuración)); el cortafuegos del panel lo
-mantiene abierto.
+mantiene abierto. En un servidor que usa ufw en su lugar, lo abre el
+instalador; si ufw aún lo bloquea (por ejemplo, tras actualizar desde el
+panel), la tarjeta **Acceso SFTP** lo avisa, y un administrador ejecuta
+`ufw allow 2222/tcp` en el servidor.

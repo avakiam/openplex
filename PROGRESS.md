@@ -260,7 +260,8 @@ has been verified on the Linux test server. One commit per milestone.
       owned by the site uid, no setuid bits, no links, no moves across websites, no shell or exec. Failed sign-ins
       are logged for the Fail2Ban openplex jail and refused after 10 per address in 10 minutes; logins audited.
       Port opened by the panel firewall (service port) and by the installer in ufw; "SFTP access" card on the
-      API & SSH keys page with host, port, user and host-key fingerprint
+      API & SSH keys page with host, port, user and host-key fingerprint, and a warning with the `ufw allow` command
+      when ufw is active and does not let the port in (v0.20.1; the panel cannot edit ufw, /etc is read-only to it)
 - [x] PHP settings per website (v0.20.0, migration v17): memory_limit (up to the website's memory, clamped if
       that is lowered later), upload_max_filesize, post_max_size (≥ upload), max_execution_time, max_input_time,
       max_input_vars, session.gc_maxlifetime, display_errors, allow_url_fopen, date.timezone, disable_functions;
@@ -441,3 +442,6 @@ has been verified on the Linux test server. One commit per milestone.
   Europe/Madrid); the site user cannot write the settings file; reset removed the file and restored 256M/UTC.
   Dashboard checked: SFTP card, SFTP password created from it and used by a client (wrong password logged in the
   Fail2Ban format), PHP settings card and its error message.
+- 2026-11-11 — v0.20.0 published and installed on the LAN and the VPS with the panel updater. The VPS uses ufw, which
+  kept 2222 closed (an update from the panel does not run the installer): opened with `ufw allow 2222/tcp`, both
+  servers then answered `SSH-2.0-OpenPlex` from outside; the SFTP card now warns about this case.

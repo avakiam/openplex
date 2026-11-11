@@ -107,4 +107,6 @@ from an address ban it (Fail2Ban), like failed panel logins.
 
 The server listens on port 2222 (`OPENPLEX_SFTP_LISTEN`, see
 [installation](installation.md#configuration)); the panel's firewall keeps it
-open.
+open. On a server that uses ufw instead, the installer opens it; if ufw still
+blocks it (for example after updating from the panel), the **SFTP access**
+card says so, and an administrator runs `ufw allow 2222/tcp` on the server.

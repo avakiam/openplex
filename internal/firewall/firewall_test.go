@@ -180,6 +180,9 @@ func TestHostDetection(t *testing.T) {
 ### tuple ### allow tcp 9000 0.0.0.0/0 any 0.0.0.0/0 out
 `)
 	write(t, root, "etc/ufw/user6.rules", "### tuple ### allow tcp 3000 ::/0 any ::/0 in\n### tuple ### allow udp 51820 ::/0 any ::/0 in\n")
+	if !UFWBlocksTCP(root, 2222) || UFWBlocksTCP(root, 3000) || !UFWBlocksTCP(root, 8050) || UFWBlocksTCP(root, 443) {
+		t.Error("UFWBlocksTCP: 2222 must be blocked, 3000 and 443 open, 8000-8100 open only to one address")
+	}
 	got := DefaultRules(root)
 	want := []string{"tcp 22 ", "tcp 2222 ", "tcp 4422 ", "tcp 3000 ", "both 8000-8100 203.0.113.4", "tcp 80 ", "tcp 443 ", "udp 51820 "}
 	if len(got) != len(want) {

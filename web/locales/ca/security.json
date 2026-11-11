@@ -97,5 +97,6 @@
   "Only for SFTP, different from your panel password: an SFTP client stores it, and it can never open the panel.": "Només per a SFTP i diferent de la del tauler: els clients SFTP la desen, i mai serveix per entrar al tauler.",
   "Copy it now: it cannot be shown again.": "Copia-la ara: no es podrà tornar a mostrar.",
   "Remove the SFTP password?": "Eliminar la contrasenya SFTP?",
-  "SFTP clients that use it stop connecting. Your SSH keys keep working.": "Els clients SFTP que la fan servir deixaran de connectar-se. Les teves claus SSH continuen funcionant."
+  "SFTP clients that use it stop connecting. Your SSH keys keep working.": "Els clients SFTP que la fan servir deixaran de connectar-se. Les teves claus SSH continuen funcionant.",
+  "The server's firewall (ufw) does not let port {port} in, so SFTP clients cannot connect. An administrator must run on the server:": "El tallafocs del servidor (ufw) no deixa passar el port {port}, així que els clients SFTP no s'hi poden connectar. Un administrador ha d'executar al servidor:"
 }

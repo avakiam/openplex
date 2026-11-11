@@ -72,6 +72,33 @@ func UFWActive(root string) bool {
 	return false
 }
 
+// UFWBlocksTCP reports whether ufw is active and none of its rules lets
+// everyone reach TCP port p. The panel cannot change ufw (it is the admin's),
+// so it only warns: an OpenPlex service on that port is unreachable.
+func UFWBlocksTCP(root string, p int) bool {
+	if !UFWActive(root) {
+		return false
+	}
+	for _, r := range ImportUFW(root) {
+		if r.Source != "" || (r.Protocol != TCP && r.Protocol != Both) {
+			continue
+		}
+		if r.Ports == "" {
+			return false
+		}
+		lo, hi, isRange := strings.Cut(r.Ports, "-")
+		a, _ := strconv.Atoi(lo)
+		b := a
+		if isRange {
+			b, _ = strconv.Atoi(hi)
+		}
+		if p >= a && p <= b {
+			return false
+		}
+	}
+	return true
+}
+
 // ImportUFW converts ufw's incoming allow rules into OpenPlex rules.
 // Rule lines look like:
 //

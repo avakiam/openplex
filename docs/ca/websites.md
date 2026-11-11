@@ -106,4 +106,7 @@ fallits repetits des d'una adreça la bloquegen (Fail2Ban), igual que al tauler.
 
 El servidor escolta al port 2222 (`OPENPLEX_SFTP_LISTEN`, vegeu
 [instal·lació](installation.md#configuració)); el tallafocs del tauler el manté
-obert.
+obert. En un servidor que fa servir ufw, l'obre l'instal·lador; si ufw encara el
+bloqueja (per exemple, després d'actualitzar des del tauler), la targeta
+**Accés SFTP** ho avisa, i un administrador executa `ufw allow 2222/tcp` al
+servidor.

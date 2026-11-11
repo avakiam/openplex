@@ -643,6 +643,7 @@ export interface SFTPStatus {
   password_set: boolean;
   keys: number;
   sites: number;
+  ufw_blocked: boolean;
 }
 
 export interface PHPOption {
