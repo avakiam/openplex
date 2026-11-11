@@ -1,4 +1,9 @@
-# OpenPlex
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
+    <img src="docs/assets/logo-light.svg" alt="OpenPlex" height="56">
+  </picture>
+</h1>
 
 [English](README.md) · [Español](README.es.md) · **Català**
 
