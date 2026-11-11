@@ -197,8 +197,11 @@ L'URL de la pàgina també rep `?lang=…&theme=light|dark`. Regles per a les
 pàgines:
 
 - Fes servir **enllaços relatius** (`href="detall"`, `action="desar"`) o
-  construeix-los amb `X-OpenPlex-Base`. Els formularis normals i els `fetch`
-  a les teves pròpies rutes funcionen.
+  construeix-los amb `X-OpenPlex-Base`. Els formularis normals funcionen
+  (respon un POST amb una redirecció `303`). La pàgina té un origen opac, així
+  que un `fetch` a les teves pròpies rutes és d'un altre origen: respon-lo amb
+  `Access-Control-Allow-Origin: *` (el que autoritza la petició és la sessió
+  de l'URL).
 - Les pàgines s'executen **aïllades** (sense mateix origen): sense galetes,
   sense `localStorage` i sense accés al tauler. Desa l'estat al teu servidor
   (`/data`), per usuari.

@@ -197,8 +197,11 @@ La URL de la página también recibe `?lang=…&theme=light|dark`. Reglas para
 las páginas:
 
 - Usa **enlaces relativos** (`href="detalle"`, `action="guardar"`) o
-  constrúyelos con `X-OpenPlex-Base`. Los formularios normales y los `fetch`
-  a tus propias rutas funcionan.
+  constrúyelos con `X-OpenPlex-Base`. Los formularios normales funcionan
+  (responde a un POST con una redirección `303`). La página tiene un origen
+  opaco, así que un `fetch` a tus propias rutas es de otro origen: respóndelo
+  con `Access-Control-Allow-Origin: *` (lo que autoriza la petición es la
+  sesión de la URL).
 - Las páginas se ejecutan **aisladas** (sin mismo origen): sin cookies, sin
   `localStorage` y sin acceso al panel. Guarda el estado en tu servidor
   (`/data`), por usuario.

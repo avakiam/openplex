@@ -49,7 +49,11 @@ func extPack(args []string) error {
 			return err
 		}
 	}
-	tmp, err := os.CreateTemp(".", ".opx-*")
+	tmpDir := "." // next to the output, so the final rename stays on one filesystem
+	if *out != "" {
+		tmpDir = filepath.Dir(*out)
+	}
+	tmp, err := os.CreateTemp(tmpDir, ".opx-*")
 	if err != nil {
 		return err
 	}

@@ -358,3 +358,9 @@ has been verified on the Linux test server. One commit per milestone.
   extension network reaches the internet but not tenant sites or MariaDB. Disable removes the container, enable
   restarts it; upgrade with the signed package shows `avakiam-2026` and keeps settings; uninstall removes the
   container, network and data; audit entries recorded.
+- 2026-11-11 — First official extension, Cloudflare (`avakiam.cloudflare` 1.0.0, private repo), on the LAN server
+  with v0.16.1: signed package (amd64 + arm64 images, no source) installed and upgraded; runs as uid 400002,
+  64 MB; admin page and website tab render in en/es/ca, form POST → 303 → flash through the page proxy; outbound
+  HTTPS to the Cloudflare API works (a bad token is explained in the user's language). Found and fixed in core:
+  reinstalling a package rebuilt under the same image tag kept the old container (the image ID is now part of the
+  spec), and `ext pack -o` wrote its temporary file in the working directory.

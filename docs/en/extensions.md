@@ -194,7 +194,10 @@ OpenPlex proxies the request to your `path`, adding:
 The page URL also gets `?lang=…&theme=light|dark`. Rules for pages:
 
 - Use **relative links** (`href="detail"`, `action="save"`), or build them
-  from `X-OpenPlex-Base`. Normal forms and `fetch` to your own paths work.
+  from `X-OpenPlex-Base`. Normal forms work (answer a POST with a `303`
+  redirect). The page has an opaque origin, so `fetch` to your own paths is
+  cross-origin: answer it with `Access-Control-Allow-Origin: *` (the session in
+  the URL is what authorizes the request).
 - Pages run **sandboxed** (no same-origin): no cookies, no `localStorage`,
   no access to the panel. Keep state on your server (`/data`), keyed by user.
 - Respect `X-OpenPlex-Read-Only` on website tabs.

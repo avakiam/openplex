@@ -54,7 +54,13 @@ func (o *Orchestrator) EnsureExtension(ctx context.Context, s ExtensionSpec) err
 		"PORT=" + strconv.Itoa(s.Port), "HOME=/tmp",
 		"OPENPLEX_SOCKET=/run/openplex/panel.sock", "OPENPLEX_DATA=/data",
 	}, s.Env...)
-	h := siteSpec{Image: s.Image, Env: env, MemoryMB: s.MemoryMB, CPUs: s.CPUs, UID: s.UID, Mount: s.DataDir + "|" + s.SocketDir,
+	img, err := o.cli.ImageInspect(ctx, s.Image)
+	if err != nil {
+		return fmt.Errorf("inspect extension image: %w", err)
+	}
+	// The image ID is part of the spec: a package rebuilt under the same tag
+	// replaces the container too.
+	h := siteSpec{Image: s.Image + "@" + img.ID, Env: env, MemoryMB: s.MemoryMB, CPUs: s.CPUs, UID: s.UID, Mount: s.DataDir + "|" + s.SocketDir,
 		Networks: []string{net}}.hash()
 	name := ExtensionContainerName(s.ID)
 	existing, err := o.findContainer(ctx, name)
