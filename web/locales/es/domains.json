@@ -15,7 +15,6 @@
   "inherited": "heredado",
   "On": "Activado",
   "Off": "Desactivado",
-
   "Request sent": "Solicitud enviada",
   "{name} deleted": "{name} eliminado",
   "Routing, runtime and resources at a glance.": "Enrutamiento, entorno de ejecución y recursos de un vistazo.",
@@ -97,7 +96,6 @@
   "Live logs": "Registros en directo",
   "Access": "Acceso",
   "Application": "Aplicación",
-
   "Website created — deploying now": "Sitio web creado; desplegándolo ahora",
   "Add a website or domain": "Añadir un sitio web o dominio",
   "OpenPlex provisions the container, routing and HTTPS certificate automatically.": "OpenPlex prepara automáticamente el contenedor, el enrutamiento y el certificado HTTPS.",
@@ -112,8 +110,10 @@
   "Me ({name})": "Yo ({name})",
   "HTTPS with automatic certificate": "HTTPS con certificado automático",
   "Let's Encrypt / ZeroSSL, HTTP redirected to HTTPS.": "Let's Encrypt / ZeroSSL, HTTP redirigido a HTTPS.",
-
-  "Uploaded {count} files": { "one": "{count} archivo subido", "other": "{count} archivos subidos" },
+  "Uploaded {count} files": {
+    "one": "{count} archivo subido",
+    "other": "{count} archivos subidos"
+  },
   "Upload failed": "No se ha podido subir",
   "Unsaved changes": "Cambios sin guardar",
   "Discard unsaved changes?": "¿Descartar los cambios sin guardar?",
@@ -139,9 +139,11 @@
   "Mode (octal)": "Modo (octal)",
   "Archive name": "Nombre del archivo comprimido",
   "e.g. 0644 for files, 0755 for folders and scripts": "p. ej., 0644 para archivos, 0755 para carpetas y scripts",
-  "Delete {count} items?": { "one": "¿Eliminar {count} elemento?", "other": "¿Eliminar {count} elementos?" },
+  "Delete {count} items?": {
+    "one": "¿Eliminar {count} elemento?",
+    "other": "¿Eliminar {count} elementos?"
+  },
   "Folders are deleted with everything inside them. This cannot be undone.": "Las carpetas se eliminan con todo su contenido. No se puede deshacer.",
-
   "connection failed": "error de conexión",
   "Streaming": "En directo",
   "Connecting…": "Conectando…",
@@ -151,7 +153,6 @@
   "Clear": "Limpiar",
   "Waiting for requests… (visit the site to see traffic here)": "Esperando solicitudes… (visita el sitio para ver el tráfico aquí)",
   "No output yet.": "Todavía no hay salida.",
-
   "session ended": "sesión finalizada",
   "session timed out": "la sesión ha caducado",
   "shell unavailable": "terminal no disponible",
@@ -165,7 +166,6 @@
   "Full screen": "Pantalla completa",
   "Runs as the website's own user in its environment. Idle sessions close after 30 minutes.": "Se ejecuta con el usuario propio del sitio web en su entorno. Las sesiones inactivas se cierran tras 30 minutos.",
   "Shift+Esc exits full screen.": "Mayús+Esc sale de pantalla completa.",
-
   "Restoring": "Restaurando",
   "Backing up": "Haciendo copia de seguridad",
   "Restored": "Restaurado",
@@ -181,5 +181,26 @@
   "New data": "Datos nuevos",
   "latest": "más reciente",
   "Restore": "Restaurar",
-  "Restore {name} to {time}?": "¿Restaurar {name} a {time}?"
+  "Restore {name} to {time}?": "¿Restaurar {name} a {time}?",
+  "Website created — installing {app}": "Web creada — instalando {app}",
+  "None — empty website": "Ninguna — web vacía",
+  "Site title": "Título del sitio",
+  "Administrator username": "Usuario administrador",
+  "Administrator e-mail": "Correo del administrador",
+  "Administrator password": "Contraseña del administrador",
+  "At least 12 characters. Copy it now: OpenPlex does not keep it.": "Al menos 12 caracteres. Cópiala ahora: OpenPlex no la guarda.",
+  "Install WordPress, Joomla or Drupal with its own database in one step.": "Instala WordPress, Joomla o Drupal con su propia base de datos en un solo paso.",
+  "Install an application": "Instalar una aplicación",
+  "Installing {app}… This usually takes one or two minutes.": "Instalando {app}… Suele tardar uno o dos minutos.",
+  "{app} could not be installed.": "No se ha podido instalar {app}.",
+  "Try again": "Volver a intentarlo",
+  "Open the administration": "Abrir la administración",
+  "Installing {app}": "Instalando {app}",
+  "The latest version is downloaded from the project's website and installed in the document root, with a new MariaDB database.": "Se descarga la última versión desde la web del proyecto y se instala en la raíz de documentos, con una nueva base de datos MariaDB.",
+  "Applications need a PHP website: change the runtime to PHP in Settings first.": "Las aplicaciones necesitan una web PHP: cambia antes el entorno a PHP en Configuración.",
+  "{app} needs PHP {version} or later: change the PHP version in Settings first.": "{app} necesita PHP {version} o posterior: cambia antes la versión de PHP en Configuración.",
+  "The document root must be empty: the installer refuses to overwrite files.": "La raíz de documentos debe estar vacía: el instalador no sobrescribe archivos.",
+  "Websites and blogs; the most used content management system.": "Webs y blogs; el gestor de contenidos más usado.",
+  "Content management with users, access levels and multilingual sites built in.": "Gestión de contenidos con usuarios, niveles de acceso y sitios multilingües de serie.",
+  "Structured content and complex websites, with a flexible content model.": "Contenido estructurado y webs complejas, con un modelo de contenidos flexible."
 }

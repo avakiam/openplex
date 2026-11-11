@@ -15,7 +15,6 @@
   "inherited": "heretat",
   "On": "Activat",
   "Off": "Desactivat",
-
   "Request sent": "S'ha enviat la sol·licitud",
   "{name} deleted": "S'ha suprimit {name}",
   "Routing, runtime and resources at a glance.": "Encaminament, entorn d'execució i recursos d'un cop d'ull.",
@@ -97,7 +96,6 @@
   "Live logs": "Registres en directe",
   "Access": "Accés",
   "Application": "Aplicació",
-
   "Website created — deploying now": "S'ha creat el lloc web; s'està desplegant",
   "Add a website or domain": "Afegeix un lloc web o un domini",
   "OpenPlex provisions the container, routing and HTTPS certificate automatically.": "OpenPlex prepara automàticament el contenidor, l'encaminament i el certificat HTTPS.",
@@ -112,8 +110,10 @@
   "Me ({name})": "Jo ({name})",
   "HTTPS with automatic certificate": "HTTPS amb certificat automàtic",
   "Let's Encrypt / ZeroSSL, HTTP redirected to HTTPS.": "Let's Encrypt / ZeroSSL, HTTP redirigit a HTTPS.",
-
-  "Uploaded {count} files": { "one": "S'ha pujat {count} fitxer", "other": "S'han pujat {count} fitxers" },
+  "Uploaded {count} files": {
+    "one": "S'ha pujat {count} fitxer",
+    "other": "S'han pujat {count} fitxers"
+  },
   "Upload failed": "No s'ha pogut pujar",
   "Unsaved changes": "Canvis sense desar",
   "Discard unsaved changes?": "Vols descartar els canvis sense desar?",
@@ -139,9 +139,11 @@
   "Mode (octal)": "Mode (octal)",
   "Archive name": "Nom de l'arxiu",
   "e.g. 0644 for files, 0755 for folders and scripts": "p. ex., 0644 per a fitxers, 0755 per a carpetes i scripts",
-  "Delete {count} items?": { "one": "Vols suprimir {count} element?", "other": "Vols suprimir {count} elements?" },
+  "Delete {count} items?": {
+    "one": "Vols suprimir {count} element?",
+    "other": "Vols suprimir {count} elements?"
+  },
   "Folders are deleted with everything inside them. This cannot be undone.": "Les carpetes se suprimeixen amb tot el contingut. No es pot desfer.",
-
   "connection failed": "error de connexió",
   "Streaming": "En directe",
   "Connecting…": "S'està connectant…",
@@ -151,7 +153,6 @@
   "Clear": "Esborra",
   "Waiting for requests… (visit the site to see traffic here)": "S'estan esperant sol·licituds… (visita el lloc per veure'n el trànsit aquí)",
   "No output yet.": "Encara no hi ha cap sortida.",
-
   "session ended": "sessió finalitzada",
   "session timed out": "la sessió ha caducat",
   "shell unavailable": "terminal no disponible",
@@ -165,7 +166,6 @@
   "Full screen": "Pantalla completa",
   "Runs as the website's own user in its environment. Idle sessions close after 30 minutes.": "S'executa amb l'usuari propi del lloc web en el seu entorn. Les sessions inactives es tanquen al cap de 30 minuts.",
   "Shift+Esc exits full screen.": "Maj+Esc surt de la pantalla completa.",
-
   "Restoring": "S'està restaurant",
   "Backing up": "S'està fent la còpia de seguretat",
   "Restored": "Restaurat",
@@ -181,5 +181,26 @@
   "New data": "Dades noves",
   "latest": "més recent",
   "Restore": "Restaura",
-  "Restore {name} to {time}?": "Vols restaurar {name} a {time}?"
+  "Restore {name} to {time}?": "Vols restaurar {name} a {time}?",
+  "Website created — installing {app}": "Web creat — s'està instal·lant {app}",
+  "None — empty website": "Cap — web buit",
+  "Site title": "Títol del lloc",
+  "Administrator username": "Usuari administrador",
+  "Administrator e-mail": "Correu de l'administrador",
+  "Administrator password": "Contrasenya de l'administrador",
+  "At least 12 characters. Copy it now: OpenPlex does not keep it.": "Com a mínim 12 caràcters. Copia-la ara: OpenPlex no la desa.",
+  "Install WordPress, Joomla or Drupal with its own database in one step.": "Instal·la WordPress, Joomla o Drupal amb la seva pròpia base de dades en un sol pas.",
+  "Install an application": "Instal·lar una aplicació",
+  "Installing {app}… This usually takes one or two minutes.": "S'està instal·lant {app}… Sol trigar un o dos minuts.",
+  "{app} could not be installed.": "No s'ha pogut instal·lar {app}.",
+  "Try again": "Tornar-ho a provar",
+  "Open the administration": "Obrir l'administració",
+  "Installing {app}": "S'està instal·lant {app}",
+  "The latest version is downloaded from the project's website and installed in the document root, with a new MariaDB database.": "Es descarrega l'última versió des del web del projecte i s'instal·la a l'arrel de documents, amb una nova base de dades MariaDB.",
+  "Applications need a PHP website: change the runtime to PHP in Settings first.": "Les aplicacions necessiten un web PHP: canvia abans l'entorn a PHP a Configuració.",
+  "{app} needs PHP {version} or later: change the PHP version in Settings first.": "{app} necessita PHP {version} o posterior: canvia abans la versió de PHP a Configuració.",
+  "The document root must be empty: the installer refuses to overwrite files.": "L'arrel de documents ha d'estar buida: l'instal·lador no sobreescriu fitxers.",
+  "Websites and blogs; the most used content management system.": "Webs i blogs; el gestor de continguts més utilitzat.",
+  "Content management with users, access levels and multilingual sites built in.": "Gestió de continguts amb usuaris, nivells d'accés i llocs multilingües de sèrie.",
+  "Structured content and complex websites, with a flexible content model.": "Contingut estructurat i webs complexos, amb un model de continguts flexible."
 }

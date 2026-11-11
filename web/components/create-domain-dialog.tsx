@@ -1,15 +1,17 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { Button, Dialog, DialogContent, ErrorBox, Field, Input, Select, Switch } from "@/components/ui";
 import { api } from "@/lib/api";
 import { canManageUsers, useAuth } from "@/lib/auth";
-import { keys, useAction, useDomains, useRuntimes, useUsers } from "@/lib/hooks";
+import { keys, useAction, useApps, useDomains, useRuntimes, useUsers } from "@/lib/hooks";
 import { tServer, useT } from "@/lib/i18n";
 
+import { AppFields, phpFor, phpSupports, useAppForm } from "./site-app";
 import { roleLabels } from "./status";
-import type { Domain, DomainKind } from "@/lib/types";
+import type { Domain, DomainKind, SiteApp } from "@/lib/types";
 
 export function CreateDomainDialog({
   open,
@@ -37,6 +39,9 @@ export function CreateDomainDialog({
   const [command, setCommand] = useState("");
   const [port, setPort] = useState("");
   const [ssl, setSsl] = useState(true);
+  const apps = useApps();
+  const [appForm, setAppForm] = useAppForm();
+  const app = kind === "alias" ? undefined : apps.data?.find((a) => a.id === appForm.app);
 
   useEffect(() => {
     if (open) {
@@ -51,12 +56,18 @@ export function CreateDomainDialog({
     setVersion(rt?.default ?? "");
     setPort(rt?.needs_command ? String(rt.default_port) : "");
   }, [rt]);
+  // An application needs PHP, in a version it supports.
+  useEffect(() => {
+    if (!app) return;
+    if (runtime !== "php") setRuntime("php");
+    else if (rt?.versions) setVersion((v) => phpFor(app, rt.versions ?? [], v || rt.default));
+  }, [app, runtime, rt]);
 
   const parents = (domains.data ?? []).filter((d) => (kind === "subdomain" ? d.kind === "primary" : d.kind !== "alias"));
 
   const create = useAction(
-    () =>
-      api.post<Domain>("/domains", {
+    async () => {
+      const d = await api.post<Domain>("/domains", {
         name: name.trim(),
         kind,
         parent_id: kind === "primary" ? undefined : Number(parentId),
@@ -71,10 +82,16 @@ export function CreateDomainDialog({
               ssl_enabled: ssl,
               force_https: ssl,
             }),
-      }),
+      });
+      if (app) {
+        // The website exists either way: a refused install is reported on its page.
+        await api.post<SiteApp>(`/domains/${d.id}/app`, { ...appForm, title: appForm.title.trim() || d.name }).catch((e: Error) => toast.error(e.message));
+      }
+      return d;
+    },
     {
-      success: t("Website created — deploying now"),
-      invalidate: [keys.domains],
+      success: app ? t("Website created — installing {app}", { app: app.name }) : t("Website created — deploying now"),
+      invalidate: [keys.domains, keys.databases],
       onSuccess: (d) => {
         onOpenChange(false);
         router.push(`/domains/view/?id=${d.kind === "alias" ? d.parent_id : d.id}`);
@@ -137,9 +154,20 @@ export function CreateDomainDialog({
           )}
           {kind !== "alias" && (
             <>
+              <Field label={t("Application")}>
+                <Select value={appForm.app} onChange={(e) => setAppForm({ ...appForm, app: e.target.value })}>
+                  <option value="">{t("None — empty website")}</option>
+                  {(apps.data ?? []).map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <AppFields form={appForm} setForm={setAppForm} apps={apps.data ?? []} siteName={name.trim()} />
               <div className="grid grid-cols-2 gap-3">
                 <Field label={t("Runtime")}>
-                  <Select value={runtime} onChange={(e) => setRuntime(e.target.value)}>
+                  <Select value={runtime} disabled={!!app} onChange={(e) => setRuntime(e.target.value)}>
                     {(runtimes.data ?? []).map((r) => (
                       <option key={r.name} value={r.name}>
                         {tServer(r.label)}
@@ -150,9 +178,11 @@ export function CreateDomainDialog({
                 {rt?.versions && (
                   <Field label={t("Version")}>
                     <Select value={version} onChange={(e) => setVersion(e.target.value)}>
-                      {rt.versions.map((v) => (
-                        <option key={v}>{v}</option>
-                      ))}
+                      {rt.versions
+                        .filter((v) => !app || phpSupports(app, v))
+                        .map((v) => (
+                          <option key={v}>{v}</option>
+                        ))}
                     </Select>
                   </Field>
                 )}

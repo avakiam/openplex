@@ -33,6 +33,7 @@ import { CronJobs } from "@/components/cron-jobs";
 import { DNSRecords } from "@/components/dns-records";
 import { ExtensionFrame } from "@/components/extension-frame";
 import { MailTab } from "@/components/mail-tab";
+import { SiteAppCard } from "@/components/site-app";
 import { FileManager } from "@/components/file-manager";
 import { ItemBackups } from "@/components/item-backups";
 import { LogViewer } from "@/components/log-viewer";
@@ -132,6 +133,7 @@ function Overview({ d }: { d: Domain }) {
         </CardBody>
       </Card>
       <div className="grid content-start gap-4">
+        <SiteAppCard d={d} canInstall={acc.owner} />
         {acc.can("site") && !acc.readOnly && (
           <Card>
             <CardHeader title={t("Actions")} />

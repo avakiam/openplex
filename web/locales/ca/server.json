@@ -230,5 +230,17 @@
   "an update is already being installed": "ja s'està instal·lant una actualització",
   "installing updates needs systemd (systemd-run was not found)": "instal·lar actualitzacions necessita systemd (no s'ha trobat systemd-run)",
   "the release has no binary for this server's architecture": "la versió no té binari per a l'arquitectura d'aquest servidor",
-  "updates are not available on this server": "les actualitzacions no estan disponibles en aquest servidor"
+  "updates are not available on this server": "les actualitzacions no estan disponibles en aquest servidor",
+  "unknown application": "aplicació desconeguda",
+  "aliases have no files of their own; install on the website": "els àlies no tenen fitxers propis; instal·la al web",
+  "applications need a PHP website; change the runtime to PHP first": "les aplicacions necessiten un web PHP; canvia abans l'entorn a PHP",
+  "this website already has an application": "aquest web ja té una aplicació",
+  "the website's document root is not empty; delete its files first": "l'arrel de documents del web no és buida; esborra abans els seus fitxers",
+  "the application is still being installed": "l'aplicació encara s'està instal·lant",
+  "the site title must be 1-100 characters": "el títol del lloc ha de tenir entre 1 i 100 caràcters",
+  "the administrator username must be 3-60 characters: letters, digits, dots, dashes and underscores": "l'usuari administrador ha de tenir entre 3 i 60 caràcters: lletres, xifres, punts, guions i guions baixos",
+  "the administrator e-mail address is not valid": "el correu de l'administrador no és vàlid",
+  "the administrator password must be 12-128 characters": "la contrasenya de l'administrador ha de tenir entre 12 i 128 caràcters",
+  "the install was interrupted by a panel restart; delete the files it left and its database, then install again": "la instal·lació es va interrompre en reiniciar-se el tauler; esborra els fitxers que va deixar i la seva base de dades, i torna a instal·lar",
+  "the website is stopped": "el web està aturat"
 }

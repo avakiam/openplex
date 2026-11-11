@@ -608,3 +608,29 @@ export interface UpdateStatus {
   state: "idle" | "installing";
   last?: UpdateOutcome;
 }
+
+export interface AppInfo {
+  id: string;
+  name: string;
+  description: string;
+  min_php: string;
+  admin_path: string;
+  languages: string[];
+}
+
+export interface SiteApp {
+  domain_id: number;
+  app: string;
+  name: string;
+  version: string;
+  database_id: number | null;
+  database_name?: string;
+  admin_user: string;
+  admin_email: string;
+  admin_url: string;
+  language: string;
+  status: "installing" | "installed" | "error";
+  status_message: string;
+  created_at: string;
+  updated_at: string;
+}

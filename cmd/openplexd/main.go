@@ -87,6 +87,11 @@ func run(args []string) error {
 	if err := bootstrapAdmin(ctx, cfg, store, log); err != nil {
 		return err
 	}
+	if n, err := store.FailInterruptedSiteApps(ctx, "the install was interrupted by a panel restart; delete the files it left and its database, then install again"); err != nil {
+		return err
+	} else if n > 0 {
+		log.Warn("application installs interrupted by the restart", "count", n)
+	}
 
 	mon := monitor.New(2*time.Second, 300, cfg.DataDir, log)
 	var workers sync.WaitGroup

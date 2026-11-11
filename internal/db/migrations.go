@@ -373,6 +373,23 @@ CREATE TABLE update_settings (
 	updated_at    TIMESTAMP NOT NULL
 );
 `,
+	// v15: applications installed on websites (WordPress, Joomla, Drupal).
+	`
+CREATE TABLE site_apps (
+	domain_id      INTEGER PRIMARY KEY REFERENCES domains(id) ON DELETE CASCADE,
+	app            TEXT NOT NULL,
+	version        TEXT NOT NULL DEFAULT '',
+	database_id    INTEGER REFERENCES databases(id) ON DELETE SET NULL,
+	admin_user     TEXT NOT NULL,
+	admin_email    TEXT NOT NULL,
+	language       TEXT NOT NULL DEFAULT 'en',
+	status         TEXT NOT NULL CHECK (status IN ('installing', 'installed', 'error')),
+	status_message TEXT NOT NULL DEFAULT '',
+	created_by     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+	created_at     TIMESTAMP NOT NULL,
+	updated_at     TIMESTAMP NOT NULL
+);
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

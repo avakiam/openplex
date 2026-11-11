@@ -60,6 +60,12 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] SSL toggle + force HTTPS
 - [x] Runtime selector + environment variables
 - [x] Access/error log streaming over WebSocket
+- [x] Application installer (`internal/apps`, v0.19.0, migration v15): WordPress, Joomla and Drupal from the
+      website creation dialog or the website's overview. The latest release is downloaded from the project
+      (WP-CLI checksum checked; Drupal through its installer API) and installed by a script running as the site
+      user in its PHP container, with a new MariaDB database counted in the owner's quota; the admin password is
+      never stored. Needs an empty document root and a PHP version the app supports; a failed install removes its
+      files and database; installs cut by a restart are marked failed. Website owners only (not grants)
 
 ## M6 — File manager & terminal (`internal/files`, `internal/terminal`)
 - [x] Jailed path resolution (symlink-safe)
@@ -396,3 +402,8 @@ has been verified on the Linux test server. One commit per milestone.
   version confirmed, outcome audited); a broken 0.18.2 (reports its version, refuses to start) was rolled back to
   0.18.1 after 3 minutes with its database, and the panel showed why. The installer's OpenSSL check accepts the
   real signature and rejects a modified SHA256SUMS.
+- 2026-11-11 — Application installer on the LAN server (0.18.90): WordPress 7.1.4 (Spanish language pack, admin
+  login and pretty permalinks checked), Joomla 6.2.0 and Drupal 11.4.12 (Catalan) installed through the API, each
+  site answering through the edge; a second install and a non-empty document root were refused; WordPress first
+  failed (no full es_ES package of 7.1.4 yet) and left an empty document root and no database behind, so it now
+  installs the language pack after the core. Also created from the dashboard as a customer.

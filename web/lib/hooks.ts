@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { api } from "./api";
 import { t } from "./i18n";
 import type {
+  AppInfo,
+  SiteApp,
   UpdateStatus,
   AccessGrant,
   APIKey,
@@ -73,6 +75,8 @@ export const keys = {
   domainMail: (id: number) => ["domains", id, "mail"] as const,
   extensions: ["extensions"] as const,
   update: ["system", "update"] as const,
+  apps: ["apps"] as const,
+  siteApp: (id: number) => ["domains", id, "app"] as const,
   extensionsUI: ["extensions", "ui"] as const,
   marketplace: ["extensions", "marketplace"] as const,
 };
@@ -298,4 +302,14 @@ export const useUpdate = (enabled: boolean, installing = false) =>
     refetchInterval: installing ? 3000 : false,
     retry: installing ? true : 1,
     retryDelay: 3000,
+  });
+
+export const useApps = () => useQuery({ queryKey: keys.apps, queryFn: () => api.get<AppInfo[]>("/apps"), staleTime: Infinity });
+
+/** The application installed on a website (null if none); polled while it installs. */
+export const useSiteApp = (id: number) =>
+  useQuery({
+    queryKey: keys.siteApp(id),
+    queryFn: () => api.get<SiteApp | null>(`/domains/${id}/app`),
+    refetchInterval: (q) => (q.state.data?.status === "installing" ? 3000 : false),
   });

@@ -25,6 +25,20 @@ var ErrSiteNotRunning = errors.New("the website's container is not running")
 // stderr go to w. When ctx ends first, the command and every process it
 // started are killed and ctx.Err() is returned.
 func (o *Orchestrator) RunSiteCommand(ctx context.Context, d *db.Domain, command string, w io.Writer) (int, error) {
+	return o.runInSite(ctx, d, command, []string{"OPENPLEX_CRON=1"}, w)
+}
+
+// RunSiteScript runs a shell script for website d like RunSiteCommand, with
+// extra environment variables (kept out of the command line). It needs the
+// site's own container: static sites have none to run it in.
+func (o *Orchestrator) RunSiteScript(ctx context.Context, d *db.Domain, script string, env []string, w io.Writer) (int, error) {
+	if d.Runtime == "static" {
+		return -1, ErrSiteNotRunning
+	}
+	return o.runInSite(ctx, d, script, env, w)
+}
+
+func (o *Orchestrator) runInSite(ctx context.Context, d *db.Domain, command string, extraEnv []string, w io.Writer) (int, error) {
 	uid := SiteUID(d.ID)
 	user := fmt.Sprintf("%d:%d", uid, uid)
 	workdir := path.Join(ssl.EdgeSitesRoot, d.Name)
@@ -52,7 +66,7 @@ func (o *Orchestrator) RunSiteCommand(ctx context.Context, d *db.Domain, command
 	ex, err := o.cli.ContainerExecCreate(ctx, target, container.ExecOptions{
 		Cmd: []string{"/bin/sh", "-c", command}, User: user, WorkingDir: workdir,
 		AttachStdout: true, AttachStderr: true,
-		Env: []string{"HOME=/tmp", "LANG=C.UTF-8", "OPENPLEX_SITE=" + d.Name, "OPENPLEX_CRON=1"},
+		Env: append([]string{"HOME=/tmp", "LANG=C.UTF-8", "OPENPLEX_SITE=" + d.Name}, extraEnv...),
 	})
 	if err != nil {
 		return -1, fmt.Errorf("start task: %w", err)

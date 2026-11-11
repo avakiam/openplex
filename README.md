@@ -27,7 +27,7 @@ dashboard for websites, databases, mail, DNS, backups and security.
 
 | | |
 |---|---|
-| **Websites** | Static, PHP 7.4–8.4 (with the extensions WordPress, Laravel or Drupal need), Node.js, Python and Go; aliases and subdomains; redirects; environment variables; start/stop/restart; access and error logs; resource limits |
+| **Websites** | Static, PHP 7.4–8.4 (with the extensions WordPress, Laravel or Drupal need), Node.js, Python and Go; one-click WordPress, Joomla and Drupal installs (latest release, own database, in English, Spanish or Catalan); aliases and subdomains; redirects; environment variables; start/stop/restart; access and error logs; resource limits |
 | **Files** | Web file manager with editor, upload, archive/extract and permissions; web terminal in the site's container |
 | **Databases** | MariaDB, PostgreSQL and Redis; one-click Adminer; password rotation |
 | **Mail** | Mailboxes, aliases and forwarding, quotas, DKIM/SPF/DMARC records, Roundcube webmail with one-click login |

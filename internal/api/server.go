@@ -150,6 +150,7 @@ func (s *Server) routes() http.Handler {
 			r.Delete("/ssh-keys/{id}", s.handleDeleteSSHKey)
 
 			r.Get("/runtimes", s.handleListRuntimes)
+			r.Get("/apps", s.handleListApps)
 			r.Post("/cron/preview", s.handleCronPreview)
 			r.Get("/domains", s.handleListDomains)
 			r.Post("/domains", s.handleCreateDomain)
@@ -161,6 +162,9 @@ func (s *Server) routes() http.Handler {
 					r.Post("/actions/"+a, s.handleDomainAction)
 				}
 				r.Get("/stats", s.handleDomainStats)
+				r.Get("/app", s.handleGetSiteApp)
+				r.Post("/app", s.handleInstallSiteApp)
+				r.Delete("/app", s.handleDeleteSiteApp)
 				r.Get("/backups", s.handleItemBackups)
 				r.Post("/backups", s.handleItemBackupNow)
 				r.Post("/backups/{snap}/restore", s.handleItemRestore)

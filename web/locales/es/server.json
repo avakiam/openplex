@@ -230,5 +230,17 @@
   "an update is already being installed": "ya se está instalando una actualización",
   "installing updates needs systemd (systemd-run was not found)": "instalar actualizaciones necesita systemd (no se ha encontrado systemd-run)",
   "the release has no binary for this server's architecture": "la versión no tiene binario para la arquitectura de este servidor",
-  "updates are not available on this server": "las actualizaciones no están disponibles en este servidor"
+  "updates are not available on this server": "las actualizaciones no están disponibles en este servidor",
+  "unknown application": "aplicación desconocida",
+  "aliases have no files of their own; install on the website": "los alias no tienen archivos propios; instala en la web",
+  "applications need a PHP website; change the runtime to PHP first": "las aplicaciones necesitan una web PHP; cambia antes el entorno a PHP",
+  "this website already has an application": "esta web ya tiene una aplicación",
+  "the website's document root is not empty; delete its files first": "la raíz de documentos de la web no está vacía; borra antes sus archivos",
+  "the application is still being installed": "la aplicación aún se está instalando",
+  "the site title must be 1-100 characters": "el título del sitio debe tener entre 1 y 100 caracteres",
+  "the administrator username must be 3-60 characters: letters, digits, dots, dashes and underscores": "el usuario administrador debe tener entre 3 y 60 caracteres: letras, números, puntos, guiones y guiones bajos",
+  "the administrator e-mail address is not valid": "el correo del administrador no es válido",
+  "the administrator password must be 12-128 characters": "la contraseña del administrador debe tener entre 12 y 128 caracteres",
+  "the install was interrupted by a panel restart; delete the files it left and its database, then install again": "la instalación se interrumpió al reiniciarse el panel; borra los archivos que dejó y su base de datos, y vuelve a instalar",
+  "the website is stopped": "la web está detenida"
 }

@@ -29,7 +29,7 @@ copias de seguridad y seguridad.
 
 | | |
 |---|---|
-| **Webs** | Estáticas, PHP 7.4–8.4 (con las extensiones que necesitan WordPress, Laravel o Drupal), Node.js, Python y Go; alias y subdominios; redirecciones; variables de entorno; arrancar/parar/reiniciar; registros de acceso y de errores; límites de recursos |
+| **Webs** | Estáticas, PHP 7.4–8.4 (con las extensiones que necesitan WordPress, Laravel o Drupal), Node.js, Python y Go; WordPress, Joomla y Drupal con un clic (última versión, base de datos propia, en inglés, español o catalán); alias y subdominios; redirecciones; variables de entorno; arrancar/parar/reiniciar; registros de acceso y de errores; límites de recursos |
 | **Archivos** | Gestor de archivos web con editor, subida, comprimir/descomprimir y permisos; terminal web en el contenedor de la web |
 | **Bases de datos** | MariaDB, PostgreSQL y Redis; Adminer con un clic; rotación de contraseñas |
 | **Correo** | Buzones, alias y reenvíos, cuotas, registros DKIM/SPF/DMARC, webmail Roundcube con acceso en un clic |

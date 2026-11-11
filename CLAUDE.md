@@ -54,6 +54,7 @@ internal/monitor/     host + container telemetry sampling
 internal/dns/          authoritative DNS: zones/records in the panel DB, pushed to a PowerDNS container via its API
 internal/mail/         mail domains, mailboxes, aliases, DKIM → docker-mailserver files + DNS records; Roundcube webmail + its plugin
 internal/captcha/      login captcha verification (Turnstile, hCaptcha, reCAPTCHA)
+internal/apps/        one-click application installs (WordPress, Joomla, Drupal): catalog + install scripts
 internal/update/      panel updates: release check, signature verification, install with rollback
 internal/extensions/  extension manifest, .opx packages + signatures, lifecycle, API sockets, events, marketplace
 internal/backup/ terminal/   (see PROGRESS.md for status)
