@@ -100,6 +100,7 @@ instálala. "Hola" aparece en el menú y cada web tiene una pestaña "Hola DNS".
 | `databases:read` | `GET /api/v1/databases`, `GET /api/v1/databases/{id}` |
 | `users:read` | `GET /api/v1/users`, `GET /api/v1/users/{id}` |
 | `system:read` | `GET /api/v1/system/info`, `GET /api/v1/system/stats` |
+| `edge:write` | `GET` y `PUT /api/v1/extension/edge` (mira abajo) |
 
 Siempre permitidas: `GET /api/v1/extension`, `GET /api/v1/auth/me`,
 `GET /api/v1/system/health`. Todo lo demás responde `403`. ¿Necesitas otra
@@ -154,6 +155,35 @@ clave de licencia, la versión del panel y tu **token**:
 { "id": "example.hello", "version": "1.0.0", "settings": { "greeting": "Hello" },
   "license_key": "", "token": "…", "panel_version": "0.16.0" }
 ```
+
+### Cómo reciben visitas las webs (`edge:write`)
+
+Una extensión que se pone delante del servidor, como una CDN, puede pedir
+al servidor web de entrada que confíe en ella y que algunas webs solo
+acepten visitas a través de ella:
+
+```json
+PUT /api/v1/extension/edge
+{ "trusted_proxies": ["173.245.48.0/20", "2400:cb00::/32"],
+  "client_ip_headers": ["CF-Connecting-IP"],
+  "restrict": [{ "host": "shop.example.com", "allow": ["173.245.48.0/20", "2400:cb00::/32"] }] }
+```
+
+- `trusted_proxies`: redes cuyas cabeceras de reenvío cree el servidor de
+  entrada, para que las webs vean la dirección real del visitante
+  (`X-Forwarded-For`, `REMOTE_ADDR` de PHP). `client_ip_headers` indica las
+  cabeceras que la llevan, por orden; necesita `trusted_proxies`.
+- `restrict`: un host de una web de este servidor responde `403` a cualquier
+  otra red (los retos de certificado siguen pasando). Restringe un host solo
+  mientras todas sus visitas lleguen por esas redes, o los visitantes verán
+  el error. Las conexiones cuyo origen el servidor de entrada no puede ver
+  (visitas IPv6 que Docker reenvía mientras la red de entrada no tiene IPv6)
+  nunca se bloquean.
+- Un `PUT` sustituye toda tu política (`{}` la borra) y la devuelve
+  normalizada; `GET` la devuelve. Las redes no pueden ser más amplias que /8
+  (IPv4) o /16 (IPv6), como máximo 256 por lista. OpenPlex combina las
+  políticas de todas las extensiones activadas; desactivar o quitar la tuya
+  la elimina. Cada cambio queda en el registro de auditoría.
 
 ## Peticiones de OpenPlex
 

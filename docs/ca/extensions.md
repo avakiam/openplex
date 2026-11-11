@@ -101,6 +101,7 @@ instal·la-la. "Hola" apareix al menú i cada web té una pestanya "Hola DNS".
 | `databases:read` | `GET /api/v1/databases`, `GET /api/v1/databases/{id}` |
 | `users:read` | `GET /api/v1/users`, `GET /api/v1/users/{id}` |
 | `system:read` | `GET /api/v1/system/info`, `GET /api/v1/system/stats` |
+| `edge:write` | `GET` i `PUT /api/v1/extension/edge` (mira a sota) |
 
 Sempre permeses: `GET /api/v1/extension`, `GET /api/v1/auth/me`,
 `GET /api/v1/system/health`. Tota la resta respon `403`. Necessites una
@@ -154,6 +155,36 @@ la clau de llicència, la versió del tauler i el teu **token**:
 { "id": "example.hello", "version": "1.0.0", "settings": { "greeting": "Hello" },
   "license_key": "", "token": "…", "panel_version": "0.16.0" }
 ```
+
+### Com reben visites els webs (`edge:write`)
+
+Una extensió que es posa davant del servidor, com una CDN, pot demanar al
+servidor web d'entrada que hi confiï i que alguns webs només acceptin
+visites a través d'ella:
+
+```json
+PUT /api/v1/extension/edge
+{ "trusted_proxies": ["173.245.48.0/20", "2400:cb00::/32"],
+  "client_ip_headers": ["CF-Connecting-IP"],
+  "restrict": [{ "host": "shop.example.com", "allow": ["173.245.48.0/20", "2400:cb00::/32"] }] }
+```
+
+- `trusted_proxies`: xarxes de les quals el servidor d'entrada creu les
+  capçaleres de reenviament, perquè els webs vegin l'adreça real del
+  visitant (`X-Forwarded-For`, `REMOTE_ADDR` de PHP). `client_ip_headers`
+  indica les capçaleres que la porten, per ordre; necessita
+  `trusted_proxies`.
+- `restrict`: un host d'un web d'aquest servidor respon `403` a qualsevol
+  altra xarxa (els reptes de certificat continuen passant). Restringeix un
+  host només mentre totes les seves visites arribin per aquestes xarxes, o
+  els visitants veuran l'error. Les connexions de les quals el servidor
+  d'entrada no pot veure l'origen (visites IPv6 que Docker reenvia mentre la
+  xarxa d'entrada no té IPv6) no es bloquegen mai.
+- Un `PUT` substitueix tota la teva política (`{}` l'esborra) i la retorna
+  normalitzada; `GET` la retorna. Les xarxes no poden ser més àmplies que /8
+  (IPv4) o /16 (IPv6), com a màxim 256 per llista. OpenPlex combina les
+  polítiques de totes les extensions activades; desactivar o treure la teva
+  l'elimina. Cada canvi queda al registre d'auditoria.
 
 ## Peticions d'OpenPlex
 

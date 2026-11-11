@@ -33,6 +33,7 @@ const permissionLabels: Record<string, string> = {
   "domains:read": tk("See websites and domains"),
   "dns:read": tk("See DNS records"),
   "dns:write": tk("Change DNS records"),
+  "edge:write": tk("Change how websites receive visits: trusted proxies and access restrictions"),
   "mail:read": tk("See mail domains and mailboxes"),
   "databases:read": tk("See databases (not their passwords)"),
   "users:read": tk("See user accounts"),

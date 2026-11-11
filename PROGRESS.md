@@ -219,6 +219,9 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] Dashboard: Extensions (installed, marketplace, upload → review → install, settings, licence),
       menu entries and website tabs; audit log entries
 - [x] Developer guide `docs/{en,es,ca}/extensions.md` + `examples/extension-hello` (0BSD)
+- [x] Edge policies (`edge:write`, v0.17.0): extensions declare trusted proxies and per-host network restrictions
+      on their socket; validated, merged across enabled extensions, re-validated when rendering the Caddyfile
+- [ ] IPv6 on the edge network, so the edge sees IPv6 visitors' addresses (logs, PHP, Fail2Ban, restrictions)
 - [ ] Marketplace service (catalog + paid downloads) — the client side is done (`OPENPLEX_MARKETPLACE_URL`)
 
 ## M14 — Installer & packaging
@@ -364,3 +367,10 @@ has been verified on the Linux test server. One commit per milestone.
   HTTPS to the Cloudflare API works (a bad token is explained in the user's language). Found and fixed in core:
   reinstalling a package rebuilt under the same image tag kept the old container (the image ID is now part of the
   spec), and `ext pack -o` wrote its temporary file in the working directory.
+- 2026-11-11 — Edge policies (v0.17.0, migration v13) and Cloudflare extension 1.1.0 on the VPS. Real visitor IP:
+  the edge got Cloudflare's 22 networks as trusted proxies (downloaded by the extension); a forged
+  CF-Connecting-IP from elsewhere is ignored. A restriction set through the extension socket gave 403 to a direct
+  IPv4 visit from outside, kept other sites at 200 and was removed cleanly; a host that isn't a website is refused;
+  every change is audited. "Only through Cloudflare" on mailcactus.com (zone pending) restricts nothing and shows
+  why. Found: IPv6 visits reach the edge through Docker's proxy with the gateway's address (the edge network has
+  no IPv6), so restrictions never block the gateway — IPv6 visits can't be filtered yet.

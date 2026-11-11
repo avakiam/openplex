@@ -99,6 +99,7 @@ Then, in the panel: **Extensions → Upload extension**, review it, install.
 | `databases:read` | `GET /api/v1/databases`, `GET /api/v1/databases/{id}` |
 | `users:read` | `GET /api/v1/users`, `GET /api/v1/users/{id}` |
 | `system:read` | `GET /api/v1/system/info`, `GET /api/v1/system/stats` |
+| `edge:write` | `GET` and `PUT /api/v1/extension/edge` (see below) |
 
 Always allowed: `GET /api/v1/extension`, `GET /api/v1/auth/me`,
 `GET /api/v1/system/health`. Everything else answers `403`. Need something
@@ -152,6 +153,33 @@ licence key, the panel version and your **token**:
 { "id": "example.hello", "version": "1.0.0", "settings": { "greeting": "Hello" },
   "license_key": "", "token": "…", "panel_version": "0.16.0" }
 ```
+
+### How websites receive visits (`edge:write`)
+
+An extension that sits in front of the server, such as a CDN, can ask the
+edge web server to trust it and to accept some websites only through it:
+
+```json
+PUT /api/v1/extension/edge
+{ "trusted_proxies": ["173.245.48.0/20", "2400:cb00::/32"],
+  "client_ip_headers": ["CF-Connecting-IP"],
+  "restrict": [{ "host": "shop.example.com", "allow": ["173.245.48.0/20", "2400:cb00::/32"] }] }
+```
+
+- `trusted_proxies`: networks whose forwarding headers the edge believes, so
+  websites see the visitor's real address (`X-Forwarded-For`, PHP's
+  `REMOTE_ADDR`). `client_ip_headers` names the header(s) carrying it, in
+  order; it needs `trusted_proxies`.
+- `restrict`: a host of a website on this server answers `403` to any other
+  network (certificate challenges still pass). Restrict a host only while all
+  its visits arrive through those networks, or visitors get the error.
+  Connections whose source the edge can't see (IPv6 visits that Docker
+  forwards while the edge network has no IPv6) are never blocked.
+- A `PUT` replaces your whole policy (`{}` clears it) and answers it
+  normalized; `GET` returns it. Networks may not be broader than /8 (IPv4) or
+  /16 (IPv6), 256 per list at most. OpenPlex merges the policies of all
+  enabled extensions; disabling or removing yours drops it. Every change is
+  in the audit log.
 
 ## Requests from OpenPlex
 

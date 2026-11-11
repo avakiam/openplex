@@ -3,11 +3,15 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"openplex.dev/openplex/internal/ssl"
+	"reflect"
 	"regexp"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -122,6 +126,10 @@ func (s *Server) handleInstallExtension(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	s.audit(r, "extension.installed", e.ID, e.Version+" "+e.Source+" signer="+e.Signer)
+	if man, err := s.ext.Manifest(e); err == nil && !slices.Contains(man.Permissions, "edge:write") {
+		_ = s.db.SetExtensionEdgePolicy(r.Context(), e.ID, db.EdgePolicy{})
+	}
+	s.applyEdgeAsync()
 	writeJSON(w, http.StatusOK, s.extensionView(e))
 }
 
@@ -151,6 +159,7 @@ func (s *Server) handleUpdateExtension(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.audit(r, "extension.updated", id, "enabled="+strconv.FormatBool(*in.Enabled))
+		s.applyEdgeAsync() // its edge policy applies only while it is enabled
 	}
 	writeJSON(w, http.StatusOK, s.extensionView(e))
 }
@@ -202,6 +211,7 @@ func (s *Server) handleDeleteExtension(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.audit(r, "extension.removed", id, "")
+	s.applyEdgeAsync()
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -471,6 +481,15 @@ func (s *Server) ExtensionAPI(id string) http.Handler {
 		r.Header.Del("X-Forwarded-For")
 		r.Header.Del("Authorization")
 		r.RemoteAddr = "extension/" + id
+		if r.URL.Path == "/api/v1/extension/edge" {
+			if !slices.Contains(man.Permissions, "edge:write") {
+				writeErr(w, http.StatusForbidden, "forbidden", "this extension was not given the edge:write permission")
+				return
+			}
+			p := &Principal{User: &db.User{Username: "extension:" + id, Role: db.RoleAdmin}, Extension: id}
+			s.handleExtensionEdge(w, r.WithContext(context.WithValue(ctx, principalKey, p)), id)
+			return
+		}
 		if r.URL.Path == "/api/v1/extension" && r.Method == http.MethodGet {
 			writeJSON(w, http.StatusOK, map[string]any{
 				"id": e.ID, "version": e.Version, "settings": s.ext.Settings(e), "license_key": s.ext.License(e),
@@ -502,4 +521,150 @@ func (s *Server) ExtensionAPI(id string) http.Handler {
 		p := &Principal{User: u, Extension: id}
 		s.root().ServeHTTP(w, r.WithContext(context.WithValue(ctx, principalKey, p)))
 	})
+}
+
+// ---------- edge policy (edge:write) ----------
+
+// Limits of an extension's edge policy.
+const (
+	maxEdgeNetworks = 256  // per list
+	maxEdgeHeaders  = 4    // client IP headers
+	maxEdgeHosts    = 2000 // restricted hosts
+)
+
+// handleExtensionEdge is GET/PUT /api/v1/extension/edge on an extension's
+// socket: what it asks of the edge (trusted proxies, host restrictions).
+func (s *Server) handleExtensionEdge(w http.ResponseWriter, r *http.Request, id string) {
+	switch r.Method {
+	case http.MethodGet:
+		p, err := s.db.GetExtensionEdgePolicy(r.Context(), id)
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, edgePolicyJSON(p))
+	case http.MethodPut:
+		var in db.EdgePolicy
+		if !decode(w, r, &in) {
+			return
+		}
+		p, err := s.validEdgePolicy(r.Context(), in)
+		if err != nil {
+			badRequest(w, err.Error())
+			return
+		}
+		old, err := s.db.GetExtensionEdgePolicy(r.Context(), id)
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		if !reflect.DeepEqual(edgePolicyJSON(old), edgePolicyJSON(p)) {
+			if err := s.db.SetExtensionEdgePolicy(r.Context(), id, p); err != nil {
+				s.fail(w, r, err)
+				return
+			}
+			hosts := make([]string, 0, len(p.Restrict))
+			for _, x := range p.Restrict {
+				hosts = append(hosts, x.Host)
+			}
+			s.audit(r, "extension.edge_updated", id, fmt.Sprintf("%d trusted proxies; restricted: %s",
+				len(p.TrustedProxies), strings.Join(hosts, ", ")))
+			s.applyEdgeAsync()
+		}
+		writeJSON(w, http.StatusOK, edgePolicyJSON(p))
+	default:
+		writeErr(w, http.StatusMethodNotAllowed, "method_not_allowed", "use GET or PUT")
+	}
+}
+
+// edgePolicyJSON never answers null lists.
+func edgePolicyJSON(p db.EdgePolicy) db.EdgePolicy {
+	if p.TrustedProxies == nil {
+		p.TrustedProxies = []string{}
+	}
+	if p.ClientIPHeaders == nil {
+		p.ClientIPHeaders = []string{}
+	}
+	if p.Restrict == nil {
+		p.Restrict = []db.EdgeRestriction{}
+	}
+	return p
+}
+
+// validEdgePolicy checks and normalizes a policy: networks in canonical form
+// and not too broad, plain header names, and only hosts of this server's
+// websites.
+func (s *Server) validEdgePolicy(ctx context.Context, in db.EdgePolicy) (db.EdgePolicy, error) {
+	var out db.EdgePolicy
+	nets := func(list []string, what string) ([]string, error) {
+		if len(list) > maxEdgeNetworks {
+			return nil, fmt.Errorf("%s: at most %d networks", what, maxEdgeNetworks)
+		}
+		seen := map[string]bool{}
+		var res []string
+		for _, c := range list {
+			n, err := ssl.NormalizePrefix(c)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", what, err)
+			}
+			if !seen[n] {
+				seen[n] = true
+				res = append(res, n)
+			}
+		}
+		sort.Strings(res)
+		return res, nil
+	}
+	var err error
+	if out.TrustedProxies, err = nets(in.TrustedProxies, "trusted_proxies"); err != nil {
+		return out, err
+	}
+	if len(in.ClientIPHeaders) > maxEdgeHeaders {
+		return out, fmt.Errorf("client_ip_headers: at most %d headers", maxEdgeHeaders)
+	}
+	for _, h := range in.ClientIPHeaders {
+		if !ssl.ValidHeaderName(h) {
+			return out, fmt.Errorf("client_ip_headers: invalid header name %q", h)
+		}
+		if !slices.Contains(out.ClientIPHeaders, h) {
+			out.ClientIPHeaders = append(out.ClientIPHeaders, h)
+		}
+	}
+	if len(out.ClientIPHeaders) > 0 && len(out.TrustedProxies) == 0 {
+		return out, errors.New("client_ip_headers need trusted_proxies")
+	}
+	if len(in.Restrict) > maxEdgeHosts {
+		return out, fmt.Errorf("restrict: at most %d hosts", maxEdgeHosts)
+	}
+	if len(in.Restrict) > 0 {
+		ds, err := s.db.ListDomains(ctx, db.DomainFilter{})
+		if err != nil {
+			return out, err
+		}
+		sites := map[string]bool{}
+		for _, d := range ds {
+			sites[d.Name] = true
+		}
+		seen := map[string]bool{}
+		for _, x := range in.Restrict {
+			h := strings.ToLower(strings.TrimSpace(x.Host))
+			if !sites[h] {
+				return out, fmt.Errorf("restrict: %q is not a website on this server", x.Host)
+			}
+			if seen[h] {
+				return out, fmt.Errorf("restrict: %q is listed twice", h)
+			}
+			seen[h] = true
+			allow, err := nets(x.Allow, "restrict "+h)
+			if err != nil {
+				return out, err
+			}
+			if len(allow) == 0 {
+				return out, fmt.Errorf("restrict %s: allow at least one network", h)
+			}
+			out.Restrict = append(out.Restrict, db.EdgeRestriction{Host: h, Allow: allow})
+		}
+		sort.Slice(out.Restrict, func(i, j int) bool { return out.Restrict[i].Host < out.Restrict[j].Host })
+	}
+	return out, nil
 }

@@ -86,3 +86,14 @@ Removing an extension deletes its container, network, socket and data.
 - Extensions cannot change OpenPlex internals beyond the API; new extension
   needs mean new API endpoints or events in the core.
 - Extension data is not yet part of panel backups.
+
+## Addendum (v0.17.0): edge policies
+
+An extension with the `edge:write` permission may declare, on its socket
+(`PUT /api/v1/extension/edge`), networks the edge trusts as proxies and website
+hosts the edge only accepts from given networks. OpenPlex validates the policy
+(canonical CIDRs no broader than /8 or /16, plain header names, only hosts of
+its own websites), merges the policies of enabled extensions, re-validates them
+when rendering the Caddyfile and drops them when an extension is disabled,
+removed or upgraded without the permission. Extensions never write Caddy
+configuration themselves.

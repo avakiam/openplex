@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"time"
 )
 
@@ -106,4 +107,84 @@ func (db *DB) DeleteExtension(ctx context.Context, id string) error {
 		return ErrNotFound
 	}
 	return nil
+}
+
+// EdgePolicy is what an extension with the edge:write permission asks of the
+// edge web server. The API validates it; the edge renderer validates it again.
+type EdgePolicy struct {
+	// TrustedProxies are CIDRs whose forwarding headers are believed, so the
+	// edge and the websites see the visitor's address behind them.
+	TrustedProxies []string `json:"trusted_proxies"`
+	// ClientIPHeaders name the headers carrying that address, in order.
+	ClientIPHeaders []string `json:"client_ip_headers"`
+	// Restrict limits website hosts to connections from these CIDRs.
+	Restrict []EdgeRestriction `json:"restrict"`
+}
+
+// EdgeRestriction allows a website host only from some networks.
+type EdgeRestriction struct {
+	Host  string   `json:"host"`
+	Allow []string `json:"allow"`
+}
+
+// Empty reports whether the policy asks for nothing.
+func (p EdgePolicy) Empty() bool {
+	return len(p.TrustedProxies) == 0 && len(p.ClientIPHeaders) == 0 && len(p.Restrict) == 0
+}
+
+// GetExtensionEdgePolicy returns an extension's edge policy (empty when none).
+func (db *DB) GetExtensionEdgePolicy(ctx context.Context, id string) (EdgePolicy, error) {
+	var raw string
+	if err := db.sql.QueryRowContext(ctx, `SELECT edge_policy FROM extensions WHERE id = ?`, id).Scan(&raw); err != nil {
+		return EdgePolicy{}, mapErr(err)
+	}
+	var p EdgePolicy
+	if raw != "" {
+		if err := json.Unmarshal([]byte(raw), &p); err != nil {
+			return EdgePolicy{}, err
+		}
+	}
+	return p, nil
+}
+
+// SetExtensionEdgePolicy stores an extension's edge policy (empty clears it).
+func (db *DB) SetExtensionEdgePolicy(ctx context.Context, id string, p EdgePolicy) error {
+	raw := ""
+	if !p.Empty() {
+		b, err := json.Marshal(p)
+		if err != nil {
+			return err
+		}
+		raw = string(b)
+	}
+	res, err := db.sql.ExecContext(ctx, `UPDATE extensions SET edge_policy = ? WHERE id = ?`, raw, id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// EdgePolicies returns the edge policies of the enabled extensions, by id.
+// An unreadable policy is skipped: the edge then simply stays open.
+func (db *DB) EdgePolicies(ctx context.Context) (map[string]EdgePolicy, error) {
+	rows, err := db.sql.QueryContext(ctx, `SELECT id, edge_policy FROM extensions WHERE enabled = 1 AND edge_policy != '' ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]EdgePolicy{}
+	for rows.Next() {
+		var id, raw string
+		if err := rows.Scan(&id, &raw); err != nil {
+			return nil, err
+		}
+		var p EdgePolicy
+		if json.Unmarshal([]byte(raw), &p) == nil {
+			out[id] = p
+		}
+	}
+	return out, rows.Err()
 }

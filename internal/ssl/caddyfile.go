@@ -7,6 +7,7 @@ package ssl
 import (
 	"errors"
 	"fmt"
+	"net/netip"
 	"path"
 	"regexp"
 	"sort"
@@ -60,6 +61,53 @@ type Config struct {
 	WebmailUpstream string
 	WebmailHosts    []string
 	Sites           []Site
+
+	// Set by extensions with the edge:write permission (see NormalizePrefix).
+	TrustedProxies  []string            // CIDRs whose forwarding headers are believed
+	ClientIPHeaders []string            // headers with the visitor's address, in order
+	Guards          map[string][]string // website host → the only CIDRs it accepts
+	// GuardExempt are sources a guard never blocks: Docker's gateway, from
+	// which the edge sees connections whose real source Docker hides (IPv6
+	// visits while the edge network has no IPv6).
+	GuardExempt []string
+}
+
+// NormalizePrefix validates a CIDR (or a single address) for the edge and
+// returns it in canonical form. Ranges broader than /8 (IPv4) or /16 (IPv6)
+// are refused: they would trust or allow most of the internet.
+func NormalizePrefix(s string) (string, error) {
+	s = strings.TrimSpace(s)
+	p, err := netip.ParsePrefix(s)
+	if err != nil {
+		a, aerr := netip.ParseAddr(s)
+		if aerr != nil || a.Zone() != "" {
+			return "", fmt.Errorf("invalid network %q", s)
+		}
+		p = netip.PrefixFrom(a, a.BitLen())
+	}
+	p = p.Masked()
+	if a := p.Addr(); a.Zone() != "" || a.Is4In6() || (a.Is4() && p.Bits() < 8) || (a.Is6() && p.Bits() < 16) {
+		return "", fmt.Errorf("network %q is too broad or not usable", s)
+	}
+	return p.String(), nil
+}
+
+var headerNameRe = regexp.MustCompile(`^[A-Za-z0-9-]{1,64}$`)
+
+// ValidHeaderName reports whether h is a plain HTTP header name.
+func ValidHeaderName(h string) bool { return headerNameRe.MatchString(h) }
+
+// prefixList validates canonical CIDRs for rendering.
+func prefixList(ps []string) (string, error) {
+	if len(ps) == 0 {
+		return "", errors.New("empty network list")
+	}
+	for _, p := range ps {
+		if n, err := NormalizePrefix(p); err != nil || n != p {
+			return "", fmt.Errorf("invalid network %q", p)
+		}
+	}
+	return strings.Join(ps, " "), nil
 }
 
 var (
@@ -112,7 +160,23 @@ func Render(c Config) (string, error) {
 		fmt.Fprintf(&b, "\temail %s\n", c.ACMEEmail)
 	}
 	b.WriteString("\tadmin localhost:2019\n")
-	b.WriteString("\tservers {\n\t\tprotocols h1 h2 h3\n\t}\n}\n\n")
+	b.WriteString("\tservers {\n\t\tprotocols h1 h2 h3\n")
+	if len(c.TrustedProxies) > 0 {
+		list, err := prefixList(c.TrustedProxies)
+		if err != nil {
+			return "", fmt.Errorf("trusted proxies: %w", err)
+		}
+		fmt.Fprintf(&b, "\t\ttrusted_proxies static %s\n", list)
+		if len(c.ClientIPHeaders) > 0 {
+			for _, h := range c.ClientIPHeaders {
+				if !ValidHeaderName(h) {
+					return "", fmt.Errorf("invalid client IP header %q", h)
+				}
+			}
+			fmt.Fprintf(&b, "\t\tclient_ip_headers %s\n", strings.Join(c.ClientIPHeaders, " "))
+		}
+	}
+	b.WriteString("\t}\n}\n\n")
 	b.WriteString("(opx_common) {\n\tencode zstd gzip\n\theader {\n\t\t-Server\n\t\tX-Content-Type-Options nosniff\n\t\tReferrer-Policy strict-origin-when-cross-origin\n\t}\n}\n\n")
 
 	if c.PanelDomain != "" {
@@ -125,7 +189,7 @@ func Render(c Config) (string, error) {
 	sites := append([]Site(nil), c.Sites...)
 	sort.Slice(sites, func(i, j int) bool { return sites[i].Name < sites[j].Name })
 	for _, s := range sites {
-		if err := renderSite(&b, s); err != nil {
+		if err := renderSite(&b, s, c.Guards, c.GuardExempt); err != nil {
 			return "", fmt.Errorf("site %s: %w", s.Name, err)
 		}
 	}
@@ -163,7 +227,7 @@ func Render(c Config) (string, error) {
 	return b.String(), nil
 }
 
-func renderSite(b *strings.Builder, s Site) error {
+func renderSite(b *strings.Builder, s Site, guards map[string][]string, exempt []string) error {
 	hosts := append([]string{s.Name}, s.Aliases...)
 	for _, h := range hosts {
 		if !ValidHostname(h) {
@@ -190,6 +254,23 @@ func renderSite(b *strings.Builder, s Site) error {
 	fmt.Fprintf(b, "# site %d\n%s {\n\timport opx_common\n", s.ID, strings.Join(addrs, ", "))
 	fmt.Fprintf(b, "\tlog {\n\t\toutput file %s/%s/access.log {\n\t\t\troll_size 50MiB\n\t\t\troll_keep 5\n\t\t}\n\t\tformat json\n\t}\n", EdgeLogsRoot, s.Name)
 
+	// Hosts restricted by an extension answer 403 to any other network
+	// (certificate challenges excepted).
+	for i, h := range hosts {
+		allow, ok := guards[h]
+		if !ok {
+			continue
+		}
+		if len(allow) == 0 {
+			return fmt.Errorf("restriction of %s: empty network list", h)
+		}
+		list, err := prefixList(append(append([]string(nil), allow...), exempt...))
+		if err != nil {
+			return fmt.Errorf("restriction of %s: %w", h, err)
+		}
+		fmt.Fprintf(b, "\t@opx_guard%d {\n\t\thost %s\n\t\tnot remote_ip %s\n\t\tnot path /.well-known/acme-challenge/*\n\t}\n", i, h, list)
+		fmt.Fprintf(b, "\trespond @opx_guard%d \"This website only accepts visits through its CDN.\" 403\n", i)
+	}
 	if s.Backend == BackendDisabled {
 		b.WriteString("\trespond \"Site temporarily unavailable\" 503\n}\n\n")
 		return nil

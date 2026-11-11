@@ -105,9 +105,12 @@ type Page struct {
 
 // Permissions an extension may ask for, with what they allow.
 var Permissions = map[string]Text{
-	"domains:read":   {"en": "See websites and domains", "es": "Ver webs y dominios", "ca": "Veure webs i dominis"},
-	"dns:read":       {"en": "See DNS records", "es": "Ver registros DNS", "ca": "Veure registres DNS"},
-	"dns:write":      {"en": "Change DNS records", "es": "Cambiar registros DNS", "ca": "Canviar registres DNS"},
+	"domains:read": {"en": "See websites and domains", "es": "Ver webs y dominios", "ca": "Veure webs i dominis"},
+	"dns:read":     {"en": "See DNS records", "es": "Ver registros DNS", "ca": "Veure registres DNS"},
+	"dns:write":    {"en": "Change DNS records", "es": "Cambiar registros DNS", "ca": "Canviar registres DNS"},
+	"edge:write": {"en": "Change how websites receive visits: trusted proxies and access restrictions",
+		"es": "Cambiar cómo reciben visitas las webs: proxies de confianza y restricciones de acceso",
+		"ca": "Canviar com reben visites els webs: proxies de confiança i restriccions d'accés"},
 	"mail:read":      {"en": "See mail domains and mailboxes", "es": "Ver dominios de correo y buzones", "ca": "Veure dominis de correu i bústies"},
 	"databases:read": {"en": "See databases (not their passwords)", "es": "Ver bases de datos (no sus contraseñas)", "ca": "Veure bases de dades (no les contrasenyes)"},
 	"users:read":     {"en": "See user accounts", "es": "Ver cuentas de usuario", "ca": "Veure comptes d'usuari"},

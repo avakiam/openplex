@@ -939,3 +939,69 @@ func TestExtensionSocket(t *testing.T) {
 		t.Errorf("forged session: %d", res.StatusCode)
 	}
 }
+
+func TestExtensionEdgePolicy(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+	d := &db.Domain{Name: "shop.test", OwnerID: 1, Kind: db.KindPrimary, Runtime: "static", DocumentRoot: "public", MemoryMB: 128, CPUs: 1}
+	if err := h.db.CreateDomain(ctx, d); err != nil {
+		t.Fatal(err)
+	}
+	mk := func(id string, perms string) {
+		man := `{"schema":1,"id":"` + id + `","name":"T","version":"1.0.0","publisher":{"name":"A"},
+			"permissions":[` + perms + `],"backend":{"image":"a/t:1","port":8080}}`
+		if err := h.db.SaveExtension(ctx, &db.Extension{ID: id, Version: "1.0.0", Manifest: man, Source: "upload", Enabled: true, Token: "t", Status: "running"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mk("acme.edge", `"edge:write"`)
+	mk("acme.noedge", `"domains:read"`)
+	call := func(id, method, body string) (int, string) {
+		r := httptest.NewRequest(method, "/api/v1/extension/edge", strings.NewReader(body))
+		r.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		h.srv.ExtensionAPI(id).ServeHTTP(w, r)
+		return w.Code, w.Body.String()
+	}
+	if c, _ := call("acme.noedge", "PUT", `{}`); c != 403 {
+		t.Fatalf("without edge:write: %d", c)
+	}
+	for _, bad := range []string{
+		`{"trusted_proxies":["0.0.0.0/0"]}`,
+		`{"trusted_proxies":["10.0.0.0/8"],"client_ip_headers":["Bad Header"]}`,
+		`{"client_ip_headers":["CF-Connecting-IP"]}`,
+		`{"restrict":[{"host":"other.test","allow":["173.245.48.0/20"]}]}`,
+		`{"restrict":[{"host":"shop.test","allow":[]}]}`,
+		`{"restrict":[{"host":"shop.test","allow":["2000::/3"]}]}`,
+	} {
+		if c, body := call("acme.edge", "PUT", bad); c != 400 {
+			t.Errorf("%s: %d %s", bad, c, body)
+		}
+	}
+	c, body := call("acme.edge", "PUT", `{"trusted_proxies":["173.245.48.1/20","2400:cb00::/32","173.245.48.0/20"],
+		"client_ip_headers":["CF-Connecting-IP"],"restrict":[{"host":"SHOP.test","allow":["173.245.48.0/20","198.51.100.7"]}]}`)
+	if c != 200 || !strings.Contains(body, `"trusted_proxies":["173.245.48.0/20","2400:cb00::/32"]`) || !strings.Contains(body, `"198.51.100.7/32"`) || !strings.Contains(body, `"host":"shop.test"`) {
+		t.Fatalf("put: %d %s", c, body)
+	}
+	if c, body := call("acme.edge", "GET", ""); c != 200 || !strings.Contains(body, "shop.test") {
+		t.Fatalf("get: %d %s", c, body)
+	}
+	pols, err := h.db.EdgePolicies(ctx)
+	if err != nil || len(pols) != 1 || len(pols["acme.edge"].Restrict) != 1 {
+		t.Fatalf("stored: %v %v", pols, err)
+	}
+	entries, _ := h.db.ListAudit(ctx, 0, 50)
+	found := false
+	for _, e := range entries {
+		found = found || (e.Action == "extension.edge_updated" && strings.Contains(e.Detail, "by extension acme.edge"))
+	}
+	if !found {
+		t.Error("no audit entry")
+	}
+	if c, _ := call("acme.edge", "PUT", `{}`); c != 200 {
+		t.Fatal("clear")
+	}
+	if pols, _ := h.db.EdgePolicies(ctx); len(pols) != 0 {
+		t.Fatalf("not cleared: %v", pols)
+	}
+}

@@ -88,3 +88,56 @@ func TestRenderWWW(t *testing.T) {
 		t.Error("injected www host rendered")
 	}
 }
+
+func TestRenderEdgePolicy(t *testing.T) {
+	c := Config{
+		Sites:           []Site{{ID: 1, Name: "shop.example.com", Aliases: []string{"tienda.example.com"}, Backend: BackendStatic, Upstream: "opx-site-1:8080", SSL: true, ForceHTTPS: true}},
+		TrustedProxies:  []string{"173.245.48.0/20", "2400:cb00::/32"},
+		ClientIPHeaders: []string{"CF-Connecting-IP", "X-Forwarded-For"},
+		Guards:          map[string][]string{"tienda.example.com": {"173.245.48.0/20"}},
+		GuardExempt:     []string{"172.18.0.1/32"},
+	}
+	out, err := Render(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"trusted_proxies static 173.245.48.0/20 2400:cb00::/32\n",
+		"client_ip_headers CF-Connecting-IP X-Forwarded-For\n",
+		"@opx_guard1 {\n\t\thost tienda.example.com\n\t\tnot remote_ip 173.245.48.0/20 172.18.0.1/32\n",
+		"respond @opx_guard1 ",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "@opx_guard0") {
+		t.Error("an unrestricted host was guarded")
+	}
+	// Anything not canonical is refused, so a bad row can't inject directives.
+	for _, bad := range []Config{
+		{TrustedProxies: []string{"10.0.0.0/8\n}"}},
+		{TrustedProxies: []string{"10.0.0.1/8"}},
+		{TrustedProxies: []string{"10.0.0.0/8"}, ClientIPHeaders: []string{"X\nY"}},
+		{Sites: c.Sites, Guards: map[string][]string{"shop.example.com": {"1.0.0.0/1"}}},
+		{Sites: c.Sites, Guards: map[string][]string{"shop.example.com": {}}},
+	} {
+		if _, err := Render(bad); err == nil {
+			t.Errorf("accepted %+v", bad)
+		}
+	}
+}
+
+func TestNormalizePrefix(t *testing.T) {
+	for in, want := range map[string]string{"173.245.48.7/20": "173.245.48.0/20", "198.51.100.7": "198.51.100.7/32",
+		"2606:4700::/32": "2606:4700::/32", " 10.1.2.3/8 ": "10.0.0.0/8"} {
+		if got, err := NormalizePrefix(in); err != nil || got != want {
+			t.Errorf("%q → %q %v, want %q", in, got, err, want)
+		}
+	}
+	for _, bad := range []string{"0.0.0.0/0", "1.0.0.0/7", "::/0", "2000::/3", "fe80::1%eth0", "::ffff:1.2.3.4/128", "nope", ""} {
+		if _, err := NormalizePrefix(bad); err == nil {
+			t.Errorf("accepted %q", bad)
+		}
+	}
+}

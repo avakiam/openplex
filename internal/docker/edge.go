@@ -7,6 +7,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 
 	"github.com/docker/docker/api/types/container"
@@ -119,7 +121,112 @@ func (o *Orchestrator) BuildEdgeConfig(ctx context.Context) (ssl.Config, error) 
 		}
 		cfg.Sites = append(cfg.Sites, s)
 	}
+	if err := o.applyEdgePolicies(ctx, &cfg); err != nil {
+		return ssl.Config{}, err
+	}
 	return cfg, nil
+}
+
+// applyEdgePolicies merges what enabled extensions ask of the edge: the
+// union of their trusted proxies and, per website host, of their allowed
+// networks. Anything invalid is left out, which leaves the edge open.
+func (o *Orchestrator) applyEdgePolicies(ctx context.Context, cfg *ssl.Config) error {
+	pols, err := o.db.EdgePolicies(ctx)
+	if err != nil {
+		return err
+	}
+	if len(pols) == 0 {
+		return nil
+	}
+	hosts := map[string]bool{}
+	for _, s := range cfg.Sites {
+		hosts[s.Name] = true
+		for _, a := range s.Aliases {
+			hosts[a] = true
+		}
+	}
+	trusted := map[string]bool{}
+	guards := map[string]map[string]bool{}
+	ids := make([]string, 0, len(pols))
+	for id := range pols {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		p := pols[id]
+		for _, c := range p.TrustedProxies {
+			if n, err := ssl.NormalizePrefix(c); err == nil {
+				trusted[n] = true
+			} else {
+				o.log.Warn("extension edge policy: skipping trusted proxy", "extension", id, "err", err)
+			}
+		}
+		for _, h := range p.ClientIPHeaders {
+			if ssl.ValidHeaderName(h) && !slices.Contains(cfg.ClientIPHeaders, h) {
+				cfg.ClientIPHeaders = append(cfg.ClientIPHeaders, h)
+			}
+		}
+		for _, r := range p.Restrict {
+			h := strings.ToLower(r.Host)
+			if !hosts[h] {
+				continue
+			}
+			for _, c := range r.Allow {
+				if n, err := ssl.NormalizePrefix(c); err == nil {
+					if guards[h] == nil {
+						guards[h] = map[string]bool{}
+					}
+					guards[h][n] = true
+				}
+			}
+		}
+	}
+	if len(guards) > 0 {
+		gws, err := o.edgeGateways(ctx)
+		if err != nil || len(gws) == 0 {
+			// Without the gateway, a guard could block every IPv6 visit
+			// (Docker forwards them from it): leave the hosts open.
+			o.log.Warn("extension edge policy: not restricting hosts, edge network gateway unknown", "err", err)
+			guards = nil
+		}
+		cfg.GuardExempt = gws
+	}
+	cfg.TrustedProxies = sortedSet(trusted)
+	if len(cfg.TrustedProxies) == 0 {
+		cfg.ClientIPHeaders = nil
+	}
+	for h, set := range guards {
+		if cfg.Guards == nil {
+			cfg.Guards = map[string][]string{}
+		}
+		cfg.Guards[h] = sortedSet(set)
+	}
+	return nil
+}
+
+// edgeGateways are the gateway addresses of the edge network.
+func (o *Orchestrator) edgeGateways(ctx context.Context) ([]string, error) {
+	n, err := o.cli.NetworkInspect(ctx, EdgeNetwork, network.InspectOptions{})
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, c := range n.IPAM.Config {
+		if gw, err := ssl.NormalizePrefix(c.Gateway); err == nil {
+			out = append(out, gw)
+		}
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+func sortedSet(m map[string]bool) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // ApplyEdge renders the Caddyfile from the DB and hot-reloads the edge.

@@ -363,6 +363,8 @@ CREATE TABLE extensions (
 );
 INSERT INTO id_sequences (name, value) VALUES ('extensions', 0);
 `,
+	// v13: what an extension with edge:write asks of the edge (JSON EdgePolicy).
+	`ALTER TABLE extensions ADD COLUMN edge_policy TEXT NOT NULL DEFAULT '';`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {
