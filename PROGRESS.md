@@ -252,6 +252,18 @@ has been verified on the Linux test server. One commit per milestone.
 
 ---
 
+## M16 — Parity with Plesk/cPanel (done in this order)
+- [ ] SFTP access to website files: built into openplexd (own port), SSH keys and/or a per-user SFTP password,
+      each user sees only the websites they may change (owners + grants with Files), files owned by the site uid
+- [ ] PHP settings per website (memory_limit, upload_max_filesize, post_max_size, max_execution_time,
+      max_input_vars, display_errors, disabled functions) with safe bounds; applied by redeploying the container
+- [ ] E-mail alerts: failed backup, website down / crash loop, disk almost full, certificate not renewing,
+      update available; per-admin recipients, rate-limited, sent through the panel's own mail server
+- [ ] Manage installed applications: update core and plugins/extensions (WP-CLI, Joomla/Drupal CLIs),
+      clone to a staging subdomain and push back, security hardening checks
+- [ ] Git deploy: clone a repository into a website (deploy key), pull on a webhook or by hand, optional
+      build command
+
 ## Verification log
 - 2026-11-06 — Local smoke test on Docker Desktop 29.9 (openplexd in a container with the
   engine socket): edge auto-provisioned (caddy:2.10-alpine), static site served, 302 redirect,
