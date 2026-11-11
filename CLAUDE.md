@@ -49,6 +49,7 @@ internal/api/         chi router, middleware (auth, RBAC, logging), JSON handler
 internal/docker/      Docker SDK orchestrator: networks, edge, site runtimes, reconcile, stats
 internal/ssl/         Caddy edge config rendering + admin-API reload (ACME is Caddy's job)
 internal/files/       jailed filesystem ops for the web file manager
+internal/sftpd/       built-in SFTP server for website files (keys / SFTP password, one folder per website)
 internal/firewall/    host firewall (own nftables table inet openplex, apply/keep/rollback) + Fail2Ban client
 internal/monitor/     host + container telemetry sampling
 internal/dns/          authoritative DNS: zones/records in the panel DB, pushed to a PowerDNS container via its API

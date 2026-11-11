@@ -80,5 +80,22 @@
   "Solve this captcha to check the keys before turning it on:": "Resuelve este captcha para comprobar las claves antes de activarlo:",
   "Anti-robot check (captcha)": "Comprobación antirrobots (captcha)",
   "Stops bots from guessing passwords on the panel and webmail sign-in pages.": "Impide que los bots prueben contraseñas en las páginas de inicio de sesión del panel y del webmail.",
-  "The panel login doesn't ask for it: OPENPLEX_CAPTCHA=false is set on this server.": "El acceso al panel no lo pide: este servidor tiene OPENPLEX_CAPTCHA=false."
+  "The panel login doesn't ask for it: OPENPLEX_CAPTCHA=false is set on this server.": "El acceso al panel no lo pide: este servidor tiene OPENPLEX_CAPTCHA=false.",
+  "SFTP password saved": "Contraseña SFTP guardada",
+  "SFTP password removed": "Contraseña SFTP eliminada",
+  "SFTP access": "Acceso SFTP",
+  "Upload and edit your websites' files with FileZilla, WinSCP, Cyberduck or any SFTP client.": "Sube y edita los archivos de tus webs con FileZilla, WinSCP, Cyberduck o cualquier cliente SFTP.",
+  "SFTP is turned off on this server.": "El SFTP está desactivado en este servidor.",
+  "You will see one folder per website whose files you can manage ({count} now).": "Verás una carpeta por cada web cuyos archivos puedes gestionar (ahora {count}).",
+  "Server key fingerprint, to compare on the first connection:": "Huella de la clave del servidor, para compararla en la primera conexión:",
+  "Sign in with": "Inicio de sesión con",
+  "An SFTP password": "Una contraseña SFTP",
+  "No SFTP password": "Sin contraseña SFTP",
+  "SSH keys (below): {count}": "Claves SSH (abajo): {count}",
+  "Change SFTP password": "Cambiar la contraseña SFTP",
+  "Set an SFTP password": "Crear una contraseña SFTP",
+  "Only for SFTP, different from your panel password: an SFTP client stores it, and it can never open the panel.": "Solo para SFTP y distinta de la del panel: los clientes SFTP la guardan, y nunca sirve para entrar en el panel.",
+  "Copy it now: it cannot be shown again.": "Cópiala ahora: no se podrá volver a mostrar.",
+  "Remove the SFTP password?": "¿Eliminar la contraseña SFTP?",
+  "SFTP clients that use it stop connecting. Your SSH keys keep working.": "Los clientes SFTP que la usan dejarán de conectarse. Tus claves SSH siguen funcionando."
 }

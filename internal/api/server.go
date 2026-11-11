@@ -43,6 +43,7 @@ type Server struct {
 	mail     *mail.Manager
 	ext      *extensions.Manager
 	updates  *update.Manager
+	sftp     *SFTPInfo
 	log      *slog.Logger
 	ui       http.Handler
 	version  string
@@ -77,6 +78,7 @@ type Options struct {
 	Mail         *mail.Manager
 	Extensions   *extensions.Manager
 	Updates      *update.Manager // nil in tests that don't need it
+	SFTP         *SFTPInfo       // nil when the SFTP server is off
 }
 
 // New builds the API server.
@@ -92,6 +94,7 @@ func New(o Options) *Server {
 		mail:         o.Mail,
 		ext:          o.Extensions,
 		updates:      o.Updates,
+		sftp:         o.SFTP,
 		loginLimiter: newLimiter(10, 5*time.Minute),
 		captcha:      captcha.NewVerifier(),
 		baseCtx:      o.BaseContext,
@@ -125,6 +128,9 @@ func (s *Server) routes() http.Handler {
 
 			r.Get("/auth/me", s.handleMe)
 			r.Patch("/auth/me", s.handleUpdateMe)
+			r.Get("/auth/me/sftp", s.handleGetSFTP)
+			r.Put("/auth/me/sftp", s.handleSetSFTPPassword)
+			r.Delete("/auth/me/sftp", s.handleDeleteSFTPPassword)
 			r.Post("/auth/password", s.handleChangeOwnPassword)
 			r.Post("/auth/2fa/setup", s.handleTOTPSetup)
 			r.Post("/auth/2fa/enable", s.handleTOTPEnable)

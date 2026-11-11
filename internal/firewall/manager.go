@@ -86,6 +86,15 @@ type Manager struct {
 	timer     *time.Timer
 	lastErr   string
 	appliedAt *time.Time
+	services  []int
+}
+
+// SetServicePorts declares the TCP ports OpenPlex serves on the host itself
+// (the SFTP server); they stay open while the firewall is on. Call it before Run.
+func (m *Manager) SetServicePorts(ports ...int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.services = ports
 }
 
 // New creates a Manager. enabled=false (OPENPLEX_FIREWALL=off) leaves the
@@ -212,13 +221,13 @@ func (m *Manager) ruleset(ctx context.Context) (Ruleset, error) {
 		return Ruleset{}, err
 	}
 	if m.pending != nil {
-		return Ruleset{Enabled: m.pending.Enabled, Rules: m.pending.Rules, Blocks: blocks}, nil
+		return Ruleset{Enabled: m.pending.Enabled, Rules: m.pending.Rules, Blocks: blocks, Services: m.services}, nil
 	}
 	cfg, err := m.db.GetFirewall(ctx)
 	if err != nil {
 		return Ruleset{}, err
 	}
-	return Ruleset{Enabled: cfg.Enabled, Rules: cfg.Rules, Blocks: blocks}, nil
+	return Ruleset{Enabled: cfg.Enabled, Rules: cfg.Rules, Blocks: blocks, Services: m.services}, nil
 }
 
 // reload renders and applies the current ruleset. Callers hold m.mu.

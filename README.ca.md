@@ -35,7 +35,7 @@ còpies de seguretat i seguretat.
 | | |
 |---|---|
 | **Webs** | Estàtics, PHP 7.4–8.4 (amb les extensions que necessiten WordPress, Laravel o Drupal), Node.js, Python i Go; WordPress, Joomla i Drupal amb un clic (última versió, base de dades pròpia, en anglès, castellà o català); àlies i subdominis; redireccions; variables d'entorn; engegar/aturar/reiniciar; registres d'accés i d'errors; límits de recursos |
-| **Fitxers** | Gestor de fitxers web amb editor, pujada, comprimir/descomprimir i permisos; terminal web al contenidor del web |
+| **Fitxers** | Gestor de fitxers web amb editor, pujada, comprimir/descomprimir i permisos; SFTP (port 2222, claus SSH o una contrasenya només per a SFTP); terminal web al contenidor del web |
 | **Bases de dades** | MariaDB, PostgreSQL i Redis; Adminer amb un clic; rotació de contrasenyes |
 | **Correu** | Bústies, àlies i reenviaments, quotes, registres DKIM/SPF/DMARC, webmail Roundcube amb accés en un clic |
 | **DNS** | DNS autoritatiu (PowerDNS) amb zones creades per als teus dominis |

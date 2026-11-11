@@ -242,5 +242,6 @@
   "the administrator e-mail address is not valid": "el correo del administrador no es válido",
   "the administrator password must be 12-128 characters": "la contraseña del administrador debe tener entre 12 y 128 caracteres",
   "the install was interrupted by a panel restart; delete the files it left and its database, then install again": "la instalación se interrumpió al reiniciarse el panel; borra los archivos que dejó y su base de datos, y vuelve a instalar",
-  "the website is stopped": "la web está detenida"
+  "the website is stopped": "la web está detenida",
+  "use a different password from your panel password": "usa una contraseña distinta de la del panel"
 }

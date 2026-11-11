@@ -235,6 +235,7 @@ systemctl restart openplexd
 if [[ $FIREWALL -eq 1 ]]; then
   if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -qiE '^(status|estado): (active|activo)'; then
     log "ufw is active: keeping it. The panel imported its rules: turn on its firewall (Firewall page), then run 'ufw disable'."
+    ufw allow 2222/tcp comment 'OpenPlex SFTP' >/dev/null || warn "could not open the SFTP port 2222 in ufw"
   else
     log "Host firewall: managed by OpenPlex (SSH open, everything else closed; edit it on the Firewall page)"
   fi

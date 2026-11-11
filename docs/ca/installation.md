@@ -69,6 +69,7 @@ sudo openplexd reset-password admin
 | 80, 443 (TCP), 443 (UDP) | Webs, tauler i webmail (proxy) |
 | 25, 465, 587, 143, 993, 110, 995, 4190 | Correu, si està activat |
 | 53 (TCP/UDP) | DNS, si el servidor DNS està activat |
+| 2222 | SFTP per als fitxers dels webs (el tallafocs sempre el permet; l'instal·lador també l'obre a `ufw`) |
 
 El tallafocs es gestiona a **Tallafocs** dins del tauler. Es queda apagat si
 `ufw` està actiu, perquè no es trepitgin les regles.
@@ -87,6 +88,7 @@ servei després de canviar-los). Els més útils:
 | `OPENPLEX_FIREWALL` | `true` | Gestionar el tallafocs del servidor |
 | `OPENPLEX_CAPTCHA` | `true` | `false` desactiva el captcha de l'inici de sessió (per exemple després de posar una clau errònia) |
 | `OPENPLEX_TENANT_NETWORKS` | `10.213.0.0/16` | Rang d'adreces per a la xarxa privada de cada compte (una /24 cadascuna) |
+| `OPENPLEX_SFTP_LISTEN` | `:2222` | Servidor SFTP per als fitxers dels webs (buit el desactiva) |
 
 ## Gestionar el servei
 

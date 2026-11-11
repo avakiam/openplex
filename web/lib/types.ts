@@ -634,3 +634,13 @@ export interface SiteApp {
   created_at: string;
   updated_at: string;
 }
+
+export interface SFTPStatus {
+  enabled: boolean;
+  port?: number;
+  fingerprint?: string;
+  username: string;
+  password_set: boolean;
+  keys: number;
+  sites: number;
+}

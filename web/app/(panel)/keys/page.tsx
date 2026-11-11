@@ -1,11 +1,12 @@
 "use client";
-import { Check, Copy, KeyRound, Plus, Terminal, Trash2 } from "lucide-react";
+import { Check, Copy, FolderSync, KeyRound, Plus, RefreshCw, Terminal, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import {
   Button,
   Card,
+  CardBody,
   CardHeader,
   Confirm,
   Dialog,
@@ -22,7 +23,7 @@ import {
   Th,
 } from "@/components/ui";
 import { api } from "@/lib/api";
-import { keys, useAction, useAPIKeys, useSSHKeys } from "@/lib/hooks";
+import { keys, useAction, useAPIKeys, useSFTP, useSSHKeys } from "@/lib/hooks";
 import { getLocale, useT } from "@/lib/i18n";
 import type { APIKey } from "@/lib/types";
 import { ago } from "@/lib/utils";
@@ -154,14 +155,142 @@ function SSHKeys() {
   );
 }
 
+/** A 20-character password from an unambiguous alphabet, with letters and digits (the policy). */
+function generatePassword(): string {
+  const abc = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const buf = new Uint32Array(20);
+  crypto.getRandomValues(buf);
+  const pw = Array.from(buf, (n) => abc[n % abc.length]).join("");
+  return /\d/.test(pw) && /[a-z]/i.test(pw) ? pw : generatePassword();
+}
+
+function SFTPAccess() {
+  const { t } = useT();
+  const { data } = useSFTP();
+  const [open, setOpen] = useState(false);
+  const [del, setDel] = useState(false);
+  const [password, setPassword] = useState("");
+  const save = useAction(() => api.put("/auth/me/sftp", { password }), {
+    success: t("SFTP password saved"),
+    invalidate: [keys.sftp],
+    onSuccess: () => setOpen(false),
+  });
+  const remove = useAction(() => api.del("/auth/me/sftp"), {
+    success: t("SFTP password removed"),
+    invalidate: [keys.sftp],
+    onSuccess: () => setDel(false),
+  });
+  if (!data) return null;
+  const host = typeof window === "undefined" ? "" : window.location.hostname;
+
+  return (
+    <Card>
+      <CardHeader
+        title={t("SFTP access")}
+        description={t("Upload and edit your websites' files with FileZilla, WinSCP, Cyberduck or any SFTP client.")}
+      />
+      <CardBody className="grid gap-4 text-sm">
+        {!data.enabled ? (
+          <p className="text-muted-foreground">{t("SFTP is turned off on this server.")}</p>
+        ) : (
+          <>
+            <div className="grid gap-3 sm:grid-cols-[1fr_7rem_1fr]">
+              <Field label={t("Host")}>
+                <CopyField value={host} />
+              </Field>
+              <Field label={t("Port")}>
+                <Input readOnly value={String(data.port)} className="font-mono text-xs" />
+              </Field>
+              <Field label={t("Username")}>
+                <CopyField value={data.username} />
+              </Field>
+            </div>
+            <p className="text-muted-foreground">
+              {t("You will see one folder per website whose files you can manage ({count} now).", { count: String(data.sites) })}{" "}
+              {t("Server key fingerprint, to compare on the first connection:")} <code className="break-all font-mono text-xs">{data.fingerprint}</code>
+            </p>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
+              <div>
+                <p className="font-medium">{t("Sign in with")}</p>
+                <p className="text-muted-foreground">
+                  {data.password_set ? t("An SFTP password") : t("No SFTP password")} ·{" "}
+                  {t("SSH keys (below): {count}", { count: String(data.keys) })}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setPassword(generatePassword());
+                    setOpen(true);
+                  }}
+                >
+                  <FolderSync /> {data.password_set ? t("Change SFTP password") : t("Set an SFTP password")}
+                </Button>
+                {data.password_set && (
+                  <Button size="sm" variant="outline" className="text-destructive" onClick={() => setDel(true)}>
+                    <Trash2 /> {t("Remove")}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </CardBody>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          title={data.password_set ? t("Change SFTP password") : t("Set an SFTP password")}
+          description={t("Only for SFTP, different from your panel password: an SFTP client stores it, and it can never open the panel.")}
+        >
+          <form
+            className="grid gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              save.mutate(undefined);
+            }}
+          >
+            <Field label={t("Password")} hint={t("Copy it now: it cannot be shown again.")}>
+              <div className="flex gap-2">
+                <Input required minLength={10} maxLength={128} className="font-mono" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <Button type="button" variant="outline" size="icon" aria-label={t("Generate a password")} onClick={() => setPassword(generatePassword())}>
+                  <RefreshCw />
+                </Button>
+              </div>
+            </Field>
+            <ErrorBox error={save.error} />
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                {t("Cancel")}
+              </Button>
+              <Button type="submit" loading={save.isPending}>
+                {t("Save")}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Confirm
+        open={del}
+        onOpenChange={setDel}
+        title={t("Remove the SFTP password?")}
+        description={t("SFTP clients that use it stop connecting. Your SSH keys keep working.")}
+        loading={remove.isPending}
+        onConfirm={() => remove.mutate(undefined)}
+      />
+    </Card>
+  );
+}
+
 export default function KeysPage() {
   const { t } = useT();
   return (
     <>
       <PageHeader title={t("API & SSH keys")} description={t("Credentials for automation and file access.")} />
       <div className="grid gap-4">
-        <APIKeys />
+        <SFTPAccess />
         <SSHKeys />
+        <APIKeys />
       </div>
     </>
   );

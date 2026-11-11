@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { api } from "./api";
 import { t } from "./i18n";
 import type {
+  SFTPStatus,
   AppInfo,
   SiteApp,
   UpdateStatus,
@@ -62,6 +63,7 @@ export const keys = {
   itemBackups: (base: string) => ["backups", "item", base] as const,
   userAccess: (id: number) => ["users", id, "access"] as const,
   sshKeys: ["ssh-keys"] as const,
+  sftp: ["auth", "me", "sftp"] as const,
   audit: ["audit"] as const,
   info: ["system", "info"] as const,
   stats: ["system", "stats"] as const,
@@ -313,3 +315,5 @@ export const useSiteApp = (id: number) =>
     queryFn: () => api.get<SiteApp | null>(`/domains/${id}/app`),
     refetchInterval: (q) => (q.state.data?.status === "installing" ? 3000 : false),
   });
+
+export const useSFTP = () => useQuery({ queryKey: keys.sftp, queryFn: () => api.get<SFTPStatus>("/auth/me/sftp") });

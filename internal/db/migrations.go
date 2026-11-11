@@ -390,6 +390,14 @@ CREATE TABLE site_apps (
 	updated_at     TIMESTAMP NOT NULL
 );
 `,
+	// v16: SFTP passwords, separate from the panel password.
+	`
+CREATE TABLE sftp_passwords (
+	user_id       INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+	password_hash TEXT NOT NULL,
+	updated_at    TIMESTAMP NOT NULL
+);
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

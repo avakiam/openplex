@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -28,6 +29,7 @@ import (
 	"openplex.dev/openplex/internal/mail"
 	"openplex.dev/openplex/internal/monitor"
 	"openplex.dev/openplex/internal/secrets"
+	"openplex.dev/openplex/internal/sftpd"
 	"openplex.dev/openplex/internal/ui"
 	"openplex.dev/openplex/internal/update"
 )
@@ -189,6 +191,25 @@ func run(args []string) error {
 	go func() { defer workers.Done(); mailMgr.Run(ctx) }()
 
 	fw := firewall.New(store, log, cfg.Firewall)
+	// The SFTP server answers on the host itself: its port stays open in the firewall.
+	var srv *api.Server
+	var sftpSrv *sftpd.Server
+	var sftpInfo *api.SFTPInfo
+	if cfg.SFTPListen != "" {
+		port, err := sftpd.Port(cfg.SFTPListen)
+		if err != nil {
+			return fmt.Errorf("sftp-listen: %w", err)
+		}
+		sftpSrv, err = sftpd.New(sftpd.Options{
+			Listen: cfg.SFTPListen, HostKeyPath: filepath.Join(cfg.DataDir, "sftp_host_ed25519_key"), DB: store, Log: log,
+			Sites: func(ctx context.Context, u *db.User) ([]sftpd.Site, error) { return srv.SFTPSites(ctx, u) },
+		})
+		if err != nil {
+			return err
+		}
+		fw.SetServicePorts(port)
+		sftpInfo = &api.SFTPInfo{Port: port, Fingerprint: sftpSrv.Fingerprint()}
+	}
 	workers.Add(1)
 	go func() { defer workers.Done(); fw.Run(ctx) }()
 
@@ -209,11 +230,20 @@ func run(args []string) error {
 	workers.Add(1)
 	go func() { defer workers.Done(); updates.Run(ctx) }()
 
-	srv := api.New(api.Options{
+	srv = api.New(api.Options{
 		Config: cfg, DB: store, Orchestrator: orch, Monitor: mon, Logger: log,
 		UI: ui.Handler(), Version: version, BaseContext: ctx, Box: box, Backups: backups, Cron: crons, Firewall: fw, DNS: dnsMgr, Mail: mailMgr,
-		Extensions: exts, Updates: updates,
+		Extensions: exts, Updates: updates, SFTP: sftpInfo,
 	})
+	if sftpSrv != nil {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			if err := sftpSrv.Run(ctx); err != nil {
+				log.Error("sftp server stopped", "err", err)
+			}
+		}()
+	}
 	exts.SetAPI(srv.ExtensionAPI)
 	workers.Add(1)
 	go func() { defer workers.Done(); exts.Reconcile(ctx) }()

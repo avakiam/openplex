@@ -99,7 +99,8 @@ func TestRender(t *testing.T) {
 			{Protocol: Both, Ports: "8000-8100", Source: "203.0.113.0/24"},
 			{Protocol: Both, Source: "2001:db8::/64"},
 		},
-		Blocks: []db.FirewallBlock{{Address: "192.0.2.9"}, {Address: "2001:db8:1::/48"}, {Address: "198.51.100.1", ExpiresAt: &past}},
+		Blocks:   []db.FirewallBlock{{Address: "192.0.2.9"}, {Address: "2001:db8:1::/48"}, {Address: "198.51.100.1", ExpiresAt: &past}},
+		Services: []int{2222},
 	}
 	got, err := Render(rs, now)
 	if err != nil {
@@ -114,6 +115,7 @@ func TestRender(t *testing.T) {
 		"type filter hook input priority 0; policy drop;",
 		"ct state established,related accept",
 		"\t\ttcp dport 22 accept\n",
+		"\t\ttcp dport 2222 accept\n",
 		"ip saddr 203.0.113.0/24 tcp dport 8000-8100 accept",
 		"ip saddr 203.0.113.0/24 udp dport 8000-8100 accept",
 		"\t\tip6 saddr 2001:db8::/64 accept\n",

@@ -253,8 +253,14 @@ has been verified on the Linux test server. One commit per milestone.
 ---
 
 ## M16 — Parity with Plesk/cPanel (done in this order)
-- [ ] SFTP access to website files: built into openplexd (own port), SSH keys and/or a per-user SFTP password,
-      each user sees only the websites they may change (owners + grants with Files), files owned by the site uid
+- [x] SFTP access to website files (`internal/sftpd`, v0.20.0, migration v16): built into openplexd on :2222
+      (`OPENPLEX_SFTP_LISTEN`), panel username + one of the user's SSH keys or an SFTP-only password (must differ
+      from the panel one); the root lists the websites whose files the user may manage (owners, managers, grants
+      with Files; read-only grants stay read-only), every operation through an os.Root on the website, new files
+      owned by the site uid, no setuid bits, no links, no moves across websites, no shell or exec. Failed sign-ins
+      are logged for the Fail2Ban openplex jail and refused after 10 per address in 10 minutes; logins audited.
+      Port opened by the panel firewall (service port) and by the installer in ufw; "SFTP access" card on the
+      API & SSH keys page with host, port, user and host-key fingerprint
 - [ ] PHP settings per website (memory_limit, upload_max_filesize, post_max_size, max_execution_time,
       max_input_vars, display_errors, disabled functions) with safe bounds; applied by redeploying the container
 - [ ] E-mail alerts: failed backup, website down / crash loop, disk almost full, certificate not renewing,
@@ -419,3 +425,7 @@ has been verified on the Linux test server. One commit per milestone.
   site answering through the edge; a second install and a non-empty document root were refused; WordPress first
   failed (no full es_ES package of 7.1.4 yet) and left an empty document root and no database behind, so it now
   installs the language pack after the core. Also created from the dashboard as a customer.
+- 2026-11-11 — SFTP on the LAN server (0.19.90) from Windows OpenSSH `sftp` with a key added in the panel: root
+  lists the 3 websites, upload/mkdir/rename/download/delete in php.lan.test (files owned by the site uid 100002),
+  chmod 4755 stored as 0755; `../../../etc/passwd`, writing at the root, a new top-level folder and a symlink
+  refused; the host-key fingerprint matched the panel; login audited.

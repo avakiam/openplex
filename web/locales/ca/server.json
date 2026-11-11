@@ -242,5 +242,6 @@
   "the administrator e-mail address is not valid": "el correu de l'administrador no és vàlid",
   "the administrator password must be 12-128 characters": "la contrasenya de l'administrador ha de tenir entre 12 i 128 caràcters",
   "the install was interrupted by a panel restart; delete the files it left and its database, then install again": "la instal·lació es va interrompre en reiniciar-se el tauler; esborra els fitxers que va deixar i la seva base de dades, i torna a instal·lar",
-  "the website is stopped": "el web està aturat"
+  "the website is stopped": "el web està aturat",
+  "use a different password from your panel password": "fes servir una contrasenya diferent de la del tauler"
 }

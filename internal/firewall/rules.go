@@ -211,6 +211,9 @@ type Ruleset struct {
 	Enabled bool
 	Rules   []db.FirewallRule
 	Blocks  []db.FirewallBlock
+	// Services are TCP ports OpenPlex itself serves on the host (SFTP): open
+	// whenever the firewall is on, like the panel's own web ports.
+	Services []int
 }
 
 // Table is the nftables table OpenPlex owns.
@@ -254,6 +257,12 @@ func Render(rs Ruleset, now time.Time) (string, error) {
 		b.WriteString("\t\tct state established,related accept\n\t\tct state invalid drop\n\t\tiifname \"lo\" accept\n")
 		b.WriteString("\t\tip protocol icmp accept\n\t\tmeta l4proto ipv6-icmp accept\n")
 		b.WriteString("\t\tip6 saddr fe80::/10 udp dport 546 accept\n")
+		for _, p := range rs.Services {
+			if p < 1 || p > 65535 {
+				return "", fmt.Errorf("service port %d out of range", p)
+			}
+			fmt.Fprintf(&b, "\t\ttcp dport %d accept\n", p)
+		}
 		for _, r := range rs.Rules {
 			rr := r
 			if err := NormalizeRule(&rr); err != nil {
