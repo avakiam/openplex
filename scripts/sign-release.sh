@@ -14,7 +14,9 @@ KEY="${2:?usage: sign-release.sh vX.Y.Z KEYFILE}"
 : "${GITHUB_TOKEN:?set GITHUB_TOKEN (a token with contents:write on $REPO)}"
 API=https://api.github.com/repos/$REPO
 gh_api() { curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "$@"; }
-json() { python3 -c "import sys,json; d=json.load(sys.stdin); $1"; }
+PYTHON=python3
+python3 -c '' 2>/dev/null || PYTHON=python # Windows installs it as python
+json() { "$PYTHON" -c "import sys,json; d=json.load(sys.stdin); $1" | tr -d '\r'; }
 
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
@@ -32,7 +34,8 @@ json "
 for a in d['assets']:
     print(a['id'], a['name'])" <<<"$release" | while read -r aid name; do
   [[ "$name" == SHA256SUMS.sig ]] && continue
-  gh_api -H "Accept: application/octet-stream" "$API/releases/assets/$aid" -o "$WORK/$name"
+  curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/octet-stream" \
+    "$API/releases/assets/$aid" -o "$WORK/$name"
 done
 (cd "$WORK" && sha256sum -c --quiet SHA256SUMS) || { echo "checksums of the draft don't match" >&2; exit 1; }
 for arch in amd64 arm64; do
