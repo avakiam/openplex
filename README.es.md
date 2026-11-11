@@ -34,7 +34,7 @@ copias de seguridad y seguridad.
 
 | | |
 |---|---|
-| **Webs** | Estáticas, PHP 7.4–8.4 (con las extensiones que necesitan WordPress, Laravel o Drupal), Node.js, Python y Go; WordPress, Joomla y Drupal con un clic (última versión, base de datos propia, en inglés, español o catalán); alias y subdominios; redirecciones; variables de entorno; arrancar/parar/reiniciar; registros de acceso y de errores; límites de recursos |
+| **Webs** | Estáticas, PHP 7.4–8.4 (con las extensiones que necesitan WordPress, Laravel o Drupal), Node.js, Python y Go; configuración de PHP por web (memoria, tamaño de subida, tiempos, zona horaria…); WordPress, Joomla y Drupal con un clic (última versión, base de datos propia, en inglés, español o catalán); alias y subdominios; redirecciones; variables de entorno; arrancar/parar/reiniciar; registros de acceso y de errores; límites de recursos |
 | **Archivos** | Gestor de archivos web con editor, subida, comprimir/descomprimir y permisos; SFTP (puerto 2222, claves SSH o una contraseña solo para SFTP); terminal web en el contenedor de la web |
 | **Bases de datos** | MariaDB, PostgreSQL y Redis; Adminer con un clic; rotación de contraseñas |
 | **Correo** | Buzones, alias y reenvíos, cuotas, registros DKIM/SPF/DMARC, webmail Roundcube con acceso en un clic |
@@ -72,6 +72,7 @@ las actualizaciones y cómo reconstruir un servidor perdido.
 ## Documentación
 
 - [Instalación, actualizaciones y recuperación](docs/es/installation.md)
+- [Webs: aplicaciones, configuración de PHP y SFTP](docs/es/websites.md)
 - [OpenPlex para proveedores de hosting](docs/es/hosting-providers.md)
 - [Licencia, extensiones y marca](docs/es/licensing.md)
 - [Crear una extensión](docs/es/extensions.md)

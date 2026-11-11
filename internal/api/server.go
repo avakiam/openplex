@@ -168,6 +168,8 @@ func (s *Server) routes() http.Handler {
 					r.Post("/actions/"+a, s.handleDomainAction)
 				}
 				r.Get("/stats", s.handleDomainStats)
+				r.Get("/php", s.handleGetPHPSettings)
+				r.Put("/php", s.handlePutPHPSettings)
 				r.Get("/app", s.handleGetSiteApp)
 				r.Post("/app", s.handleInstallSiteApp)
 				r.Delete("/app", s.handleDeleteSiteApp)

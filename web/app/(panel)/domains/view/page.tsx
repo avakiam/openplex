@@ -33,6 +33,7 @@ import { CronJobs } from "@/components/cron-jobs";
 import { DNSRecords } from "@/components/dns-records";
 import { ExtensionFrame } from "@/components/extension-frame";
 import { MailTab } from "@/components/mail-tab";
+import { PHPSettingsCard } from "@/components/php-settings";
 import { SiteAppCard } from "@/components/site-app";
 import { FileManager } from "@/components/file-manager";
 import { ItemBackups } from "@/components/item-backups";
@@ -694,6 +695,11 @@ function DomainView() {
         </TabsContent>
         <TabsContent value="settings">
           <SettingsTab d={d} />
+          {d.runtime === "php" && (
+            <div className="mt-4">
+              <PHPSettingsCard d={d} readOnly={acc.readOnly} />
+            </div>
+          )}
         </TabsContent>
         <TabsContent value="redirects">
           <RedirectsTab d={d} />

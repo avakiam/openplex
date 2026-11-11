@@ -34,7 +34,7 @@ còpies de seguretat i seguretat.
 
 | | |
 |---|---|
-| **Webs** | Estàtics, PHP 7.4–8.4 (amb les extensions que necessiten WordPress, Laravel o Drupal), Node.js, Python i Go; WordPress, Joomla i Drupal amb un clic (última versió, base de dades pròpia, en anglès, castellà o català); àlies i subdominis; redireccions; variables d'entorn; engegar/aturar/reiniciar; registres d'accés i d'errors; límits de recursos |
+| **Webs** | Estàtics, PHP 7.4–8.4 (amb les extensions que necessiten WordPress, Laravel o Drupal), Node.js, Python i Go; configuració de PHP per web (memòria, mida de pujada, temps, zona horària…); WordPress, Joomla i Drupal amb un clic (última versió, base de dades pròpia, en anglès, castellà o català); àlies i subdominis; redireccions; variables d'entorn; engegar/aturar/reiniciar; registres d'accés i d'errors; límits de recursos |
 | **Fitxers** | Gestor de fitxers web amb editor, pujada, comprimir/descomprimir i permisos; SFTP (port 2222, claus SSH o una contrasenya només per a SFTP); terminal web al contenidor del web |
 | **Bases de dades** | MariaDB, PostgreSQL i Redis; Adminer amb un clic; rotació de contrasenyes |
 | **Correu** | Bústies, àlies i reenviaments, quotes, registres DKIM/SPF/DMARC, webmail Roundcube amb accés en un clic |
@@ -72,6 +72,7 @@ les actualitzacions i com reconstruir un servidor perdut.
 ## Documentació
 
 - [Instal·lació, actualitzacions i recuperació](docs/ca/installation.md)
+- [Webs: aplicacions, configuració de PHP i SFTP](docs/ca/websites.md)
 - [OpenPlex per a proveïdors d'allotjament](docs/ca/hosting-providers.md)
 - [Llicència, extensions i marca](docs/ca/licensing.md)
 - [Crear una extensió](docs/ca/extensions.md)

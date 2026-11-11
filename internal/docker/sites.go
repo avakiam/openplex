@@ -124,6 +124,54 @@ type siteSpec struct {
 	Mount    string
 	ReadOnly bool
 	Networks []string
+	// PHP settings of the website (omitted when it has none, so the hash of
+	// websites without settings is unchanged): the host directory mounted at
+	// phpSettingsDir and the ini content, so a change recreates the container.
+	PHPConf string `json:",omitempty"`
+	PHPIni  string `json:",omitempty"`
+}
+
+// phpSettingsDir is where a PHP container finds its website's PHP settings.
+const phpSettingsDir = "/etc/openplex/site-php"
+
+// PHPSettingsDir is the host directory holding a website's PHP settings file.
+func (o *Orchestrator) PHPSettingsDir(id int64) string {
+	return filepath.Join(o.cfg.DataDir, "php", strconv.FormatInt(id, 10))
+}
+
+// applyPHPSettings writes the website's PHP settings (if any) and adds them
+// to its container spec. The directory belongs to root, outside the
+// website's files: the website can read its settings but not change them.
+func (o *Orchestrator) applyPHPSettings(ctx context.Context, d *db.Domain, spec *siteSpec) error {
+	settings, err := o.db.GetPHPSettings(ctx, d.ID)
+	if err != nil {
+		return err
+	}
+	dir := o.PHPSettingsDir(d.ID)
+	if len(settings) == 0 {
+		return os.RemoveAll(dir)
+	}
+	ini := PHPIni(settings, d.MemoryMB)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("PHP settings dir: %w", err)
+	}
+	if err := os.Chmod(dir, 0o755); err != nil {
+		return err
+	}
+	tmp := filepath.Join(dir, ".zz-site.ini.tmp")
+	if err := os.WriteFile(tmp, []byte(ini), 0o644); err != nil {
+		return err
+	}
+	if err := os.Chmod(tmp, 0o644); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, filepath.Join(dir, "zz-site.ini")); err != nil {
+		return err
+	}
+	spec.PHPConf, spec.PHPIni = dir, ini
+	// A leading ":" keeps the image's own conf.d and adds the website's after it.
+	spec.Env = append(spec.Env, "PHP_INI_SCAN_DIR=:"+phpSettingsDir)
+	return nil
 }
 
 func (s siteSpec) hash() string {
@@ -207,6 +255,11 @@ func (o *Orchestrator) deploy(ctx context.Context, d *db.Domain) error {
 	if err != nil {
 		return err
 	}
+	if Runtimes[d.Runtime].Build {
+		if err := o.applyPHPSettings(ctx, d, spec); err != nil {
+			return err
+		}
+	}
 	if _, err := o.ensureTenantNetwork(ctx, d.OwnerID); err != nil {
 		return err
 	}
@@ -268,6 +321,9 @@ func (o *Orchestrator) deploy(ctx context.Context, d *db.Domain) error {
 		CapDrop:     []string{"ALL"},
 		SecurityOpt: []string{"no-new-privileges:true"},
 		LogConfig:   container.LogConfig{Type: "json-file", Config: map[string]string{"max-size": "10m", "max-file": "3"}},
+	}
+	if spec.PHPConf != "" {
+		hc.Mounts = append(hc.Mounts, mount.Mount{Type: mount.TypeBind, Source: spec.PHPConf, Target: phpSettingsDir, ReadOnly: true})
 	}
 	eps := map[string]*network.EndpointSettings{}
 	for _, n := range spec.Networks {
@@ -356,6 +412,9 @@ func (o *Orchestrator) RemoveSite(ctx context.Context, d *db.Domain, purge bool)
 	defer unlock()
 	if err := o.removeSiteContainer(ctx, d.ID); err != nil {
 		return err
+	}
+	if err := os.RemoveAll(o.PHPSettingsDir(d.ID)); err != nil {
+		o.log.Warn("remove PHP settings", "domain", d.Name, "err", err)
 	}
 	if err := o.ApplyEdge(ctx); err != nil {
 		return err

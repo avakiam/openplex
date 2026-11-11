@@ -243,5 +243,7 @@
   "the administrator password must be 12-128 characters": "la contrasenya de l'administrador ha de tenir entre 12 i 128 caràcters",
   "the install was interrupted by a panel restart; delete the files it left and its database, then install again": "la instal·lació es va interrompre en reiniciar-se el tauler; esborra els fitxers que va deixar i la seva base de dades, i torna a instal·lar",
   "the website is stopped": "el web està aturat",
-  "use a different password from your panel password": "fes servir una contrasenya diferent de la del tauler"
+  "use a different password from your panel password": "fes servir una contrasenya diferent de la del tauler",
+  "post_max_size must be at least upload_max_filesize, or uploads of that size fail": "post_max_size ha de ser com a mínim upload_max_filesize, o les pujades d'aquesta mida fallaran",
+  "this website does not run PHP": "aquest web no fa servir PHP"
 }

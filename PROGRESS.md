@@ -261,8 +261,14 @@ has been verified on the Linux test server. One commit per milestone.
       are logged for the Fail2Ban openplex jail and refused after 10 per address in 10 minutes; logins audited.
       Port opened by the panel firewall (service port) and by the installer in ufw; "SFTP access" card on the
       API & SSH keys page with host, port, user and host-key fingerprint
-- [ ] PHP settings per website (memory_limit, upload_max_filesize, post_max_size, max_execution_time,
-      max_input_vars, display_errors, disabled functions) with safe bounds; applied by redeploying the container
+- [x] PHP settings per website (v0.20.0, migration v17): memory_limit (up to the website's memory, clamped if
+      that is lowered later), upload_max_filesize, post_max_size (≥ upload), max_execution_time, max_input_time,
+      max_input_vars, session.gc_maxlifetime, display_errors, allow_url_fopen, date.timezone, disable_functions;
+      allowlisted and validated (no other ini keys, no injection), only changes from the defaults stored. Written by
+      the panel to `<data>/php/<id>/zz-site.ini` (root-owned) and mounted read-only with `PHP_INI_SCAN_DIR`, so
+      PHP-FPM, cron and the terminal all use it; saving recreates the container. Websites without settings keep
+      the same container spec (no restart on upgrade). Card in the website's Settings tab; user guide
+      `docs/*/websites.md` (sites, applications, PHP settings, SFTP)
 - [ ] E-mail alerts: failed backup, website down / crash loop, disk almost full, certificate not renewing,
       update available; per-admin recipients, rate-limited, sent through the panel's own mail server
 - [ ] Manage installed applications: update core and plugins/extensions (WP-CLI, Joomla/Drupal CLIs),
@@ -429,3 +435,9 @@ has been verified on the Linux test server. One commit per milestone.
   lists the 3 websites, upload/mkdir/rename/download/delete in php.lan.test (files owned by the site uid 100002),
   chmod 4755 stored as 0755; `../../../etc/passwd`, writing at the root, a new top-level folder and a symlink
   refused; the host-key fingerprint matched the panel; login audited.
+- 2026-11-11 — PHP settings on the LAN server (0.19.91): the upgrade left the 3 site containers untouched; through
+  the API 4 bad inputs refused (memory above the site's 512 MB, post below upload, auto_prepend_file, a newline
+  injection); saved values reached PHP-FPM (probe page through the edge) and the CLI as the site user (300M,
+  Europe/Madrid); the site user cannot write the settings file; reset removed the file and restored 256M/UTC.
+  Dashboard checked: SFTP card, SFTP password created from it and used by a client (wrong password logged in the
+  Fail2Ban format), PHP settings card and its error message.

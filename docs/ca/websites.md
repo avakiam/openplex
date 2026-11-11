@@ -1,0 +1,109 @@
+# Webs
+
+[English](../en/websites.md) · [Español](../es/websites.md) · **Català**
+
+Tot sobre allotjar un web: crear-lo, instal·lar-hi una aplicació, canviar-ne
+la configuració de PHP i accedir als seus fitxers per SFTP.
+
+## Crear un web
+
+**Llocs web i dominis → Afegeix un lloc web.** Escriu el nom de host (apunta abans
+el seu registre DNS A/AAAA al servidor, perquè es pugui emetre el certificat
+HTTPS), tria el propietari i com funciona:
+
+| Entorn | Per a |
+|---|---|
+| Estàtic | Fitxers HTML, CSS i JavaScript, sense codi de servidor |
+| PHP 7.4 – 8.4 | WordPress, Joomla, Drupal, Laravel i qualsevol codi PHP |
+| Node.js, Python, Go | La teva pròpia aplicació: indica l'ordre d'arrencada; escolta a `$PORT` |
+
+Cada web funciona en el seu propi contenidor, amb el seu propi usuari del
+sistema i els seus propis límits de memòria i CPU (només els administradors
+els canvien). Els seus fitxers són a `/var/lib/openplex/sites/<nom>/`; el
+servidor web serveix l'**arrel de documents**, `public/` per defecte.
+
+Els subdominis (`blog.example.com`) són webs propis. Els **àlies** són noms
+addicionals que mostren el mateix web (`www.example.com`).
+
+## Aplicacions: WordPress, Joomla, Drupal
+
+En crear un web, tria una **Aplicació**. També la pots instal·lar després en
+un web buit, des d'**Aplicació → Instal·lar una aplicació** al seu resum.
+
+1. Indica el títol del lloc, l'usuari i el correu de l'administrador, i la
+   seva contrasenya (se'n genera una: copia-la, OpenPlex no la desa).
+   WordPress i Drupal es poden instal·lar en anglès, castellà o català; Joomla
+   en anglès (afegeix idiomes des de la seva administració).
+2. OpenPlex passa el web a PHP, en una versió que l'aplicació admeti (Joomla 6
+   i Drupal 11 necessiten PHP 8.3 o posterior), i li crea una base de dades
+   MariaDB, que compta a la quota de bases de dades del propietari.
+3. Es descarrega l'última versió des del mateix projecte i s'instal·la a
+   l'arrel de documents. Triga un o dos minuts; la targeta **Aplicació** en
+   mostra el progrés i després la versió, la base de dades i un enllaç a
+   l'administració.
+
+L'arrel de documents ha d'estar buida: l'instal·lador mai sobreescriu fitxers.
+Si una instal·lació falla, esborra els fitxers que va escriure i la seva base
+de dades, i la targeta n'explica el motiu; ho pots tornar a provar. Només el
+propietari del web (i qui gestiona aquest compte) pot instal·lar aplicacions,
+perquè la base de dades es crea al seu nom.
+
+Un cop instal·lada, l'aplicació és teva: actualitza-la des de la seva pròpia
+administració. WordPress pot començar en anglès uns dies després d'una versió
+nova, fins que se'n publiqui la traducció; després l'ofereix a
+**Escriptori → Actualitzacions**.
+
+## Configuració de PHP
+
+En un web PHP, **Configuració → Configuració de PHP** canvia aquests valors.
+Els camps buits mantenen el valor per defecte (en gris).
+
+| Ajust | Per defecte | Límits |
+|---|---|---|
+| Memòria per script (`memory_limit`) | 256M | de 32M a la memòria del web |
+| Pujada de fitxer màxima (`upload_max_filesize`) | 64M | fins a 2048M |
+| Enviament de formulari màxim (`post_max_size`) | 64M | fins a 2048M, com a mínim la mida de pujada |
+| Temps màxim d'script (`max_execution_time`) | 60 s | 1 – 3600 |
+| Temps per llegir una petició (`max_input_time`) | 60 s | 1 – 3600 |
+| Camps de formulari per petició (`max_input_vars`) | 3000 | 100 – 100000 |
+| Durada de la sessió (`session.gc_maxlifetime`) | 1440 s | 60 – 604800 |
+| Mostrar els errors a les pàgines (`display_errors`) | No | Sí / No |
+| Obrir URL remotes com a fitxers (`allow_url_fopen`) | Sí | Sí / No |
+| Zona horària (`date.timezone`) | UTC | p. ex. `Europe/Madrid` |
+| Funcions desactivades (`disable_functions`) | cap | noms separats per comes |
+
+En desar es reinicia el contenidor del web (uns segons). Els valors s'apliquen
+al web, a les seves tasques programades i al seu terminal web per igual.
+Deixa **Mostrar els errors** desactivat en un web en producció: els missatges
+d'error poden revelar camins i configuració als visitants.
+
+## Fitxers per SFTP
+
+A més del gestor de fitxers (pestanya **Fitxers**), cada usuari pot accedir
+als fitxers dels seus webs amb un client SFTP com FileZilla, WinSCP o
+Cyberduck. Les dades són a **Claus API i SSH → Accés SFTP**:
+
+| | |
+|---|---|
+| Host | l'adreça del tauler (o del servidor) |
+| Port | 2222 |
+| Usuari | el teu usuari del tauler |
+| Contrasenya | una **contrasenya SFTP** creada en aquesta pàgina, o una de les teves **claus SSH** |
+
+La contrasenya SFTP és diferent de la del tauler i no pot ser la mateixa: els
+clients SFTP la desen, i mai serveix per entrar al tauler. Per fer servir una
+clau SSH, afegeix-ne la part pública a **Claus SSH**, a la mateixa pàgina.
+
+En entrar veuràs una carpeta per cada web els fitxers del qual pots gestionar:
+els teus webs, els dels comptes que gestiones i els webs compartits amb tu amb
+l'àrea **Fitxers** (de només lectura si ho és l'accés compartit). Els fitxers
+nous pertanyen a l'usuari del web, com amb el gestor de fitxers. No es poden
+crear enllaços, moure fitxers entre webs ni executar ordres.
+
+En la primera connexió el client mostra l'empremta de la clau del servidor:
+compara-la amb la de la targeta **Accés SFTP**. Els intents d'inici de sessió
+fallits repetits des d'una adreça la bloquegen (Fail2Ban), igual que al tauler.
+
+El servidor escolta al port 2222 (`OPENPLEX_SFTP_LISTEN`, vegeu
+[instal·lació](installation.md#configuració)); el tallafocs del tauler el manté
+obert.

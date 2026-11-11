@@ -90,7 +90,7 @@ export function Field({
   children,
   className,
 }: {
-  label: string;
+  label: React.ReactNode;
   hint?: React.ReactNode;
   children: React.ReactNode;
   className?: string;

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { api } from "./api";
 import { t } from "./i18n";
 import type {
+  PHPSettings,
   SFTPStatus,
   AppInfo,
   SiteApp,
@@ -79,6 +80,7 @@ export const keys = {
   update: ["system", "update"] as const,
   apps: ["apps"] as const,
   siteApp: (id: number) => ["domains", id, "app"] as const,
+  phpSettings: (id: number) => ["domains", id, "php"] as const,
   extensionsUI: ["extensions", "ui"] as const,
   marketplace: ["extensions", "marketplace"] as const,
 };
@@ -317,3 +319,6 @@ export const useSiteApp = (id: number) =>
   });
 
 export const useSFTP = () => useQuery({ queryKey: keys.sftp, queryFn: () => api.get<SFTPStatus>("/auth/me/sftp") });
+
+export const usePHPSettings = (id: number) =>
+  useQuery({ queryKey: keys.phpSettings(id), queryFn: () => api.get<PHPSettings>(`/domains/${id}/php`) });

@@ -644,3 +644,17 @@ export interface SFTPStatus {
   keys: number;
   sites: number;
 }
+
+export interface PHPOption {
+  key: string;
+  kind: "size" | "int" | "bool" | "timezone" | "list";
+  default: string;
+  min?: number;
+  max?: number;
+}
+
+export interface PHPSettings {
+  settings: Record<string, string>;
+  options: PHPOption[];
+  memory_mb: number;
+}

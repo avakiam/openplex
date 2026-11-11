@@ -398,6 +398,14 @@ CREATE TABLE sftp_passwords (
 	updated_at    TIMESTAMP NOT NULL
 );
 `,
+	// v17: PHP settings per website (only the ones that differ from the defaults).
+	`
+CREATE TABLE php_settings (
+	domain_id     INTEGER PRIMARY KEY REFERENCES domains(id) ON DELETE CASCADE,
+	settings_json TEXT NOT NULL,
+	updated_at    TIMESTAMP NOT NULL
+);
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

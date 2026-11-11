@@ -162,7 +162,7 @@ func siteArea(r *http.Request) (area string, write bool) {
 			return "", false
 		}
 		return areaOwner, true
-	case "actions", "logs", "redirects", "cron":
+	case "actions", "logs", "redirects", "cron", "php":
 		return db.AreaSite, write
 	case "files":
 		return db.AreaFiles, write
