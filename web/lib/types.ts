@@ -204,6 +204,18 @@ export interface Database {
   created_at: string;
   /** Owned by another account and shared with the caller. */
   shared?: boolean;
+  /** Public port for remote clients; 0 when the database cannot be reached remotely. */
+  remote_port: number;
+  /** Addresses/networks allowed to connect remotely; empty = remote access off. */
+  remote_allow: string[];
+}
+
+export interface RemoteDBInfo {
+  available: boolean;
+  ports: Record<string, number>;
+  fingerprint: string;
+  client_ip: string;
+  ufw_blocks: number[];
 }
 
 export interface DatabaseCredentials {

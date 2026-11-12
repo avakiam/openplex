@@ -16,23 +16,26 @@ const (
 // Database is a tenant database (MariaDB/PostgreSQL schema + user) or a
 // dedicated Redis instance. The password is stored encrypted (secrets.Box).
 type Database struct {
-	ID            int64     `json:"id"`
-	OwnerID       int64     `json:"owner_id"`
-	Engine        string    `json:"engine"`
-	Name          string    `json:"name"`
-	Username      string    `json:"username"`
-	PasswordEnc   string    `json:"-"`
-	Status        string    `json:"status"` // pending | running | error
-	StatusMessage string    `json:"status_message"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID            int64  `json:"id"`
+	OwnerID       int64  `json:"owner_id"`
+	Engine        string `json:"engine"`
+	Name          string `json:"name"`
+	Username      string `json:"username"`
+	PasswordEnc   string `json:"-"`
+	Status        string `json:"status"` // pending | running | error
+	StatusMessage string `json:"status_message"`
+	// RemoteAllow lists the addresses/networks (comma-separated) allowed to
+	// reach the database remotely; empty = no remote access.
+	RemoteAllow string    `json:"-"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-const databaseCols = `id, owner_id, engine, name, username, password_enc, status, status_message, created_at, updated_at`
+const databaseCols = `id, owner_id, engine, name, username, password_enc, status, status_message, remote_allow, created_at, updated_at`
 
 func scanDatabase(row interface{ Scan(...any) error }) (*Database, error) {
 	var d Database
-	if err := row.Scan(&d.ID, &d.OwnerID, &d.Engine, &d.Name, &d.Username, &d.PasswordEnc, &d.Status, &d.StatusMessage, &d.CreatedAt, &d.UpdatedAt); err != nil {
+	if err := row.Scan(&d.ID, &d.OwnerID, &d.Engine, &d.Name, &d.Username, &d.PasswordEnc, &d.Status, &d.StatusMessage, &d.RemoteAllow, &d.CreatedAt, &d.UpdatedAt); err != nil {
 		return nil, mapErr(err)
 	}
 	return &d, nil
@@ -122,4 +125,34 @@ func (db *DB) DeleteDatabase(ctx context.Context, id int64) error {
 		return err
 	}
 	return expectOne(res)
+}
+
+// SetDatabaseRemote sets the remote access allow-list of a database (empty = off).
+func (db *DB) SetDatabaseRemote(ctx context.Context, id int64, allow string) error {
+	res, err := db.sql.ExecContext(ctx, `UPDATE databases SET remote_allow = ?, updated_at = ? WHERE id = ?`, allow, now(), id)
+	if err != nil {
+		return mapErr(err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// RemoteDatabases lists the databases with remote access switched on.
+func (db *DB) RemoteDatabases(ctx context.Context) ([]*Database, error) {
+	rows, err := db.sql.QueryContext(ctx, `SELECT `+databaseCols+` FROM databases WHERE remote_allow <> '' ORDER BY id`)
+	if err != nil {
+		return nil, mapErr(err)
+	}
+	defer rows.Close()
+	var out []*Database
+	for rows.Next() {
+		d, err := scanDatabase(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, d)
+	}
+	return out, rows.Err()
 }

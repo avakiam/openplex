@@ -87,6 +87,7 @@ type Manager struct {
 	lastErr   string
 	appliedAt *time.Time
 	services  []int
+	restrict  []Restricted
 }
 
 // SetServicePorts declares the TCP ports OpenPlex serves on the host itself
@@ -95,6 +96,18 @@ func (m *Manager) SetServicePorts(ports ...int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.services = ports
+}
+
+// SetRestrictedPorts declares the TCP ports OpenPlex serves only to some
+// addresses (remote database access) and reloads the firewall.
+func (m *Manager) SetRestrictedPorts(ctx context.Context, r []Restricted) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.restrict = r
+	if !m.Available() {
+		return nil
+	}
+	return m.reload(ctx)
 }
 
 // New creates a Manager. enabled=false (OPENPLEX_FIREWALL=off) leaves the
@@ -221,13 +234,13 @@ func (m *Manager) ruleset(ctx context.Context) (Ruleset, error) {
 		return Ruleset{}, err
 	}
 	if m.pending != nil {
-		return Ruleset{Enabled: m.pending.Enabled, Rules: m.pending.Rules, Blocks: blocks, Services: m.services}, nil
+		return Ruleset{Enabled: m.pending.Enabled, Rules: m.pending.Rules, Blocks: blocks, Services: m.services, Restricted: m.restrict}, nil
 	}
 	cfg, err := m.db.GetFirewall(ctx)
 	if err != nil {
 		return Ruleset{}, err
 	}
-	return Ruleset{Enabled: cfg.Enabled, Rules: cfg.Rules, Blocks: blocks, Services: m.services}, nil
+	return Ruleset{Enabled: cfg.Enabled, Rules: cfg.Rules, Blocks: blocks, Services: m.services, Restricted: m.restrict}, nil
 }
 
 // reload renders and applies the current ruleset. Callers hold m.mu.

@@ -69,6 +69,7 @@ sudo openplexd reset-password admin
 | 25, 465, 587, 143, 993, 110, 995, 4190 | Mail, when mail is turned on |
 | 53 (TCP/UDP) | DNS, when the DNS server is turned on |
 | 2222 | SFTP for website files (always allowed by the firewall; the installer also opens it in `ufw`) |
+| 3306, 5432 | Remote database access, only while some database has it on, and only to the addresses it lists |
 
 The firewall is managed from **Firewall** in the panel. It is left off when
 `ufw` is active, so they don't fight over the rules.
@@ -88,6 +89,8 @@ service after a change). The most useful ones:
 | `OPENPLEX_CAPTCHA` | `true` | `false` turns the login captcha off (e.g. after entering a wrong key) |
 | `OPENPLEX_TENANT_NETWORKS` | `10.213.0.0/16` | Address pool for the private network of each account (one /24 each) |
 | `OPENPLEX_SFTP_LISTEN` | `:2222` | SFTP server for website files (empty turns it off) |
+| `OPENPLEX_DB_REMOTE_MARIADB` | `:3306` | Remote access to MariaDB databases (empty turns it off) |
+| `OPENPLEX_DB_REMOTE_POSTGRES` | `:5432` | Remote access to PostgreSQL databases (empty turns it off) |
 
 ## E-mail alerts
 

@@ -101,6 +101,9 @@ func TestRender(t *testing.T) {
 		},
 		Blocks:   []db.FirewallBlock{{Address: "192.0.2.9"}, {Address: "2001:db8:1::/48"}, {Address: "198.51.100.1", ExpiresAt: &past}},
 		Services: []int{2222},
+		Restricted: []Restricted{{Port: 3306, Sources: []netip.Prefix{
+			netip.MustParsePrefix("198.51.100.7/32"), netip.MustParsePrefix("10.0.0.0/8"), netip.MustParsePrefix("2001:db8::1/128"),
+		}}},
 	}
 	got, err := Render(rs, now)
 	if err != nil {
@@ -119,6 +122,8 @@ func TestRender(t *testing.T) {
 		"ip saddr 203.0.113.0/24 tcp dport 8000-8100 accept",
 		"ip saddr 203.0.113.0/24 udp dport 8000-8100 accept",
 		"\t\tip6 saddr 2001:db8::/64 accept\n",
+		"\t\tip saddr { 198.51.100.7, 10.0.0.0/8 } tcp dport 3306 accept\n",
+		"\t\tip6 saddr { 2001:db8::1 } tcp dport 3306 accept\n",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("render lacks %q:\n%s", want, got)

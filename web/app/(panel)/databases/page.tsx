@@ -1,8 +1,9 @@
 "use client";
-import { Archive, Check, Copy, Database as DbIcon, Eye, EyeOff, KeyRound, Loader2, MoreHorizontal, Plus, SquareArrowOutUpRight, Trash2 } from "lucide-react";
+import { Archive, Check, Copy, Database as DbIcon, Eye, EyeOff, Globe, KeyRound, Loader2, MoreHorizontal, Plus, SquareArrowOutUpRight, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { RemoteAccessDialog } from "@/components/database-remote";
 import { ItemBackups } from "@/components/item-backups";
 import {
   Badge,
@@ -295,6 +296,7 @@ export default function DatabasesPage() {
   const [connect, setConnect] = useState<Database | null>(null);
   const [del, setDel] = useState<Database | null>(null);
   const [backups, setBackups] = useState<Database | null>(null);
+  const [remote, setRemote] = useState<Database | null>(null);
   const remove = useAction((id: number) => api.del(`/databases/${id}`), {
     success: t("Database is being deleted"),
     invalidate: [keys.databases],
@@ -306,7 +308,7 @@ export default function DatabasesPage() {
     <>
       <PageHeader
         title={t("Databases")}
-        description={t("MariaDB, PostgreSQL and Redis, reachable only from your websites.")}
+        description={t("MariaDB, PostgreSQL and Redis, reachable from your websites (and, if you allow it, from your own computer).")}
         actions={
           <Button onClick={() => setCreate(true)}>
             <Plus /> {t("New database")}
@@ -359,6 +361,11 @@ export default function DatabasesPage() {
                   </Td>
                   <Td className="font-mono text-xs text-muted-foreground">
                     {d.host}:{d.port}
+                    {d.remote_allow.length > 0 && (
+                      <Badge tone="warning" className="ml-2 font-sans" title={d.remote_allow.join(", ")}>
+                        <Globe className="size-3" /> {t("Remote")}
+                      </Badge>
+                    )}
                   </Td>
                   <Td className="tabular text-right text-muted-foreground">{sizes.data?.[d.id] !== undefined ? bytes(sizes.data[d.id]) : "—"}</Td>
                   <Td>
@@ -399,6 +406,11 @@ export default function DatabasesPage() {
                             <SquareArrowOutUpRight /> {t("Open in Adminer")}
                           </DropdownItem>
                         )}
+                        {d.remote_port > 0 && !d.shared && (
+                          <DropdownItem disabled={d.status !== "running"} onSelect={() => setRemote(d)}>
+                            <Globe /> {t("Remote access")}
+                          </DropdownItem>
+                        )}
                         <DropdownItem disabled={d.status !== "running"} onSelect={() => setBackups(d)}>
                           <Archive /> {t("Backups")}
                         </DropdownItem>
@@ -421,6 +433,7 @@ export default function DatabasesPage() {
       </Card>
       <CreateDialog open={create} onOpenChange={setCreate} />
       <CredentialsDialog db={connect} onClose={() => setConnect(null)} />
+      <RemoteAccessDialog key={remote?.id ?? 0} db={remote} onClose={() => setRemote(null)} />
       <Dialog open={!!backups} onOpenChange={(o) => !o && setBackups(null)}>
         <DialogContent title={t("Backups of {name}", { name: backups?.name ?? "" })} className="max-w-2xl">
           {backups && (

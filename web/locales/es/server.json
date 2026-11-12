@@ -288,5 +288,8 @@
   "the build command is too long": "el comando de compilación es demasiado largo",
   "a deploy is running; wait for it to finish": "hay un despliegue en curso; espera a que termine",
   "the deploy was interrupted by a panel restart; deploy again": "el despliegue se interrumpió por un reinicio del panel; vuelve a desplegar",
-  "the website is not running, so the build command could not run; start it and deploy again": "la web no está en marcha, así que el comando de compilación no se pudo ejecutar; iníciala y vuelve a desplegar"
+  "the website is not running, so the build command could not run; start it and deploy again": "la web no está en marcha, así que el comando de compilación no se pudo ejecutar; iníciala y vuelve a desplegar",
+  "only the owner of this database can change its remote access": "solo el propietario de esta base de datos puede cambiar su acceso remoto",
+  "this database cannot be reached remotely": "a esta base de datos no se puede acceder de forma remota",
+  "remote access is off on this server": "el acceso remoto está desactivado en este servidor"
 }

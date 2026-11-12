@@ -45,6 +45,7 @@ type Server struct {
 	ext      *extensions.Manager
 	updates  *update.Manager
 	sftp     *SFTPInfo
+	remote   RemoteDB
 	alerts   *alerts.Manager
 	log      *slog.Logger
 	ui       http.Handler
@@ -82,6 +83,7 @@ type Options struct {
 	Extensions   *extensions.Manager
 	Updates      *update.Manager // nil in tests that don't need it
 	SFTP         *SFTPInfo       // nil when the SFTP server is off
+	RemoteDB     RemoteDB        // nil when remote database access is off
 	Alerts       *alerts.Manager // nil in tests that don't need it
 }
 
@@ -99,6 +101,7 @@ func New(o Options) *Server {
 		ext:            o.Extensions,
 		updates:        o.Updates,
 		sftp:           o.SFTP,
+		remote:         o.RemoteDB,
 		alerts:         o.Alerts,
 		loginLimiter:   newLimiter(10, 5*time.Minute),
 		webhookLimiter: newLimiter(20, 10*time.Minute),
@@ -238,10 +241,13 @@ func (s *Server) routes() http.Handler {
 			r.Get("/databases", s.handleListDatabases)
 			r.Post("/databases", s.handleCreateDatabase)
 			r.Get("/databases/sizes", s.handleDatabaseSizes)
+			r.Get("/databases/remote", s.handleRemoteDBInfo)
+			r.Get("/databases/remote/certificate", s.handleRemoteDBCertificate)
 			r.Get("/databases/{id}", s.handleGetDatabase)
 			r.Delete("/databases/{id}", s.handleDeleteDatabase)
 			r.Get("/databases/{id}/credentials", s.handleDatabaseCredentials)
 			r.Post("/databases/{id}/rotate-password", s.handleRotateDatabasePassword)
+			r.Put("/databases/{id}/remote", s.handleSetDatabaseRemote)
 			r.Get("/databases/{id}/backups", s.handleItemBackups)
 			r.Post("/databases/{id}/backups", s.handleItemBackupNow)
 			r.Post("/databases/{id}/backups/{snap}/restore", s.handleItemRestore)

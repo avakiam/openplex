@@ -472,6 +472,8 @@ CREATE TABLE git_deploys (
 	updated_at     TIMESTAMP NOT NULL
 );
 `,
+	// 22: remote access to a database (comma-separated allowed addresses/networks; empty = off)
+	`ALTER TABLE databases ADD COLUMN remote_allow TEXT NOT NULL DEFAULT '';`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

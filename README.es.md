@@ -36,7 +36,7 @@ copias de seguridad y seguridad.
 |---|---|
 | **Webs** | Estáticas, PHP 7.4–8.4 (con las extensiones que necesitan WordPress, Laravel o Drupal), Node.js, Python y Go; configuración de PHP por web (memoria, tamaño de subida, tiempos, zona horaria…); WordPress, Joomla y Drupal con un clic (última versión, base de datos propia, en inglés, español o catalán) y sus actualizaciones, con copia de seguridad previa; comprobaciones de seguridad con correcciones en un clic; despliegue desde Git (clave de despliegue, webhook de push, comando de compilación); copias de staging en un subdominio que se envían a producción; alias y subdominios; redirecciones; variables de entorno; arrancar/parar/reiniciar; registros de acceso y de errores; límites de recursos |
 | **Archivos** | Gestor de archivos web con editor, subida, comprimir/descomprimir y permisos; SFTP (puerto 2222, claves SSH o una contraseña solo para SFTP); terminal web en el contenedor de la web |
-| **Bases de datos** | MariaDB, PostgreSQL y Redis; Adminer con un clic; rotación de contraseñas |
+| **Bases de datos** | MariaDB, PostgreSQL y Redis; Adminer con un clic; rotación de contraseñas; acceso remoto con TLS para las direcciones que permitas |
 | **Correo** | Buzones, alias y reenvíos, cuotas, registros DKIM/SPF/DMARC, webmail Roundcube con acceso en un clic |
 | **DNS** | DNS autoritativo (PowerDNS) con zonas creadas para tus dominios |
 | **Copias de seguridad** | Copias cifradas y deduplicadas (restic) en un disco local o en S3, programadas; restauración de una web, una base de datos, un dominio de correo o un solo buzón; reconstrucción completa del servidor con `openplexd restore-panel` |
@@ -73,6 +73,7 @@ las actualizaciones y cómo reconstruir un servidor perdido.
 
 - [Instalación, actualizaciones y recuperación](docs/es/installation.md)
 - [Webs: aplicaciones, configuración de PHP y SFTP](docs/es/websites.md)
+- [Bases de datos y acceso remoto](docs/es/databases.md)
 - [OpenPlex para proveedores de hosting](docs/es/hosting-providers.md)
 - [Licencia, extensiones y marca](docs/es/licensing.md)
 - [Crear una extensión](docs/es/extensions.md)

@@ -36,6 +36,10 @@ type Config struct {
 	UpdateURL string
 	// SFTPListen is where the built-in SFTP server listens ("" = off).
 	SFTPListen string
+	// DBRemoteMariaDB / DBRemotePostgres are where remote database clients
+	// connect, while some database has remote access ("" = never).
+	DBRemoteMariaDB  string
+	DBRemotePostgres string
 
 	Secret []byte // HMAC key for JWTs, loaded from DataDir/secret.key
 }
@@ -68,6 +72,8 @@ func Load(args []string) (*Config, error) {
 	fsFlags.BoolVar(&c.Captcha, "captcha", envBool("OPENPLEX_CAPTCHA", true), "ask the configured captcha on the panel login (false turns it off, e.g. after a wrong key)")
 	fsFlags.StringVar(&c.TenantNetworks, "tenant-networks", env("OPENPLEX_TENANT_NETWORKS", "10.213.0.0/16"), "address pool for the per-account website networks (one /24 each)")
 	fsFlags.StringVar(&c.SFTPListen, "sftp-listen", env("OPENPLEX_SFTP_LISTEN", ":2222"), "address of the built-in SFTP server for website files (empty: off)")
+	fsFlags.StringVar(&c.DBRemoteMariaDB, "db-remote-mariadb", env("OPENPLEX_DB_REMOTE_MARIADB", ":3306"), "address for remote MariaDB clients, open only while some database has remote access (empty: never)")
+	fsFlags.StringVar(&c.DBRemotePostgres, "db-remote-postgres", env("OPENPLEX_DB_REMOTE_POSTGRES", ":5432"), "address for remote PostgreSQL clients, open only while some database has remote access (empty: never)")
 	fsFlags.StringVar(&c.UpdateURL, "update-url", env("OPENPLEX_UPDATE_URL", "https://api.github.com/repos/avakiam/openplex/releases/latest"), "latest stable release of OpenPlex")
 	fsFlags.StringVar(&c.MarketplaceURL, "marketplace-url", env("OPENPLEX_MARKETPLACE_URL", "https://marketplace.openplex.dev"), "extension marketplace (empty: none)")
 	fsFlags.DurationVar(&c.AccessTTL, "access-ttl", 15*time.Minute, "access token lifetime")

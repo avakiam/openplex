@@ -214,6 +214,15 @@ type Ruleset struct {
 	// Services are TCP ports OpenPlex itself serves on the host (SFTP): open
 	// whenever the firewall is on, like the panel's own web ports.
 	Services []int
+	// Restricted are TCP ports OpenPlex serves only to some addresses (remote
+	// database access): open to those sources whenever the firewall is on.
+	Restricted []Restricted
+}
+
+// Restricted is a TCP port open only to some source networks.
+type Restricted struct {
+	Port    int
+	Sources []netip.Prefix
 }
 
 // Table is the nftables table OpenPlex owns.
@@ -262,6 +271,25 @@ func Render(rs Ruleset, now time.Time) (string, error) {
 				return "", fmt.Errorf("service port %d out of range", p)
 			}
 			fmt.Fprintf(&b, "\t\ttcp dport %d accept\n", p)
+		}
+		for _, r := range rs.Restricted {
+			if r.Port < 1 || r.Port > 65535 {
+				return "", fmt.Errorf("service port %d out of range", r.Port)
+			}
+			var s4, s6 []string
+			for _, p := range r.Sources {
+				if p.Addr().Is4() {
+					s4 = append(s4, FormatPrefix(p))
+				} else {
+					s6 = append(s6, FormatPrefix(p))
+				}
+			}
+			if len(s4) > 0 {
+				fmt.Fprintf(&b, "\t\tip saddr { %s } tcp dport %d accept\n", strings.Join(s4, ", "), r.Port)
+			}
+			if len(s6) > 0 {
+				fmt.Fprintf(&b, "\t\tip6 saddr { %s } tcp dport %d accept\n", strings.Join(s6, ", "), r.Port)
+			}
 		}
 		for _, r := range rs.Rules {
 			rr := r

@@ -288,5 +288,8 @@
   "the build command is too long": "l'ordre de compilació és massa llarga",
   "a deploy is running; wait for it to finish": "hi ha un desplegament en curs; espera que acabi",
   "the deploy was interrupted by a panel restart; deploy again": "el desplegament es va interrompre per un reinici del tauler; torna a desplegar",
-  "the website is not running, so the build command could not run; start it and deploy again": "el web no està en marxa, així que l'ordre de compilació no s'ha pogut executar; engega'l i torna a desplegar"
+  "the website is not running, so the build command could not run; start it and deploy again": "el web no està en marxa, així que l'ordre de compilació no s'ha pogut executar; engega'l i torna a desplegar",
+  "only the owner of this database can change its remote access": "només el propietari d'aquesta base de dades en pot canviar l'accés remot",
+  "this database cannot be reached remotely": "a aquesta base de dades no s'hi pot accedir de forma remota",
+  "remote access is off on this server": "l'accés remot està desactivat en aquest servidor"
 }

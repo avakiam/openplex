@@ -86,7 +86,11 @@ has been verified on the Linux test server. One commit per milestone.
       php-fpm-alpine images: bcmath exif gd(freetype/jpeg/webp) intl(+full ICU) mysqli opcache pdo_mysql
       pdo_pgsql pgsql redis zip, production php.ini + OpenPlex overrides; recipe changes rebuild and
       redeploy automatically, stale images are removed
-- [ ] Remote access option (publish a DB port per-IP allow-list) and per-database size limits
+- [x] Remote access per database: openplexd answers on 3306/5432 (only while some database has it on), refuses
+      addresses on no list before any greeting, requires TLS (own certificate, fingerprint + download), reads the
+      user (and PostgreSQL database) from the handshake and forwards only what that database allows; the panel
+      firewall opens the port to the listed addresses only; ufw warning; Redis excluded
+- [ ] Per-database size limits
 
 ## M8 — Mail
 - [x] Mail stack: docker-mailserver 16.0.1 (Postfix 3.10, Dovecot 2.4, Rspamd with Redis; no ClamAV/SpamAssassin),
@@ -522,3 +526,12 @@ has been verified on the Linux test server. One commit per milestone.
   is removed after each deploy and the git folder goes with the website. Found on the way: ssh refused to run
   for a uid without a passwd entry (generated passwd/group are now mounted) and git refused files left by
   another owner (safe.directory allowed inside the job). Git tab checked in the browser (Spanish).
+- 2026-11-12 — Remote database access (0.25.91): on the LAN, from another machine with the official mariadb 11.8 and
+  postgres 17 clients: a MariaDB database answered over TLS verified against the downloaded certificate (CA +
+  host name), a PostgreSQL one with sslmode=verify-full and with the default sslmode=prefer. Refused with a clear
+  message: no TLS (both), another user (MariaDB, before reaching the server), another database (PostgreSQL), a
+  wrong password (by the server). An address on no list got the connection closed before any greeting. PostgreSQL
+  on 5432 failed with "address already in use" (a host PostgreSQL) and was rolled back; on 5433 it worked. Turning
+  remote access off, and deleting the databases, closed the listeners; restarting the daemon reopened them with the
+  same certificate. Dialog (list, my address, anyone warning, ufw warning, turn off, how to connect) checked in the
+  browser (Spanish).

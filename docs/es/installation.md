@@ -70,6 +70,7 @@ sudo openplexd reset-password admin
 | 25, 465, 587, 143, 993, 110, 995, 4190 | Correo, si está activado |
 | 53 (TCP/UDP) | DNS, si el servidor DNS está activado |
 | 2222 | SFTP para los archivos de las webs (el cortafuegos siempre lo permite; el instalador también lo abre en `ufw`) |
+| 3306, 5432 | Acceso remoto a bases de datos, solo mientras alguna lo tiene activado y solo para las direcciones de su lista |
 
 El cortafuegos se gestiona en **Firewall** dentro del panel. Se queda
 apagado si `ufw` está activo, para que no se pisen las reglas.
@@ -89,6 +90,8 @@ servicio después de cambiarlos). Los más útiles:
 | `OPENPLEX_CAPTCHA` | `true` | `false` desactiva el captcha del inicio de sesión (por ejemplo tras poner una clave errónea) |
 | `OPENPLEX_TENANT_NETWORKS` | `10.213.0.0/16` | Rango de direcciones para la red privada de cada cuenta (una /24 cada una) |
 | `OPENPLEX_SFTP_LISTEN` | `:2222` | Servidor SFTP para los archivos de las webs (vacío lo desactiva) |
+| `OPENPLEX_DB_REMOTE_MARIADB` | `:3306` | Acceso remoto a las bases de datos MariaDB (vacío lo desactiva) |
+| `OPENPLEX_DB_REMOTE_POSTGRES` | `:5432` | Acceso remoto a las bases de datos PostgreSQL (vacío lo desactiva) |
 
 ## Alertas por correo
 

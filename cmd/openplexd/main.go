@@ -220,6 +220,21 @@ func run(args []string) error {
 	workers.Add(1)
 	go func() { defer workers.Done(); fw.Run(ctx) }()
 
+	var remoteDB api.RemoteDB // a nil *Proxy must not become a non-nil interface
+	if orch != nil && (cfg.DBRemoteMariaDB != "" || cfg.DBRemotePostgres != "") {
+		proxy, err := newDBProxy(ctx, cfg, store, orch, fw, log)
+		if err != nil {
+			return err
+		}
+		defer proxy.Close()
+		remoteDB = proxy
+		go func() {
+			if err := proxy.Sync(ctx); err != nil {
+				log.Error("remote database access", "err", err)
+			}
+		}()
+	}
+
 	var extRT extensions.Runtime // a nil *Orchestrator must not become a non-nil interface
 	if orch != nil {
 		extRT = orch
@@ -281,7 +296,7 @@ func run(args []string) error {
 	srv = api.New(api.Options{
 		Config: cfg, DB: store, Orchestrator: orch, Monitor: mon, Logger: log,
 		UI: ui.Handler(), Version: version, BaseContext: ctx, Box: box, Backups: backups, Cron: crons, Firewall: fw, DNS: dnsMgr, Mail: mailMgr,
-		Extensions: exts, Updates: updates, SFTP: sftpInfo, Alerts: alertMgr,
+		Extensions: exts, Updates: updates, SFTP: sftpInfo, Alerts: alertMgr, RemoteDB: remoteDB,
 	})
 	if sftpSrv != nil {
 		workers.Add(1)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -566,4 +567,25 @@ func (o *Orchestrator) ResetMariaDB(ctx context.Context, d *db.Database) error {
 func mariaGrant(d *db.Database) string {
 	name := strings.NewReplacer("_", `\_`, "%", `\%`).Replace(d.Name)
 	return fmt.Sprintf("GRANT ALL PRIVILEGES ON `%s`.* TO '%s'@'%%'", name, d.Username)
+}
+
+// EngineAddr returns ip:port of a shared engine's server on the internal
+// database network, reachable from the host (remote database access).
+func (o *Orchestrator) EngineAddr(ctx context.Context, engine string) (string, error) {
+	e, ok := Engines[engine]
+	if !ok || !e.Shared {
+		return "", fmt.Errorf("%s is not a shared engine", engine)
+	}
+	c, err := o.findContainer(ctx, e.container)
+	if err != nil {
+		return "", err
+	}
+	if c == nil || !c.State.Running {
+		return "", fmt.Errorf("the %s server is not running", engine)
+	}
+	ep := c.NetworkSettings.Networks[DBNetwork]
+	if ep == nil || ep.IPAddress == "" {
+		return "", fmt.Errorf("the %s server has no address", engine)
+	}
+	return net.JoinHostPort(ep.IPAddress, strconv.Itoa(e.Port)), nil
 }

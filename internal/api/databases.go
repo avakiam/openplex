@@ -39,11 +39,15 @@ type databaseView struct {
 	Port   int    `json:"port"`
 	Label  string `json:"engine_label"`
 	Shared bool   `json:"shared"` // owned by someone else, opened by a grant
+	// RemotePort is the public port remote clients use (0: not reachable remotely).
+	RemotePort  int      `json:"remote_port"`
+	RemoteAllow []string `json:"remote_allow"`
 }
 
-func viewOf(d *db.Database) databaseView {
+func (s *Server) viewOf(d *db.Database) databaseView {
 	e := docker.Engines[d.Engine]
-	return databaseView{Database: d, Host: docker.DatabaseHost(d), Port: e.Port, Label: e.Label}
+	return databaseView{Database: d, Host: docker.DatabaseHost(d), Port: e.Port, Label: e.Label,
+		RemotePort: s.remotePort(d), RemoteAllow: splitAllow(d.RemoteAllow)}
 }
 
 func (s *Server) loadDatabase(w http.ResponseWriter, r *http.Request) *db.Database {
@@ -104,7 +108,7 @@ func (s *Server) handleListDatabases(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]databaseView, 0, len(list))
 	for _, d := range list {
-		v := viewOf(d)
+		v := s.viewOf(d)
 		v.Shared = shared[d.ID]
 		out = append(out, v)
 	}
@@ -128,7 +132,7 @@ func (s *Server) handleDatabaseSizes(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleGetDatabase(w http.ResponseWriter, r *http.Request) {
 	if d := s.loadDatabase(w, r); d != nil {
-		writeJSON(w, http.StatusOK, viewOf(d))
+		writeJSON(w, http.StatusOK, s.viewOf(d))
 	}
 }
 
@@ -207,7 +211,7 @@ func (s *Server) handleCreateDatabase(w http.ResponseWriter, r *http.Request) {
 		}
 		return s.db.SetDatabaseStatus(ctx, cp.ID, db.StatusRunning, "")
 	})
-	writeJSON(w, http.StatusCreated, viewOf(d))
+	writeJSON(w, http.StatusCreated, s.viewOf(d))
 }
 
 func (s *Server) handleDatabaseCredentials(w http.ResponseWriter, r *http.Request) {
@@ -220,7 +224,7 @@ func (s *Server) handleDatabaseCredentials(w http.ResponseWriter, r *http.Reques
 		s.fail(w, r, err)
 		return
 	}
-	v := viewOf(d)
+	v := s.viewOf(d)
 	var uri string
 	switch d.Engine {
 	case db.EngineMariaDB:
@@ -281,7 +285,13 @@ func (s *Server) handleDeleteDatabase(w http.ResponseWriter, r *http.Request) {
 			_ = s.db.SetDatabaseStatus(ctx, cp.ID, db.StatusError, "delete failed: "+err.Error())
 			return err
 		}
-		return s.db.DeleteDatabase(ctx, cp.ID)
+		if err := s.db.DeleteDatabase(ctx, cp.ID); err != nil {
+			return err
+		}
+		if cp.RemoteAllow != "" {
+			s.syncRemote(ctx)
+		}
+		return nil
 	})
 	w.WriteHeader(http.StatusAccepted)
 }

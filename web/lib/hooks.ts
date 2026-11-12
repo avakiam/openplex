@@ -41,6 +41,7 @@ import type {
   ExtensionUI,
   MailOverview,
   Redirect,
+  RemoteDBInfo,
   Runtime,
   SSHKey,
   SystemInfo,
@@ -60,6 +61,7 @@ export const keys = {
   runtimes: ["runtimes"] as const,
   databases: ["databases"] as const,
   dbSizes: ["databases", "sizes"] as const,
+  remoteDB: ["databases", "remote"] as const,
   engines: ["database-engines"] as const,
   apiKeys: ["api-keys"] as const,
   backupSettings: ["backups", "settings"] as const,
@@ -183,6 +185,9 @@ export const useDatabaseSizes = (enabled: boolean) =>
     enabled,
     refetchInterval: 30_000,
   });
+
+export const useRemoteDBInfo = (enabled: boolean) =>
+  useQuery({ queryKey: keys.remoteDB, queryFn: () => api.get<RemoteDBInfo>("/databases/remote"), enabled });
 
 export const useBackupSettings = () => useQuery({ queryKey: keys.backupSettings, queryFn: () => api.get<BackupSettings>("/backups/settings"), retry: false });
 

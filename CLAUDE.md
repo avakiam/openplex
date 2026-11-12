@@ -50,6 +50,7 @@ internal/docker/      Docker SDK orchestrator: networks, edge, site runtimes, re
 internal/ssl/         Caddy edge config rendering + admin-API reload (ACME is Caddy's job)
 internal/files/       jailed filesystem ops for the web file manager
 internal/sftpd/       built-in SFTP server for website files (keys / SFTP password, one folder per website)
+internal/dbproxy/      remote database access: TLS-terminating MariaDB/PostgreSQL proxy with per-database IP allow-lists
 internal/firewall/    host firewall (own nftables table inet openplex, apply/keep/rollback) + Fail2Ban client
 internal/monitor/     host + container telemetry sampling
 internal/alerts/      e-mail alerts (backups, websites down, disk, certificates, updates) via local mail or SMTP
