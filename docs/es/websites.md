@@ -48,10 +48,41 @@ de datos, y la tarjeta explica por qué; puedes volver a intentarlo. Solo el
 propietario de la web (y quienes gestionan esa cuenta) pueden instalar
 aplicaciones, porque la base de datos se crea a su nombre.
 
-Una vez instalada, la aplicación es tuya: actualízala desde su propia
-administración. WordPress puede empezar en inglés unos días después de una
-versión nueva, hasta que se publique la traducción; luego la ofrece en
-**Escritorio → Actualizaciones**.
+WordPress puede empezar en inglés unos días después de una versión nueva,
+hasta que se publique la traducción; luego la ofrece en **Escritorio →
+Actualizaciones**.
+
+### Actualizar una aplicación
+
+La tarjeta **Aplicación** muestra lo que se puede actualizar: la propia
+aplicación y, en WordPress, sus plugins y temas; en Drupal, sus módulos.
+OpenPlex lo comprueba una vez al día; **Comprobar ahora** lo comprueba al
+momento. **Actualizar** te deja elegir qué actualizar y después:
+
+1. hace una copia de seguridad de los archivos de la web y de la base de datos
+   de la aplicación (aparece en **Copias de seguridad** marcada *antes de una
+   actualización*); si la copia falla, no se actualiza nada;
+2. actualiza con las herramientas de la propia aplicación: WP-CLI en WordPress
+   (con la actualización de la base de datos y las traducciones), la línea de
+   comandos de Joomla en Joomla, Composer y Drush en Drupal (Drush se añade al
+   proyecto la primera vez; mientras tanto la web está en modo mantenimiento,
+   y si Composer falla se vuelve a dejar el código anterior);
+3. comprueba que la web sigue respondiendo. Si da un error de servidor, la
+   tarjeta indica que la actualización falló: restaura la copia desde la
+   pestaña **Copias de seguridad** de la web.
+
+Notas:
+
+- Las extensiones de Joomla se actualizan desde su administración (**Sistema →
+  Actualizar → Extensiones**); la tarjeta las muestra.
+- Drupal se actualiza dentro de las versiones que permite su `composer.json`:
+  no se ofrece una versión mayor nueva ni un módulo fijado a una versión
+  exacta.
+- Para actualizar, la web debe estar en marcha y el servidor necesita acceso a
+  Internet; suele tardar menos de un minuto (unos minutos en Drupal).
+- Solo el propietario de la web (y quien gestiona esa cuenta) puede comprobar
+  y actualizar, igual que al instalar. También puedes seguir actualizando desde
+  la administración de la aplicación.
 
 ## Configuración de PHP
 

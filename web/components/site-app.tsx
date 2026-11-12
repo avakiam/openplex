@@ -1,5 +1,5 @@
 "use client";
-import { Check, Copy, ExternalLink, LayoutTemplate, RefreshCw, RotateCcw, TriangleAlert } from "lucide-react";
+import { ArrowUpCircle, Check, CircleCheck, Copy, ExternalLink, LayoutTemplate, RefreshCw, RotateCcw, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -7,8 +7,9 @@ import { Button, Card, CardBody, CardHeader, Dialog, DialogContent, ErrorBox, Fi
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { keys, useAction, useApps, useSiteApp } from "@/lib/hooks";
-import { tServer, useT } from "@/lib/i18n";
-import type { AppInfo, Domain, SiteApp } from "@/lib/types";
+import { tk, tServer, useT } from "@/lib/i18n";
+import type { AppInfo, AppUpdates, Domain, SiteApp } from "@/lib/types";
+import { ago } from "@/lib/utils";
 
 const languageNames: Record<string, string> = { en: "English", es: "Español", ca: "Català" };
 
@@ -161,7 +162,7 @@ export function SiteAppCard({ d, canInstall }: { d: Domain; canInstall: boolean 
             <p>{t("Installing {app}… This usually takes one or two minutes.", { app: app.name })}</p>
           </div>
         )}
-        {app?.status === "installed" && <Installed app={app} />}
+        {app?.status === "installed" && <Installed app={app} canManage={canInstall} />}
         {app?.status === "error" && (
           <>
             <div className="flex items-start gap-2 text-destructive">
@@ -184,7 +185,7 @@ export function SiteAppCard({ d, canInstall }: { d: Domain; canInstall: boolean 
   );
 }
 
-function Installed({ app }: { app: SiteApp }) {
+function Installed({ app, canManage }: { app: SiteApp; canManage: boolean }) {
   const { t } = useT();
   return (
     <>
@@ -206,7 +207,168 @@ function Installed({ app }: { app: SiteApp }) {
           <ExternalLink /> {t("Open the administration")}
         </a>
       </Button>
+      <AppUpdatesSection app={app} canManage={canManage} />
     </>
+  );
+}
+
+const kindLabels: Record<string, string> = {
+  plugin: tk("Plugin"),
+  theme: tk("Theme"),
+  module: tk("Module"),
+  component: tk("Component"),
+  package: tk("Package"),
+  library: tk("Library"),
+  template: tk("Template"),
+  language: tk("Language"),
+};
+
+/** Updates of an installed application: last check, what is available, update. */
+function AppUpdatesSection({ app, canManage }: { app: SiteApp; canManage: boolean }) {
+  const { t } = useT();
+  const [all, setAll] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const check = useAction(() => api.post(`/domains/${app.domain_id}/app/check`), { invalidate: [keys.siteApp(app.domain_id)] });
+  const u = app.updates;
+  const items = u?.items ?? [];
+  const shown = all ? items : items.slice(0, 6);
+  const manual = !!u?.manual_extensions;
+  const updatable = !!u?.core || (items.length > 0 && !manual);
+
+  return (
+    <div className="grid gap-2 border-t pt-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-medium">{t("Updates")}</p>
+        {canManage && !app.task && (
+          <Button variant="ghost" size="sm" loading={check.isPending} onClick={() => check.mutate(undefined)}>
+            <RefreshCw /> {t("Check now")}
+          </Button>
+        )}
+      </div>
+      {app.task === "checking" && (
+        <p className="flex items-center gap-2 text-muted-foreground">
+          <Spinner className="size-4" /> {t("Checking for updates…")}
+        </p>
+      )}
+      {app.task === "updating" && (
+        <p className="flex items-start gap-2">
+          <Spinner className="mt-0.5 size-4 shrink-0" /> {t("Backing up the website and its database, then updating… This can take several minutes.")}
+        </p>
+      )}
+      {app.task_error && !app.task && (
+        <div className="flex items-start gap-2 text-destructive">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+          <p className="break-words text-xs">{tServer(app.task_error)}</p>
+        </div>
+      )}
+      <ErrorBox error={check.error} />
+      {!u && !app.task && <p className="text-muted-foreground">{t("Not checked for updates yet.")}</p>}
+      {u && !app.task && (
+        <>
+          {!u.core && items.length === 0 && (
+            <p className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+              <CircleCheck className="size-4" /> {t("Everything is up to date.")}
+            </p>
+          )}
+          {u.core && (
+            <p className="flex items-center gap-2">
+              <ArrowUpCircle className="size-4 text-primary" /> {t("{app} {version} is available.", { app: app.name, version: u.core })}
+            </p>
+          )}
+          {items.length > 0 && (
+            <ul className="grid gap-1 text-xs">
+              {shown.map((it) => (
+                <li key={`${it.kind}:${it.name}`} className="flex justify-between gap-3">
+                  <span className="truncate">
+                    {it.title} <span className="text-muted-foreground">· {kindLabels[it.kind] ? t(kindLabels[it.kind]) : it.kind}</span>
+                  </span>
+                  <span className="shrink-0 font-mono text-muted-foreground">
+                    {it.version && `${it.version} → `}
+                    {it.latest}
+                  </span>
+                </li>
+              ))}
+              {items.length > shown.length && (
+                <li>
+                  <button type="button" className="text-primary hover:underline" onClick={() => setAll(true)}>
+                    {t("Show all ({count})", { count: items.length })}
+                  </button>
+                </li>
+              )}
+            </ul>
+          )}
+          {manual && items.length > 0 && (
+            <p className="text-xs text-muted-foreground">{t("{app} extensions are updated from its administration (System → Update → Extensions).", { app: app.name })}</p>
+          )}
+          {canManage && updatable && (
+            <Button onClick={() => setUpdating(true)}>
+              <ArrowUpCircle /> {t("Update")}
+            </Button>
+          )}
+          <p className="text-xs text-muted-foreground">
+            {app.checked_at && t("Checked {when}.", { when: ago(app.checked_at) })} {app.last_update_at && t("Last updated {when}.", { when: ago(app.last_update_at) })}
+          </p>
+        </>
+      )}
+      {updating && u && <UpdateAppDialog app={app} updates={u} onClose={() => setUpdating(false)} />}
+    </div>
+  );
+}
+
+function UpdateAppDialog({ app, updates, onClose }: { app: SiteApp; updates: AppUpdates; onClose: () => void }) {
+  const { t } = useT();
+  const extensions = updates.manual_extensions ? 0 : updates.items.length;
+  const [core, setCore] = useState(!!updates.core);
+  const [ext, setExt] = useState(extensions > 0);
+  const update = useAction(() => api.post(`/domains/${app.domain_id}/app/update`, { core, extensions: ext }), {
+    success: t("Updating {app}", { app: app.name }),
+    invalidate: [keys.siteApp(app.domain_id)],
+    onSuccess: onClose,
+  });
+  const extLabel =
+    app.app === "wordpress" ? t("Plugins and themes ({count})", { count: extensions }) : t("Modules ({count})", { count: extensions });
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        title={t("Update {app}", { app: app.name })}
+        description={t("A backup of the website's files and its database is taken first; if it fails, nothing is updated.")}
+      >
+        <form
+          className="grid gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            update.mutate(undefined);
+          }}
+        >
+          <div className="grid gap-2 text-sm">
+            {updates.core && (
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={core} onChange={(e) => setCore(e.target.checked)} />
+                {t("{app} {from} → {to}", { app: app.name, from: updates.version, to: updates.core })}
+              </label>
+            )}
+            {extensions > 0 && (
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={ext} onChange={(e) => setExt(e.target.checked)} />
+                {extLabel}
+              </label>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t("While it runs, the website may show a maintenance page for a moment. If the website does not work afterwards, restore the backup from its Backups tab.")}
+          </p>
+          <ErrorBox error={update.error} />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              {t("Cancel")}
+            </Button>
+            <Button type="submit" loading={update.isPending} disabled={!core && !ext}>
+              {t("Update")}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -91,7 +91,8 @@ func run(args []string) error {
 	if err := bootstrapAdmin(ctx, cfg, store, log); err != nil {
 		return err
 	}
-	if n, err := store.FailInterruptedSiteApps(ctx, "the install was interrupted by a panel restart; delete the files it left and its database, then install again"); err != nil {
+	if n, err := store.FailInterruptedSiteApps(ctx, "the install was interrupted by a panel restart; delete the files it left and its database, then install again",
+		"interrupted by a panel restart; if it was an update, check the website and restore the backup taken before it if needed"); err != nil {
 		return err
 	} else if n > 0 {
 		log.Warn("application installs interrupted by the restart", "count", n)
@@ -288,6 +289,8 @@ func run(args []string) error {
 		}()
 	}
 	exts.SetAPI(srv.ExtensionAPI)
+	workers.Add(1)
+	go func() { defer workers.Done(); srv.RunAppUpdateChecks(ctx) }()
 	workers.Add(1)
 	go func() { defer workers.Done(); exts.Reconcile(ctx) }()
 	httpSrv := &http.Server{

@@ -277,8 +277,15 @@ has been verified on the Linux test server. One commit per milestone.
       Up to 10 recipients, e-mails in en/es/ca, sent through the server's mail service (sendmail in the mail
       container) or an SMTP server (STARTTLS/TLS/none, password sealed); header-injection-proof messages, test
       e-mail, Alerts page for administrators
-- [ ] Manage installed applications: update core and plugins/extensions (WP-CLI, Joomla/Drupal CLIs),
-      clone to a staging subdomain and push back, security hardening checks
+- [x] Application updates (migration v19): daily and on-demand update checks (WP-CLI core/plugins/themes,
+      Joomla `core:update:check` + `update:extensions:check` read from `#__updates`, Composer dry run for Drupal);
+      Update = synchronous backup of the site files + app database (`app:<id>` scope, trigger `app_update`; no
+      update when it fails), then WP-CLI (core, update-db, plugins, themes, translations), `joomla.php core:update`
+      or Composer + Drush (`updatedb`, `cache:rebuild`, maintenance mode, composer.json/lock rollback on failure,
+      unknown Composer plugins disabled, symfony/runtime allowed), then an HTTP check of the site from inside its
+      container (5xx = failed update pointing at the backup). One task per site; restarts end running tasks.
+      Joomla extensions stay in Joomla's administration. Owner-only like installs
+- [ ] Manage installed applications: clone to a staging subdomain and push back, security hardening checks
 - [ ] Git deploy: clone a repository into a website (deploy key), pull on a webhook or by hand, optional
       build command
 
@@ -456,3 +463,11 @@ has been verified on the Linux test server. One commit per milestone.
   on the LAN (no mail service) the test failed with a clear message, a website kept in error raised "Web caída"
   after 2 minutes with the send error recorded, and it was resolved when the site came back; settings
   validation refused an empty recipient list, a CRLF in an address and a bad SMTP host. Alerts page checked.
+- 2026-11-12 — Application updates (0.21.91): on the LAN, WordPress 6.8.3 (old Akismet and theme), Joomla 5.3.0
+  and Drupal 11.1.0 (with token pinned at 1.15.0 under ^1.15) were found with their updates and updated through
+  the panel: WordPress core then plugins/themes to 7.1.4, Joomla to 5.4.10, Drupal core + token to 11.4.12 /
+  1.18.0, each after an `app:<id>` backup; re-checks came back clean. The first Drupal run broke the site (HTTP
+  500: symfony/runtime had been disabled, so `vendor/autoload_runtime.php` was missing) — fixed by allowing that
+  plugin and by the new post-update site check; a WordPress site broken on purpose (web-only fatal mu-plugin)
+  made the update fail with the backup hint. Refusals: Joomla extensions-only, nothing chosen, a second task
+  while one runs. Card, dialog and progress states checked in the browser (Spanish).

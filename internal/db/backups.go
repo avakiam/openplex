@@ -59,8 +59,8 @@ func (db *DB) SaveBackupSettings(ctx context.Context, s *BackupSettings) error {
 type BackupRun struct {
 	ID         int64      `json:"id"`
 	Kind       string     `json:"kind"`    // backup | restore
-	Trigger    string     `json:"trigger"` // manual | scheduled
-	Scope      string     `json:"scope"`   // all | site:<id> | db:<id> | panel
+	Trigger    string     `json:"trigger"` // manual | scheduled | app_update
+	Scope      string     `json:"scope"`   // all | site:<id> | db:<id> | app:<id> | panel
 	Status     string     `json:"status"`  // running | success | error
 	Message    string     `json:"message"`
 	BytesAdded int64      `json:"bytes_added"`

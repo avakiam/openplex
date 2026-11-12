@@ -257,5 +257,12 @@
   "the SMTP password is too long": "la contraseña SMTP es demasiado larga",
   "alerts are not available on this server": "las alertas no están disponibles en este servidor",
   "add at least one recipient": "añade al menos un destinatario",
-  "this server's mail service is off: turn it on under Mail, or send through an SMTP server": "el servicio de correo de este servidor está apagado: actívalo en Correo, o envía mediante un servidor SMTP"
+  "this server's mail service is off: turn it on under Mail, or send through an SMTP server": "el servicio de correo de este servidor está apagado: actívalo en Correo, o envía mediante un servidor SMTP",
+  "the website is not running; start it first": "la web no está en marcha; iníciala primero",
+  "the application is busy: wait for the current check or update to finish": "la aplicación está ocupada: espera a que termine la comprobación o actualización en curso",
+  "the application is not installed": "la aplicación no está instalada",
+  "choose what to update": "elige qué actualizar",
+  "this application is not known to this version of OpenPlex": "esta versión de OpenPlex no conoce esta aplicación",
+  "the update check gave no result": "la comprobación de actualizaciones no dio ningún resultado",
+  "interrupted by a panel restart; if it was an update, check the website and restore the backup taken before it if needed": "interrumpida por un reinicio del panel; si era una actualización, revisa la web y, si hace falta, restaura la copia hecha antes"
 }

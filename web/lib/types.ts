@@ -237,7 +237,7 @@ export interface BackupSettings {
 export interface BackupRun {
   id: number;
   kind: "backup" | "restore";
-  trigger: "manual" | "scheduled";
+  trigger: "manual" | "scheduled" | "app_update";
   scope: string;
   status: "running" | "success" | "error";
   message: string;
@@ -616,6 +616,22 @@ export interface AppInfo {
   min_php: string;
   admin_path: string;
   languages: string[];
+  manual_extensions: boolean;
+}
+
+export interface AppUpdate {
+  kind: string;
+  name: string;
+  title: string;
+  version: string;
+  latest: string;
+}
+
+export interface AppUpdates {
+  version: string;
+  core: string;
+  items: AppUpdate[];
+  manual_extensions?: boolean;
 }
 
 export interface SiteApp {
@@ -633,6 +649,11 @@ export interface SiteApp {
   status_message: string;
   created_at: string;
   updated_at: string;
+  updates: AppUpdates | null;
+  checked_at: string | null;
+  task: "" | "checking" | "updating";
+  task_error: string;
+  last_update_at: string | null;
 }
 
 export interface SFTPStatus {

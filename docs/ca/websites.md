@@ -48,10 +48,41 @@ de dades, i la targeta n'explica el motiu; ho pots tornar a provar. Només el
 propietari del web (i qui gestiona aquest compte) pot instal·lar aplicacions,
 perquè la base de dades es crea al seu nom.
 
-Un cop instal·lada, l'aplicació és teva: actualitza-la des de la seva pròpia
-administració. WordPress pot començar en anglès uns dies després d'una versió
-nova, fins que se'n publiqui la traducció; després l'ofereix a
-**Escriptori → Actualitzacions**.
+WordPress pot començar en anglès uns dies després d'una versió nova, fins que
+se'n publiqui la traducció; després l'ofereix a **Escriptori →
+Actualitzacions**.
+
+### Actualitzar una aplicació
+
+La targeta **Aplicació** mostra què es pot actualitzar: la mateixa aplicació
+i, al WordPress, els seus connectors i temes; al Drupal, els seus mòduls.
+OpenPlex ho comprova un cop al dia; **Comprova ara** ho comprova al moment.
+**Actualitza** et deixa triar què vols actualitzar i després:
+
+1. fa una còpia de seguretat dels fitxers del web i de la base de dades de
+   l'aplicació (apareix a **Còpies de seguretat** marcada *abans d'una
+   actualització*); si la còpia falla, no s'actualitza res;
+2. actualitza amb les eines de la mateixa aplicació: WP-CLI al WordPress (amb
+   l'actualització de la base de dades i les traduccions), la línia d'ordres
+   del Joomla al Joomla, Composer i Drush al Drupal (el Drush s'afegeix al
+   projecte el primer cop; mentrestant el web és en mode de manteniment, i si
+   el Composer falla es torna a deixar el codi anterior);
+3. comprova que el web encara respon. Si dona un error de servidor, la targeta
+   indica que l'actualització ha fallat: restaura la còpia des de la pestanya
+   **Còpies de seguretat** del web.
+
+Notes:
+
+- Les extensions del Joomla s'actualitzen des de la seva administració
+  (**Sistema → Actualitza → Extensions**); la targeta les mostra.
+- El Drupal s'actualitza dins de les versions que permet el seu
+  `composer.json`: no s'ofereix una versió major nova ni un mòdul fixat a una
+  versió exacta.
+- Per actualitzar, el web ha d'estar en marxa i el servidor necessita accés a
+  Internet; sol trigar menys d'un minut (uns minuts al Drupal).
+- Només el propietari del web (i qui gestiona aquell compte) pot comprovar i
+  actualitzar, igual que en instal·lar. També pots continuar actualitzant des
+  de l'administració de l'aplicació.
 
 ## Configuració de PHP
 

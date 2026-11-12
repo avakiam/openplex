@@ -7,6 +7,7 @@ package apps
 
 import (
 	"embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/mail"
@@ -30,6 +31,8 @@ type App struct {
 	AdminPath   string   `json:"admin_path"` // where its administration lives
 	Languages   []string `json:"languages"`  // languages it can be installed in (en/es/ca)
 	DBPrefix    string   `json:"-"`          // short name used in its database name
+	// ManualExtensions: its extensions are updated only from its own administration.
+	ManualExtensions bool `json:"manual_extensions"`
 }
 
 // Catalog lists the applications in display order.
@@ -37,7 +40,7 @@ var Catalog = []App{
 	{ID: "wordpress", Name: "WordPress", Description: "Websites and blogs; the most used content management system.",
 		MinPHP: "7.4", AdminPath: "/wp-admin/", Languages: []string{"en", "es", "ca"}, DBPrefix: "wp"},
 	{ID: "joomla", Name: "Joomla", Description: "Content management with users, access levels and multilingual sites built in.",
-		MinPHP: "8.3", AdminPath: "/administrator/", Languages: []string{"en"}, DBPrefix: "joomla"},
+		MinPHP: "8.3", AdminPath: "/administrator/", Languages: []string{"en"}, DBPrefix: "joomla", ManualExtensions: true},
 	{ID: "drupal", Name: "Drupal", Description: "Structured content and complex websites, with a flexible content model.",
 		MinPHP: "8.3", AdminPath: "/user/login", Languages: []string{"en", "es", "ca"}, DBPrefix: "drupal"},
 }
@@ -105,16 +108,112 @@ func cmpVersion(a, b string) int {
 }
 
 // Script returns the shell script installing a.
-func (a App) Script() (string, error) {
-	common, err := scripts.ReadFile("scripts/common.sh")
-	if err != nil {
-		return "", err
+func (a App) Script() (string, error) { return compose("lib", "empty", a.ID) }
+
+// CheckScript returns the shell script listing the updates of a; it prints
+// them as one "OPX_RESULT=<json>" line (see ParseUpdates).
+func (a App) CheckScript() (string, error) { return compose("lib", a.ID+"-check") }
+
+// UpdateScript returns the shell script updating a. Its environment says what
+// to update: OPX_CORE=1 the application itself, OPX_EXTENSIONS=1 its
+// plugins, themes or modules.
+func (a App) UpdateScript() (string, error) { return compose("lib", a.ID+"-update") }
+
+func compose(parts ...string) (string, error) {
+	var b strings.Builder
+	for _, p := range parts {
+		s, err := scripts.ReadFile("scripts/" + p + ".sh")
+		if err != nil {
+			return "", fmt.Errorf("no script %s", p)
+		}
+		b.Write(s)
+		b.WriteByte('\n')
 	}
-	body, err := scripts.ReadFile("scripts/" + a.ID + ".sh")
-	if err != nil {
-		return "", fmt.Errorf("no install script for %s", a.ID)
+	return b.String(), nil
+}
+
+// UpdateEnv is the environment of the update script.
+// host is the website's name, used to check it still answers afterwards.
+func UpdateEnv(docroot, host string, core, extensions bool) []string {
+	flag := func(b bool) string {
+		if b {
+			return "1"
+		}
+		return "0"
 	}
-	return string(common) + "\n" + string(body), nil
+	return []string{"OPX_DOCROOT=" + docroot, "OPX_HOST=" + host, "OPX_CORE=" + flag(core), "OPX_EXTENSIONS=" + flag(extensions)}
+}
+
+// Update is one update available for a plugin, theme, module or extension.
+type Update struct {
+	Kind    string `json:"kind"` // plugin, theme, module, component…
+	Name    string `json:"name"`
+	Title   string `json:"title"`
+	Version string `json:"version"` // installed ("" when unknown)
+	Latest  string `json:"latest"`
+}
+
+// Updates is the result of an update check.
+type Updates struct {
+	Version string   `json:"version"` // installed version of the application
+	Core    string   `json:"core"`    // newer version available ("" = up to date)
+	Items   []Update `json:"items"`
+	// ManualExtensions: the application updates its extensions only from its
+	// own administration (Joomla).
+	ManualExtensions bool `json:"manual_extensions,omitempty"`
+}
+
+// maxUpdates bounds what a check may report.
+const maxUpdates = 500
+
+// ParseUpdates reads the "OPX_RESULT=" line of a check script's output.
+func ParseUpdates(output string) (*Updates, error) {
+	line := ""
+	for _, l := range strings.Split(output, "\n") {
+		if rest, ok := strings.CutPrefix(strings.TrimSpace(l), "OPX_RESULT="); ok {
+			line = rest
+		}
+	}
+	if line == "" {
+		return nil, errors.New("the update check gave no result")
+	}
+	var u Updates
+	if err := json.Unmarshal([]byte(line), &u); err != nil {
+		return nil, fmt.Errorf("reading the update check: %w", err)
+	}
+	clip := func(s string, n int) string {
+		s = strings.Map(func(r rune) rune {
+			if unicode.IsControl(r) {
+				return -1
+			}
+			return r
+		}, strings.TrimSpace(s))
+		if utf8.RuneCountInString(s) > n {
+			s = string([]rune(s)[:n])
+		}
+		return s
+	}
+	u.Version, u.Core = clip(u.Version, 40), clip(u.Core, 40)
+	if len(u.Items) > maxUpdates {
+		u.Items = u.Items[:maxUpdates]
+	}
+	items := u.Items[:0]
+	for _, it := range u.Items {
+		it.Kind, it.Name, it.Title = clip(it.Kind, 20), clip(it.Name, 100), clip(it.Title, 200)
+		it.Version, it.Latest = clip(it.Version, 40), clip(it.Latest, 40)
+		if it.Name == "" {
+			continue
+		}
+		if it.Title == "" {
+			it.Title = it.Name
+		}
+		items = append(items, it)
+	}
+	u.Items = items
+	if u.Items == nil {
+		u.Items = []Update{}
+	}
+	return &u, nil
 }
 
 // Database is where the app stores its data.

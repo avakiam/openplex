@@ -129,5 +129,7 @@
   "AES-256 encrypted": "Xifratge AES-256",
   "What to restore": "Què restaurar",
   "Everything in this backup": "Tot el que hi ha en aquesta còpia",
-  "If this server is lost: install OpenPlex on a new one, stop it, and run this command with the repository and this key. Websites, databases and mail are then restored when it starts.": "Si perds aquest servidor: instal·la OpenPlex en un de nou, atura'l i executa aquesta ordre amb el repositori i aquesta clau. En arrencar es restauren els webs, les bases de dades i el correu."
+  "If this server is lost: install OpenPlex on a new one, stop it, and run this command with the repository and this key. Websites, databases and mail are then restored when it starts.": "Si perds aquest servidor: instal·la OpenPlex en un de nou, atura'l i executa aquesta ordre amb el repositori i aquesta clau. En arrencar es restauren els webs, les bases de dades i el correu.",
+  "{site} and its application's database": "{site} i la base de dades de la seva aplicació",
+  "before an update": "abans d'una actualització"
 }

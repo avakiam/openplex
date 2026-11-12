@@ -435,6 +435,14 @@ CREATE TABLE alerts (
 );
 CREATE INDEX alerts_recent ON alerts(first_at);
 `,
+	// v19: update checks and updates of installed applications.
+	`
+ALTER TABLE site_apps ADD COLUMN updates TEXT NOT NULL DEFAULT '';
+ALTER TABLE site_apps ADD COLUMN checked_at TIMESTAMP;
+ALTER TABLE site_apps ADD COLUMN task TEXT NOT NULL DEFAULT '';
+ALTER TABLE site_apps ADD COLUMN task_error TEXT NOT NULL DEFAULT '';
+ALTER TABLE site_apps ADD COLUMN last_update_at TIMESTAMP;
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

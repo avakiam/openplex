@@ -257,5 +257,12 @@
   "the SMTP password is too long": "la contrasenya SMTP és massa llarga",
   "alerts are not available on this server": "les alertes no estan disponibles en aquest servidor",
   "add at least one recipient": "afegeix com a mínim un destinatari",
-  "this server's mail service is off: turn it on under Mail, or send through an SMTP server": "el servei de correu d'aquest servidor està aturat: activa'l a Correu, o envia mitjançant un servidor SMTP"
+  "this server's mail service is off: turn it on under Mail, or send through an SMTP server": "el servei de correu d'aquest servidor està aturat: activa'l a Correu, o envia mitjançant un servidor SMTP",
+  "the website is not running; start it first": "el web no està en marxa; engega'l primer",
+  "the application is busy: wait for the current check or update to finish": "l'aplicació està ocupada: espera que acabi la comprovació o actualització en curs",
+  "the application is not installed": "l'aplicació no està instal·lada",
+  "choose what to update": "tria què vols actualitzar",
+  "this application is not known to this version of OpenPlex": "aquesta versió d'OpenPlex no coneix aquesta aplicació",
+  "the update check gave no result": "la comprovació d'actualitzacions no va donar cap resultat",
+  "interrupted by a panel restart; if it was an update, check the website and restore the backup taken before it if needed": "interrompuda per un reinici del tauler; si era una actualització, revisa el web i, si cal, restaura la còpia feta abans"
 }

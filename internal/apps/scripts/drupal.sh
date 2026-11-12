@@ -3,7 +3,7 @@ fetch https://www.drupal.org/download-latest/tar.gz | tar -xz --strip-components
 cp sites/default/default.settings.php sites/default/settings.php
 mkdir -p sites/default/files
 
-cat >/tmp/opx-drupal.php <<'PHP'
+cat >"$HOME/install.php" <<'PHP'
 <?php
 // Unattended install through Drupal's installer API, with MariaDB.
 $autoloader = require 'autoload.php';
@@ -35,6 +35,6 @@ install_drupal($autoloader, [
 ]);
 PHP
 step "installing"
-php -d memory_limit=384M /tmp/opx-drupal.php
-rm -f /tmp/opx-drupal.php
+php -d memory_limit=384M "$HOME/install.php"
+rm -f "$HOME/install.php"
 echo "OPX_VERSION=$(php -r 'include "core/lib/Drupal.php"; echo Drupal::VERSION;')"

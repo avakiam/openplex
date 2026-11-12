@@ -49,10 +49,39 @@ says why; you can try again. Only the owner of the website (and the people who
 manage that account) can install applications, because the database is
 created in the owner's name.
 
-Once installed, the application is yours: update it from its own
-administration. WordPress may start in English for a few days after a new
-release, until the translation is published; it then offers it under
-**Dashboard → Updates**.
+WordPress may start in English for a few days after a new release, until the
+translation is published; it then offers it under **Dashboard → Updates**.
+
+### Updating an application
+
+The **Application** card lists what can be updated: the application itself
+and, for WordPress, its plugins and themes, for Drupal its modules. OpenPlex
+checks once a day; **Check now** checks straight away. **Update** lets you
+choose what to update and then:
+
+1. backs up the website's files and the application's database (it appears in
+   **Backups** marked *before an update*); if the backup fails, nothing is
+   updated;
+2. updates with the application's own tools: WP-CLI for WordPress (with the
+   database upgrade and the translations), Joomla's command line for Joomla,
+   Composer and Drush for Drupal (Drush is added to the project the first
+   time; the website is in maintenance mode meanwhile, and a failed Composer
+   run puts the previous code back);
+3. checks that the website still answers. If it shows a server error, the
+   card says the update failed: restore the backup from the website's
+   **Backups** tab.
+
+Notes:
+
+- Joomla extensions are updated from Joomla's administration (**System →
+  Update → Extensions**); the card lists them.
+- Drupal is updated within the versions its `composer.json` allows: a new
+  major version, or a module pinned to an exact version, is not offered.
+- An update needs the website running and Internet access from the server; it
+  usually takes under a minute (a few minutes for Drupal).
+- Only the owner of the website (and the people who manage that account) can
+  check and update, as with installs. You can still update from the
+  application's own administration.
 
 ## PHP settings
 

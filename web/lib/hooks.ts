@@ -317,7 +317,7 @@ export const useSiteApp = (id: number) =>
   useQuery({
     queryKey: keys.siteApp(id),
     queryFn: () => api.get<SiteApp | null>(`/domains/${id}/app`),
-    refetchInterval: (q) => (q.state.data?.status === "installing" ? 3000 : false),
+    refetchInterval: (q) => (q.state.data?.status === "installing" || q.state.data?.task ? 3000 : false),
   });
 
 export const useSFTP = () => useQuery({ queryKey: keys.sftp, queryFn: () => api.get<SFTPStatus>("/auth/me/sftp") });

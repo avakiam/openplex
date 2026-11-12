@@ -348,7 +348,7 @@ func lastLines(s string, n int) string {
 	lines := strings.Split(strings.TrimSpace(s), "\n")
 	var keep []string
 	for _, l := range lines {
-		if l = strings.TrimSpace(l); l != "" && !strings.HasPrefix(l, "==> ") {
+		if l = strings.TrimSpace(l); l != "" && !strings.HasPrefix(l, "==> ") && !strings.HasPrefix(l, "OPX_") {
 			keep = append(keep, l)
 		}
 	}

@@ -336,6 +336,36 @@ func (m *Manager) Backup(ctx context.Context, scope, trigger string, userID *int
 	return run, nil
 }
 
+// BackupNow backs up scope and waits for it, queueing behind a running backup
+// or restore until ctx ends. Besides the scopes of Backup it takes
+// "app:<website id>": the website's files and the database of its application.
+func (m *Manager) BackupNow(ctx context.Context, scope, trigger string, userID *int64) (*db.BackupRun, error) {
+	for !m.mu.TryLock() {
+		select {
+		case <-ctx.Done():
+			return nil, ErrBusy
+		case <-time.After(2 * time.Second):
+		}
+	}
+	defer m.mu.Unlock()
+	run := &db.BackupRun{Kind: "backup", Trigger: trigger, Scope: scope, UserID: userID}
+	if err := m.db.CreateBackupRun(ctx, run); err != nil {
+		return nil, err
+	}
+	added, msg, err := m.doBackup(ctx, scope, false)
+	run.Status = "success"
+	if err != nil {
+		run.Status = "error"
+		msg = strings.TrimSpace(msg + " " + err.Error())
+		m.log.Error("backup failed", "scope", scope, "err", err)
+	} else {
+		m.log.Info("backup finished", "scope", scope, "added", added, "summary", msg)
+	}
+	run.Message = msg
+	_ = m.db.FinishBackupRun(context.WithoutCancel(ctx), run.ID, run.Status, msg, added)
+	return run, err
+}
+
 func (m *Manager) doBackup(ctx context.Context, scope string, prune bool) (int64, string, error) {
 	s, err := m.Settings(ctx)
 	if err != nil {
@@ -372,6 +402,27 @@ func (m *Manager) doBackup(ctx context.Context, scope string, prune bool) (int64
 			return 0, "", err
 		}
 		sites = append(sites, d)
+	case strings.HasPrefix(scope, "app:"):
+		id, _ := strconv.ParseInt(strings.TrimPrefix(scope, "app:"), 10, 64)
+		d, err := m.db.GetDomain(ctx, id)
+		if err != nil {
+			return 0, "", err
+		}
+		sites = append(sites, d)
+		a, err := m.db.GetSiteApp(ctx, id)
+		if err != nil {
+			return 0, "", err
+		}
+		if a.DatabaseID != nil {
+			dbr, err := m.db.GetDatabase(ctx, *a.DatabaseID)
+			if err != nil {
+				return 0, "", err
+			}
+			if dbr.Status != db.StatusRunning {
+				return 0, "", fmt.Errorf("the database %s is not running", dbr.Name)
+			}
+			dbs = append(dbs, dbr)
+		}
 	case strings.HasPrefix(scope, "db:"):
 		id, _ := strconv.ParseInt(strings.TrimPrefix(scope, "db:"), 10, 64)
 		d, err := m.db.GetDatabase(ctx, id)

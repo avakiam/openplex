@@ -184,6 +184,8 @@ function RunsCard() {
     if (s === "panel") return t("Panel configuration");
     const [kind, id] = s.split(":");
     if (kind === "site") return domains.data?.find((d) => String(d.id) === id)?.name ?? t("website #{id}", { id });
+    if (kind === "app")
+      return t("{site} and its application's database", { site: domains.data?.find((d) => String(d.id) === id)?.name ?? t("website #{id}", { id }) });
     if (kind === "db") return dbs.data?.find((d) => String(d.id) === id)?.name ?? t("database #{id}", { id });
     return s;
   };
@@ -224,7 +226,8 @@ function RunsCard() {
                 </Td>
                 <Td><RunStatus run={r} /></Td>
                 <Td className="text-right">{r.kind === "backup" && r.status === "success" ? bytes(r.bytes_added) : "—"}</Td>
-                <Td className="text-muted-foreground">{who(r.user_id)}{r.trigger === "scheduled" && <Badge className="ml-2">{t("scheduled")}</Badge>}</Td>
+                <Td className="text-muted-foreground">{who(r.user_id)}{r.trigger === "scheduled" && <Badge className="ml-2">{t("scheduled")}</Badge>}
+                  {r.trigger === "app_update" && <Badge className="ml-2">{t("before an update")}</Badge>}</Td>
               </tr>
             ))}
           </tbody>
