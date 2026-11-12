@@ -1,4 +1,14 @@
 {
-  "Uploaded {count} files": { "one": "Uploaded {count} file", "other": "Uploaded {count} files" },
-  "Delete {count} items?": { "one": "Delete {count} item?", "other": "Delete {count} items?" }
+  "Uploaded {count} files": {
+    "one": "Uploaded {count} file",
+    "other": "Uploaded {count} files"
+  },
+  "Delete {count} items?": {
+    "one": "Delete {count} item?",
+    "other": "Delete {count} items?"
+  },
+  "{count} checks passed": {
+    "one": "{count} check passed",
+    "other": "{count} checks passed"
+  }
 }

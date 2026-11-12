@@ -84,6 +84,34 @@ Notes:
   actualitzar, igual que en instal·lar. També pots continuar actualitzant des
   de l'administració de l'aplicació.
 
+### Comprovacions de seguretat
+
+La part **Seguretat** de la targeta **Aplicació** mostra el que afebleix el
+web; es comprova juntament amb les actualitzacions (cada dia o amb
+**Comprova ara**):
+
+| Aplicació | Comprovacions (✓ = OpenPlex ho pot corregir) |
+|---|---|
+| WordPress | editor de temes i connectors activat ✓, mode de depuració activat ✓, XML-RPC activat ✓, `wp-config.php` llegible per altres usuaris ✓, un administrador anomenat `admin`, connectors inactius |
+| Joomla | mode de depuració activat ✓, errors de PHP visibles ✓, HTTPS no obligatori (si el web té HTTPS) ✓, carpeta `installation` oblidada ✓, `configuration.php` llegible per altres usuaris ✓, un usuari anomenat `admin` |
+| Drupal | paquets amb vulnerabilitats conegudes (`composer audit`), sense noms d'amfitrió de confiança ✓, `update.php` obert a qualsevol ✓, errors de PHP visibles ✓, `settings.php` modificable ✓, l'administrador principal anomenat `admin` |
+| Tots els webs | HTTPS no obligatori, una versió de PHP sense correccions de seguretat (7.4, 8.0, 8.1), errors de PHP mostrats a les pàgines |
+
+Marca els problemes que vulguis corregir i prem **Corregeix els problemes
+seleccionats**. Les correccions són les habituals: `DISALLOW_FILE_EDIT` i
+`WP_DEBUG` a `wp-config.php`, un petit connector obligatori que respon a
+XML-RPC amb un 403 (esborra
+`wp-content/mu-plugins/openplex-disable-xmlrpc.php` per tornar-lo a activar),
+la configuració global del Joomla, línies marcades `// OpenPlex security` al
+final del `settings.php` del Drupal (els amfitrions de confiança són el nom
+del web i els seus àlies), i permisos privats o només de lectura. Si després
+el web deixa de respondre, el fitxer de configuració torna a quedar com
+estava. La resta (un compte `admin`, les opcions del mateix web) els canvies
+tu.
+
+Les instal·lacions noves ja no proposen `admin` com a nom de
+l'administrador.
+
 ### Còpies de staging
 
 Una còpia de staging és una còpia a part d'un web, en un subdomini, per

@@ -83,6 +83,30 @@ Notes:
   check and update, as with installs. You can still update from the
   application's own administration.
 
+### Security checks
+
+The **Security** part of the **Application** card lists what weakens the
+website, checked with the updates (daily or with **Check now**):
+
+| Application | Checks (✓ = OpenPlex can fix it) |
+|---|---|
+| WordPress | theme and plugin editor on ✓, debug mode on ✓, XML-RPC on ✓, `wp-config.php` readable by other users ✓, an administrator called `admin`, inactive plugins |
+| Joomla | debug mode on ✓, PHP errors shown ✓, HTTPS not forced (when the website has HTTPS) ✓, `installation` folder left ✓, `configuration.php` readable by other users ✓, a user called `admin` |
+| Drupal | packages with known vulnerabilities (`composer audit`), trusted host names not set ✓, `update.php` open to anyone ✓, PHP errors shown ✓, `settings.php` writable ✓, the main administrator called `admin` |
+| Every website | HTTPS not forced, a PHP version without security fixes (7.4, 8.0, 8.1), PHP errors shown on the pages |
+
+Tick the problems to fix and press **Fix the selected problems**. The fixes
+are the usual ones: `DISALLOW_FILE_EDIT` and `WP_DEBUG` in `wp-config.php`, a
+small must-use plugin that answers XML-RPC with 403 (delete
+`wp-content/mu-plugins/openplex-disable-xmlrpc.php` to turn it back on),
+Joomla's global configuration, lines marked `// OpenPlex security` at the
+end of Drupal's `settings.php` (trusted host names are the website's name and
+its aliases), and private or read-only permissions. If the website stops
+answering afterwards, the configuration file is put back as it was. The
+others (an `admin` account, the website's own settings) are yours to change.
+
+New installs no longer suggest `admin` as the administrator's name.
+
 ### Staging copies
 
 A staging copy is a separate copy of a website, on a subdomain, to try

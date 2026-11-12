@@ -113,9 +113,120 @@ func cmpVersion(a, b string) int {
 // Script returns the shell script installing a.
 func (a App) Script() (string, error) { return compose("lib", "empty", a.ID) }
 
-// CheckScript returns the shell script listing the updates of a; it prints
-// them as one "OPX_RESULT=<json>" line (see ParseUpdates).
-func (a App) CheckScript() (string, error) { return compose("lib", a.ID+"-check") }
+// CheckScript returns the shell script listing the updates of a and running
+// its security checks; it prints them as an "OPX_RESULT=<json>" and an
+// "OPX_SECURITY=<json>" line (see ParseCheck). Its environment is CheckEnv.
+func (a App) CheckScript() (string, error) { return compose("lib", a.ID+"-check", a.ID+"-security") }
+
+// CheckEnv is the environment of the check script; ssl says whether the
+// website has HTTPS.
+func CheckEnv(docroot, host string, ssl bool) []string {
+	return []string{"OPX_DOCROOT=" + docroot, "OPX_HOST=" + host, "OPX_SSL=" + flag(ssl)}
+}
+
+// HardenScript returns the shell script applying security fixes (see HardenEnv).
+func (a App) HardenScript() (string, error) { return compose("lib", a.ID+"-harden") }
+
+// HardenEnv is the environment of the harden script: the fixes to apply and
+// every name of the website (its own and its aliases').
+func HardenEnv(docroot string, hosts []string, fixes []string) []string {
+	return []string{"OPX_DOCROOT=" + docroot, "OPX_HOST=" + hosts[0], "OPX_HOSTS=" + strings.Join(hosts, " "), "OPX_FIX=" + strings.Join(fixes, " ")}
+}
+
+// Fixes lists the security checks of a that OpenPlex can fix.
+func (a App) Fixes() []string { return fixes[a.ID] }
+
+var fixes = map[string][]string{
+	"wordpress": {"wp_file_edit", "wp_debug", "wp_xmlrpc", "wp_config_perms"},
+	"joomla":    {"joomla_debug", "joomla_error_reporting", "joomla_force_ssl", "joomla_installation_dir", "joomla_config_perms"},
+	"drupal":    {"drupal_trusted_hosts", "drupal_update_free_access", "drupal_error_level", "drupal_settings_perms"},
+}
+
+// Severities of a failed security check.
+const (
+	SeverityCritical = "critical"
+	SeverityWarning  = "warning"
+	SeverityInfo     = "info"
+)
+
+var severities = map[string]string{
+	"wp_inactive_plugins": SeverityInfo,
+	"drupal_advisories":   SeverityCritical,
+	"site_php_eol":        SeverityCritical,
+}
+
+// SecurityCheck is the result of one security check.
+type SecurityCheck struct {
+	ID       string `json:"id"`
+	OK       bool   `json:"ok"`
+	Detail   string `json:"detail"`
+	Severity string `json:"severity"` // when not OK
+	Fixable  bool   `json:"fixable"`  // OpenPlex can fix it
+}
+
+// NewCheck returns a check with its severity filled in.
+func NewCheck(id string, ok bool, detail string) SecurityCheck {
+	sev := severities[id]
+	if sev == "" {
+		sev = SeverityWarning
+	}
+	return SecurityCheck{ID: id, OK: ok, Detail: detail, Severity: sev}
+}
+
+// ParseCheck reads the output of a's check script.
+func (a App) ParseCheck(output string) (*Updates, error) {
+	u, err := ParseUpdates(output)
+	if err != nil {
+		return nil, err
+	}
+	line := ""
+	for _, l := range strings.Split(output, "\n") {
+		if rest, ok := strings.CutPrefix(strings.TrimSpace(l), "OPX_SECURITY="); ok {
+			line = rest
+		}
+	}
+	if line == "" {
+		return nil, errors.New("the security checks gave no result")
+	}
+	var raw []SecurityCheck
+	if err := json.Unmarshal([]byte(line), &raw); err != nil {
+		return nil, fmt.Errorf("reading the security checks: %w", err)
+	}
+	u.Security = []SecurityCheck{}
+	for _, c := range raw {
+		c.ID = clip(c.ID, 40)
+		if c.ID == "" || len(u.Security) >= 50 {
+			continue
+		}
+		sc := NewCheck(c.ID, c.OK, clip(c.Detail, 300))
+		sc.Fixable = !c.OK && slices.Contains(a.Fixes(), c.ID)
+		u.Security = append(u.Security, sc)
+	}
+	return u, nil
+}
+
+// ValidFixes checks that every fix in ids is one a can apply.
+func (a App) ValidFixes(ids []string) error {
+	if len(ids) == 0 {
+		return errors.New("choose at least one fix")
+	}
+	for _, id := range ids {
+		if !slices.Contains(a.Fixes(), id) {
+			return fmt.Errorf("unknown fix %q", id)
+		}
+	}
+	return nil
+}
+
+// UnsupportedPHP lists the PHP versions without security support.
+var UnsupportedPHP = []string{"7.4", "8.0", "8.1"}
+
+func flag(b bool) string {
+	if b {
+		return "1"
+	}
+	return "0"
+}
 
 // UpdateScript returns the shell script updating a. Its environment says what
 // to update: OPX_CORE=1 the application itself, OPX_EXTENSIONS=1 its
@@ -159,12 +270,6 @@ func compose(parts ...string) (string, error) {
 // UpdateEnv is the environment of the update script.
 // host is the website's name, used to check it still answers afterwards.
 func UpdateEnv(docroot, host string, core, extensions bool) []string {
-	flag := func(b bool) string {
-		if b {
-			return "1"
-		}
-		return "0"
-	}
 	return []string{"OPX_DOCROOT=" + docroot, "OPX_HOST=" + host, "OPX_CORE=" + flag(core), "OPX_EXTENSIONS=" + flag(extensions)}
 }
 
@@ -185,6 +290,8 @@ type Updates struct {
 	// ManualExtensions: the application updates its extensions only from its
 	// own administration (Joomla).
 	ManualExtensions bool `json:"manual_extensions,omitempty"`
+	// Security holds the application's security checks.
+	Security []SecurityCheck `json:"security"`
 }
 
 // maxUpdates bounds what a check may report.
@@ -204,18 +311,6 @@ func ParseUpdates(output string) (*Updates, error) {
 	var u Updates
 	if err := json.Unmarshal([]byte(line), &u); err != nil {
 		return nil, fmt.Errorf("reading the update check: %w", err)
-	}
-	clip := func(s string, n int) string {
-		s = strings.Map(func(r rune) rune {
-			if unicode.IsControl(r) {
-				return -1
-			}
-			return r
-		}, strings.TrimSpace(s))
-		if utf8.RuneCountInString(s) > n {
-			s = string([]rune(s)[:n])
-		}
-		return s
 	}
 	u.Version, u.Core = clip(u.Version, 40), clip(u.Core, 40)
 	if len(u.Items) > maxUpdates {
@@ -238,6 +333,20 @@ func ParseUpdates(output string) (*Updates, error) {
 		u.Items = []Update{}
 	}
 	return &u, nil
+}
+
+// clip removes control characters from s and cuts it to n characters.
+func clip(s string, n int) string {
+	s = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, strings.TrimSpace(s))
+	if utf8.RuneCountInString(s) > n {
+		s = string([]rune(s)[:n])
+	}
+	return s
 }
 
 // Database is where the app stores its data.

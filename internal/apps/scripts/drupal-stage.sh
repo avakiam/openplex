@@ -11,6 +11,8 @@ $s = preg_replace("~\n// OpenPlex staging copy.*\z~s", "", file_get_contents($f)
 $s .= "\n// OpenPlex staging copy: this site uses its own database.\n";
 foreach (["database" => "OPX_DB_NAME", "username" => "OPX_DB_USER", "password" => "OPX_DB_PASSWORD", "host" => "OPX_DB_HOST"] as $k => $env)
 	$s .= "\$databases[\"default\"][\"default\"][" . var_export($k, true) . "] = " . var_export(getenv($env), true) . ";\n";
+// The live site may accept only its own names.
+$s .= "if (!empty(\$settings[\"trusted_host_patterns\"])) \$settings[\"trusted_host_patterns\"][] = " . var_export("^" . preg_quote(getenv("OPX_HOST")) . "\$", true) . ";\n";
 file_put_contents($f, $s);
 '
 	chmod a-w sites/default/settings.php sites/default

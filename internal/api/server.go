@@ -181,6 +181,7 @@ func (s *Server) routes() http.Handler {
 				r.Post("/app/update", s.handleUpdateSiteApp)
 				r.Post("/app/staging", s.handleCreateStaging)
 				r.Post("/app/push", s.handlePushStaging)
+				r.Post("/app/harden", s.handleHardenSiteApp)
 				r.Get("/backups", s.handleItemBackups)
 				r.Post("/backups", s.handleItemBackupNow)
 				r.Post("/backups/{snap}/restore", s.handleItemRestore)

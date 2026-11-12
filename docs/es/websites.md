@@ -84,6 +84,33 @@ Notas:
   y actualizar, igual que al instalar. También puedes seguir actualizando desde
   la administración de la aplicación.
 
+### Comprobaciones de seguridad
+
+La parte **Seguridad** de la tarjeta **Aplicación** muestra lo que debilita
+la web; se comprueba junto con las actualizaciones (cada día o con
+**Comprobar ahora**):
+
+| Aplicación | Comprobaciones (✓ = OpenPlex lo puede corregir) |
+|---|---|
+| WordPress | editor de temas y plugins activado ✓, modo de depuración activado ✓, XML-RPC activado ✓, `wp-config.php` legible por otros usuarios ✓, un administrador llamado `admin`, plugins inactivos |
+| Joomla | modo de depuración activado ✓, errores de PHP visibles ✓, HTTPS no obligatorio (si la web tiene HTTPS) ✓, carpeta `installation` olvidada ✓, `configuration.php` legible por otros usuarios ✓, un usuario llamado `admin` |
+| Drupal | paquetes con vulnerabilidades conocidas (`composer audit`), sin nombres de host de confianza ✓, `update.php` abierto a cualquiera ✓, errores de PHP visibles ✓, `settings.php` modificable ✓, el administrador principal llamado `admin` |
+| Todas las webs | HTTPS no obligatorio, una versión de PHP sin correcciones de seguridad (7.4, 8.0, 8.1), errores de PHP mostrados en las páginas |
+
+Marca los problemas que quieras corregir y pulsa **Corregir los problemas
+seleccionados**. Las correcciones son las habituales: `DISALLOW_FILE_EDIT` y
+`WP_DEBUG` en `wp-config.php`, un pequeño plugin obligatorio que responde a
+XML-RPC con un 403 (borra `wp-content/mu-plugins/openplex-disable-xmlrpc.php`
+para volver a activarlo), la configuración global de Joomla, líneas marcadas
+`// OpenPlex security` al final del `settings.php` de Drupal (los hosts de
+confianza son el nombre de la web y sus alias), y permisos privados o de solo
+lectura. Si después la web deja de responder, el archivo de configuración
+vuelve a quedar como estaba. El resto (una cuenta `admin`, los ajustes de la
+propia web) los cambias tú.
+
+Las instalaciones nuevas ya no proponen `admin` como nombre del
+administrador.
+
 ### Copias de staging
 
 Una copia de staging es una copia aparte de una web, en un subdominio, para

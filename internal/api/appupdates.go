@@ -84,14 +84,14 @@ func (s *Server) checkApp(ctx context.Context, d *db.Domain, app apps.App) *apps
 			return nil, err
 		}
 		out := &tailBuffer{max: 256 << 10}
-		code, err := s.orch.RunSiteScript(ctx, d, script, []string{"OPX_DOCROOT=" + appDocroot(d)}, out)
+		code, err := s.orch.RunSiteScript(ctx, d, script, apps.CheckEnv(appDocroot(d), d.Name, d.SSLEnabled), out)
 		if err != nil {
 			return nil, err
 		}
 		if code != 0 {
 			return nil, fmt.Errorf("the update check stopped (exit %d): %s", code, lastLines(out.String(), 6))
 		}
-		return apps.ParseUpdates(out.String())
+		return app.ParseCheck(out.String())
 	}()
 	bg := context.WithoutCancel(ctx)
 	if err != nil {

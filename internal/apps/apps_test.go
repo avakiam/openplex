@@ -62,14 +62,23 @@ func TestScripts(t *testing.T) {
 		if a.ConfigFile == "" {
 			t.Errorf("%s: no configuration file", a.ID)
 		}
-		for name, get := range map[string]func() (string, error){"install": a.Script, "check": a.CheckScript, "update": a.UpdateScript, "stage": a.StageScript} {
+		if len(a.Fixes()) == 0 {
+			t.Errorf("%s: no security fixes", a.ID)
+		}
+		for name, get := range map[string]func() (string, error){"install": a.Script, "check": a.CheckScript, "update": a.UpdateScript,
+			"stage": a.StageScript, "harden": a.HardenScript} {
 			s, err := get()
 			if err != nil {
 				t.Fatalf("%s %s: %v", a.ID, name, err)
 			}
-			want := "OPX_VERSION="
-			if name == "check" {
-				want = "OPX_RESULT="
+			want := map[string]string{"check": "\nsec_report\n", "harden": "\nrestore_if_broken "}[name]
+			if want == "" {
+				want = "OPX_VERSION="
+			}
+			for _, f := range a.Fixes() {
+				if name == "harden" && !strings.Contains(s, f) {
+					t.Errorf("%s: fix %s is not in the harden script", a.ID, f)
+				}
 			}
 			if !strings.HasPrefix(s, "# Runs as the website's user") || !strings.Contains(s, want) {
 				t.Errorf("%s %s: script incomplete", a.ID, name)
@@ -84,6 +93,33 @@ func TestScripts(t *testing.T) {
 				t.Errorf("%s %s: script has CR line endings", a.ID, name)
 			}
 		}
+	}
+}
+
+func TestParseCheck(t *testing.T) {
+	wp, _ := Get("wordpress")
+	out := `OPX_RESULT={"version":"7.1.4","core":"","items":[]}` + "\n" +
+		`OPX_SECURITY=[{"id":"wp_debug","ok":false,"detail":""},{"id":"wp_admin_user","ok":false},{"id":"wp_xmlrpc","ok":true},{"id":"wp_inactive_plugins","ok":false,"detail":"hello\u0000 akismet"}]`
+	u, err := wp.ParseCheck(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]SecurityCheck{}
+	for _, c := range u.Security {
+		got[c.ID] = c
+	}
+	if len(got) != 4 || !got["wp_debug"].Fixable || got["wp_admin_user"].Fixable || got["wp_xmlrpc"].Fixable ||
+		got["wp_inactive_plugins"].Severity != SeverityInfo || got["wp_inactive_plugins"].Detail != "hello akismet" || got["wp_debug"].Severity != SeverityWarning {
+		t.Fatalf("got %+v", u.Security)
+	}
+	if _, err := wp.ParseCheck(`OPX_RESULT={"version":"7.1.4"}`); err == nil {
+		t.Fatal("missing security line accepted")
+	}
+	if wp.ValidFixes([]string{"wp_debug", "wp_xmlrpc"}) != nil || wp.ValidFixes(nil) == nil || wp.ValidFixes([]string{"joomla_debug"}) == nil {
+		t.Fatal("ValidFixes")
+	}
+	if env := strings.Join(HardenEnv("/d", []string{"a.example", "b.example"}, []string{"wp_debug"}), " "); env != "OPX_DOCROOT=/d OPX_HOST=a.example OPX_HOSTS=a.example b.example OPX_FIX=wp_debug" {
+		t.Fatalf("harden env %q", env)
 	}
 }
 

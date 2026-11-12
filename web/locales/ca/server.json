@@ -275,5 +275,7 @@
   "the live website belongs to another account": "el web en producció pertany a un altre compte",
   "both websites must be running": "els dos webs han d'estar en marxa",
   "the live website's application is busy: wait for its current task to finish": "l'aplicació del web en producció està ocupada: espera que acabi la seva tasca en curs",
-  "the application has no database linked in the panel": "l'aplicació no té cap base de dades vinculada al tauler"
+  "the application has no database linked in the panel": "l'aplicació no té cap base de dades vinculada al tauler",
+  "choose at least one fix": "tria almenys una correcció",
+  "the security checks gave no result": "les comprovacions de seguretat no van donar cap resultat"
 }

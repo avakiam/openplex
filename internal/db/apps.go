@@ -18,8 +18,9 @@ const (
 const (
 	AppTaskChecking = "checking"
 	AppTaskUpdating = "updating"
-	AppTaskCopying  = "copying" // a staging copy is being made
-	AppTaskPushing  = "pushing" // a staging copy is being pushed to the live site
+	AppTaskCopying  = "copying"  // a staging copy is being made
+	AppTaskPushing  = "pushing"  // a staging copy is being pushed to the live site
+	AppTaskSecuring = "securing" // security fixes are being applied
 )
 
 // SiteApp is an application (WordPress, Joomla, Drupal…) installed by the

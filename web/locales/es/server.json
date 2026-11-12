@@ -275,5 +275,7 @@
   "the live website belongs to another account": "la web en producción pertenece a otra cuenta",
   "both websites must be running": "las dos webs deben estar en marcha",
   "the live website's application is busy: wait for its current task to finish": "la aplicación de la web en producción está ocupada: espera a que termine su tarea en curso",
-  "the application has no database linked in the panel": "la aplicación no tiene ninguna base de datos vinculada en el panel"
+  "the application has no database linked in the panel": "la aplicación no tiene ninguna base de datos vinculada en el panel",
+  "choose at least one fix": "elige al menos una corrección",
+  "the security checks gave no result": "las comprobaciones de seguridad no dieron ningún resultado"
 }

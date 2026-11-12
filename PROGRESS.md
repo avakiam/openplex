@@ -295,7 +295,16 @@ has been verified on the Linux test server. One commit per milestone.
       kept in `opx_live_blog_public`, Joomla robots). "Push" (files and/or database) backs up the live site
       first (trigger `staging_push`), rsyncs keeping the live configuration file, copies the database, rewrites
       back, rebuilds Drupal caches and checks the live site answers. Tasks `copying`/`pushing` lock both sites
-- [ ] Manage installed applications: security hardening checks
+- [x] Application security checks: `<app>-security.sh` runs after the update check (same task, stored in the
+      `updates` JSON as `security`) — WordPress: DISALLOW_FILE_EDIT, WP_DEBUG, XML-RPC answering, wp-config.php
+      mode, `admin` administrator, inactive plugins; Joomla: debug, error_reporting, force_ssl (with HTTPS),
+      installation/ left, configuration.php mode, `admin` user; Drupal: `composer audit`, trusted_host_patterns,
+      update_free_access, error_level, settings.php writable, uid 1 `admin` — plus site checks computed per request
+      (HTTPS forced, PHP 7.4/8.0/8.1 unsupported, display_errors). "Fix" runs `<app>-harden.sh` (OPX_FIX list; WP
+      config + 403 mu-plugin for XML-RPC, Joomla configuration.php, marked lines appended to Drupal's settings.php
+      with the site and alias names as trusted hosts, chmod), keeps a copy of the configuration file and puts it
+      back if the site stops answering, then re-checks. Drupal staging copies add their own name to the trusted
+      hosts. The install form no longer defaults the administrator to `admin`
 - [ ] Git deploy: clone a repository into a website (deploy key), pull on a webhook or by hand, optional
       build command
 
@@ -488,3 +497,10 @@ has been verified on the Linux test server. One commit per milestone.
   and blog_public back; files owned by the live site's user; a backup preceded each push. Refusals: copy of a copy,
   push from a live site, nothing chosen, bad name, existing name. Cards and dialogs checked in the browser. Deleting
   a live site removes its staging subdomains but (as for any website) not their databases.
+- 2026-11-12 — Application security checks (0.23.91): on the LAN, fresh WordPress, Joomla and Drupal sites showed the
+  expected findings (WordPress editor, XML-RPC, wp-config 644, `admin`, inactive akismet/hello; Joomla
+  configuration.php 644, `admin`; Drupal trusted hosts, `admin`; HTTPS on all three test sites, which are HTTP only).
+  Fixing everything fixable left only the `admin` accounts, inactive plugins and HTTPS; all three answered 200,
+  wp-config.php 600, settings.php 444, installation/ gone, Drupal refused a foreign Host with 400. XML-RPC first
+  stayed on (the `xmlrpc_enabled` filter only drops authenticated methods): the mu-plugin now answers 403. A
+  staging copy of the hardened Drupal site answered 200. Refusals: an unknown fix, no fix. Card checked (Spanish).

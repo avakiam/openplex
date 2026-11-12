@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { AppSecuritySection } from "@/components/app-security";
 import { Button, Card, CardBody, CardHeader, Dialog, DialogContent, ErrorBox, Field, Input, Select, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -51,7 +52,7 @@ export function useAppForm() {
   const [form, setForm] = useState<AppForm>({
     app: "",
     title: "",
-    admin_user: "admin",
+    admin_user: "",
     admin_email: "",
     admin_password: "",
     language: locale,
@@ -60,6 +61,8 @@ export function useAppForm() {
     setForm((f) => ({
       ...f,
       admin_email: f.admin_email || user?.email || "",
+      // "admin" is the first name attackers try.
+      admin_user: f.admin_user || (user?.username && user.username !== "admin" ? user.username : ""),
       admin_password: f.admin_password || generatePassword(),
     }));
   }, [user?.email]);
@@ -216,6 +219,7 @@ function Installed({ app, canManage }: { app: SiteApp; canManage: boolean }) {
         </a>
       </Button>
       <AppUpdatesSection app={app} canManage={canManage} />
+      <AppSecuritySection app={app} canManage={canManage} />
       <StagingSection app={app} canManage={canManage} />
     </>
   );

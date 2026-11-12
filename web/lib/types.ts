@@ -627,11 +627,20 @@ export interface AppUpdate {
   latest: string;
 }
 
+export interface SecurityCheck {
+  id: string;
+  ok: boolean;
+  detail: string;
+  severity: "critical" | "warning" | "info";
+  fixable: boolean;
+}
+
 export interface AppUpdates {
   version: string;
   core: string;
   items: AppUpdate[];
   manual_extensions?: boolean;
+  security?: SecurityCheck[];
 }
 
 export interface SiteApp {
@@ -651,12 +660,13 @@ export interface SiteApp {
   updated_at: string;
   updates: AppUpdates | null;
   checked_at: string | null;
-  task: "" | "checking" | "updating" | "copying" | "pushing";
+  task: "" | "checking" | "updating" | "copying" | "pushing" | "securing";
   task_error: string;
   last_update_at: string | null;
   staging_of: number | null;
   staging_of_name?: string;
   staging_copies: { id: number; name: string }[];
+  site_checks: SecurityCheck[];
 }
 
 export interface SFTPStatus {

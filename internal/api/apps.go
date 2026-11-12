@@ -33,6 +33,8 @@ type siteAppView struct {
 	StagingOfName string `json:"staging_of_name,omitempty"`
 	// StagingCopies are the staging copies of this website.
 	StagingCopies []siteRef `json:"staging_copies"`
+	// SiteChecks are the security checks of the website's own settings.
+	SiteChecks []apps.SecurityCheck `json:"site_checks"`
 }
 
 type siteRef struct {
@@ -78,6 +80,7 @@ func (s *Server) handleGetSiteApp(w http.ResponseWriter, r *http.Request) {
 			v.StagingOfName = l.Name
 		}
 	}
+	v.SiteChecks = s.siteChecks(r.Context(), d)
 	v.StagingCopies = []siteRef{}
 	if ids, err := s.db.StagingCopies(r.Context(), d.ID); err == nil {
 		for _, id := range ids {
