@@ -46,6 +46,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		ParentID   *int64 `json:"parent_id"`
 		MaxDomains int    `json:"max_domains"`
 		MaxDBs     int    `json:"max_databases"`
+		MaxDBSize  int    `json:"max_db_size_mb"`
 		Locale     string `json:"locale"`
 	}
 	if !decode(w, r, &in) {
@@ -91,6 +92,13 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		forbidden(w)
 		return
 	}
+	if a.Role == db.RoleReseller && in.MaxDBSize == 0 {
+		in.MaxDBSize = a.MaxDBSizeMB // a reseller's customers stay within its own limit
+	}
+	if msg := dbSizeCap(a, in.MaxDBSize); msg != "" {
+		badRequest(w, msg)
+		return
+	}
 	if err := auth.CheckPolicy(in.Password); err != nil {
 		badRequest(w, err.Error())
 		return
@@ -100,7 +108,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
-	u := &db.User{Username: in.Username, Email: strings.TrimSpace(in.Email), PasswordHash: hash, Role: in.Role, ParentID: in.ParentID, MaxDomains: in.MaxDomains, MaxDatabases: in.MaxDBs, Locale: in.Locale}
+	u := &db.User{Username: in.Username, Email: strings.TrimSpace(in.Email), PasswordHash: hash, Role: in.Role, ParentID: in.ParentID, MaxDomains: in.MaxDomains, MaxDatabases: in.MaxDBs, MaxDBSizeMB: in.MaxDBSize, Locale: in.Locale}
 	if err := s.db.CreateUser(r.Context(), u); err != nil {
 		s.fail(w, r, err)
 		return
@@ -127,6 +135,7 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		Disabled   *bool   `json:"disabled"`
 		MaxDomains *int    `json:"max_domains"`
 		MaxDBs     *int    `json:"max_databases"`
+		MaxDBSize  *int    `json:"max_db_size_mb"`
 		Locale     *string `json:"locale"`
 	}
 	if !decode(w, r, &in) {
@@ -172,7 +181,7 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 			u.ParentID = nil
 		}
 	}
-	if in.Disabled != nil || in.MaxDomains != nil || in.MaxDBs != nil {
+	if in.Disabled != nil || in.MaxDomains != nil || in.MaxDBs != nil || in.MaxDBSize != nil {
 		if self { // nobody changes their own status or quota
 			forbidden(w)
 			return
@@ -194,6 +203,13 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 			}
 			u.MaxDatabases = *in.MaxDBs
 		}
+		if in.MaxDBSize != nil {
+			if msg := dbSizeCap(a, *in.MaxDBSize); msg != "" {
+				badRequest(w, msg)
+				return
+			}
+			u.MaxDBSizeMB = *in.MaxDBSize
+		}
 	}
 	if err := s.db.UpdateUser(r.Context(), u); err != nil {
 		s.fail(w, r, err)
@@ -201,6 +217,9 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	if u.Disabled {
 		_ = s.db.RevokeUserRefreshTokens(r.Context(), u.ID)
+	}
+	if in.MaxDBSize != nil {
+		s.kickDBLimits()
 	}
 	s.audit(r, "user.updated", u.Username, "")
 	writeJSON(w, http.StatusOK, u)

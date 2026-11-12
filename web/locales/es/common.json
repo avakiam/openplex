@@ -233,5 +233,8 @@
   "Since": "Desde",
   "Alert": "Alerta",
   "Not sent: {error}": "No enviada: {error}",
-  "The mail service is running. For the best delivery, use a sender address of a mail domain hosted here, whose SPF record allows this server.": "El servicio de correo está en marcha. Para que lleguen mejor, usa un remitente de un dominio de correo alojado aquí, cuyo registro SPF autoriza a este servidor."
+  "The mail service is running. For the best delivery, use a sender address of a mail domain hosted here, whose SPF record allows this server.": "El servicio de correo está en marcha. Para que lleguen mejor, usa un remitente de un dominio de correo alojado aquí, cuyo registro SPF autoriza a este servidor.",
+  "Size of each database (MB)": "Tamaño de cada base de datos (MB)",
+  "A database goes over its size limit": "Una base de datos supera su límite de tamaño",
+  "When it becomes read-only; again when it is back under its limit.": "Cuando pasa a solo lectura; otra vez cuando vuelve a estar por debajo de su límite."
 }

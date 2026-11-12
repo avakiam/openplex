@@ -148,5 +148,15 @@
   "How to connect": "Cómo conectarse",
   "Use host {host}, port {port}, the database's own user name and password (Connection details), and TLS (SSL) set to required. The server's certificate is OpenPlex's own: download it to let your client verify it, or compare its fingerprint.": "Usa el host {host}, el puerto {port}, el usuario y la contraseña de la base de datos (Datos de conexión) y TLS (SSL) obligatorio. El certificado del servidor es propio de OpenPlex: descárgalo para que tu cliente lo verifique, o compara su huella.",
   "Certificate fingerprint (SHA-256)": "Huella del certificado (SHA-256)",
-  "Download certificate": "Descargar el certificado"
+  "Download certificate": "Descargar el certificado",
+  "{pct}% of {limit}": "{pct}% de {limit}",
+  "Over its size limit: its applications can read it but not save anything.": "Supera su límite de tamaño: sus aplicaciones pueden leerla pero no guardar nada.",
+  "Read-only": "Solo lectura",
+  "Size limit": "Límite de tamaño",
+  "Size limit saved": "Límite de tamaño guardado",
+  "Size limit of {name}": "Límite de tamaño de {name}",
+  "Checked every five minutes. Over the limit, the database becomes read-only for its applications until data is deleted or the limit is raised.": "Se comprueba cada cinco minutos. Por encima del límite, la base de datos pasa a solo lectura para sus aplicaciones hasta que se borren datos o se suba el límite.",
+  "Limit (MB)": "Límite (MB)",
+  "0 = the account's limit ({limit} for each database).": "0 = el límite de la cuenta ({limit} por base de datos).",
+  "0 = the account's limit (none at the moment).": "0 = el límite de la cuenta (ahora mismo ninguno)."
 }

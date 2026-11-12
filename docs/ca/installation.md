@@ -103,6 +103,7 @@ alguna cosa necessita atenció. Ho comprova cada minut:
 | Falla una còpia de seguretat | cada còpia fallida, un cop |
 | Un web està caigut | després de dos minuts amb error, i un altre cop quan es recupera |
 | El disc és gairebé ple | per sobre del 90 % del disc de dades, i un altre cop per sota del 85 % |
+| Una base de dades supera el seu límit de mida | quan passa a només lectura, i un altre cop quan torna a estar-ne per sota (vegeu [bases de dades](databases.md#límits-de-mida)) |
 | Un certificat no es renova | quan el d'un nom en ús és a punt de caducar (la renovació fa temps que falla: sol ser el DNS o el port 80) |
 | Nova versió d'OpenPlex | un cop per versió |
 | Falla una actualització d'OpenPlex | quan una actualització es desfà o falla |

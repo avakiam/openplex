@@ -150,6 +150,9 @@ func (m *Manager) Check(ctx context.Context) error {
 	if on(KindDiskFull) {
 		errs = append(errs, m.checkDisk(ctx, s))
 	}
+	if on(KindDatabaseFull) {
+		errs = append(errs, m.checkDatabases(ctx, s))
+	}
 	if on(KindCertExpiring) {
 		errs = append(errs, m.checkCerts(ctx, s))
 	}
@@ -294,6 +297,35 @@ func (m *Manager) checkSites(ctx context.Context, s *db.AlertSettings) error {
 	return m.resolveMissing(ctx, s, KindSiteDown, active, func(a *db.Alert) (string, string) {
 		v := map[string]string{"site": strings.TrimPrefix(a.Key, "site:")}
 		return text(s.Language, "site_down.resolved", v), text(s.Language, "site_down.resolved_body", v)
+	})
+}
+
+// checkDatabases reports the databases made read-only for being over their size limit.
+func (m *Manager) checkDatabases(ctx context.Context, s *db.AlertSettings) error {
+	dbs, err := m.o.DB.ListDatabases(ctx, nil)
+	if err != nil {
+		return err
+	}
+	active := map[string]bool{}
+	for _, d := range dbs {
+		if !d.SizeLocked {
+			continue
+		}
+		key := "database:" + d.Name
+		active[key] = true
+		owner, _ := m.o.DB.GetUser(ctx, d.OwnerID)
+		v := map[string]string{"database": d.Name, "limit": strconv.Itoa(d.LimitMB(owner)) + " MB", "owner": ""}
+		if owner != nil {
+			v["owner"] = owner.Username
+		}
+		if err := m.firing(ctx, s, key, KindDatabaseFull,
+			text(s.Language, "database_full.subject", v), text(s.Language, "database_full.body", v)); err != nil {
+			return err
+		}
+	}
+	return m.resolveMissing(ctx, s, KindDatabaseFull, active, func(a *db.Alert) (string, string) {
+		v := map[string]string{"database": strings.TrimPrefix(a.Key, "database:")}
+		return text(s.Language, "database_full.resolved", v), text(s.Language, "database_full.resolved_body", v)
 	})
 }
 

@@ -12,6 +12,8 @@ export interface User {
   disabled: boolean;
   max_domains: number;
   max_databases: number;
+  /** Size limit of each database of the account without one of its own (MB, 0 = none). */
+  max_db_size_mb: number;
   /** "" = follow the browser */
   locale: "" | "en" | "es" | "ca";
   created_at: string;
@@ -208,6 +210,14 @@ export interface Database {
   remote_port: number;
   /** Addresses/networks allowed to connect remotely; empty = remote access off. */
   remote_allow: string[];
+  /** The database's own size limit (MB; 0 = the account's applies). */
+  max_size_mb: number;
+  /** The size limit that applies (MB, 0 = none). */
+  limit_mb: number;
+  /** Read-only for being over its limit. */
+  size_locked: boolean;
+  /** The caller may change the limit (administrators, the account's reseller). */
+  can_limit: boolean;
 }
 
 export interface RemoteDBInfo {

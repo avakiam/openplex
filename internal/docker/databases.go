@@ -274,6 +274,9 @@ func (o *Orchestrator) ProvisionDatabase(ctx context.Context, d *db.Database, pa
 	default:
 		err = fmt.Errorf("unknown engine %q", d.Engine)
 	}
+	if err == nil && d.SizeLocked {
+		err = o.SetDatabaseReadOnly(ctx, d, true) // the grant above gave everything back
+	}
 	return err
 }
 
@@ -588,4 +591,83 @@ func (o *Orchestrator) EngineAddr(ctx context.Context, engine string) (string, e
 		return "", fmt.Errorf("the %s server has no address", engine)
 	}
 	return net.JoinHostPort(ep.IPAddress, strconv.Itoa(e.Port)), nil
+}
+
+// SetDatabaseReadOnly makes a MariaDB/PostgreSQL database read-only for its
+// user (over its size limit) or gives the full privileges back, and closes the
+// user's open connections so the change applies at once.
+//
+// MariaDB keeps SELECT, DELETE, DROP, LOCK TABLES and SHOW VIEW, so the
+// owner can still free space. PostgreSQL has no privilege the owner of a
+// database can lose: new sessions start read-only (default_transaction_read_only),
+// which stops applications but not someone who turns it off on purpose.
+func (o *Orchestrator) SetDatabaseReadOnly(ctx context.Context, d *db.Database, ro bool) error {
+	if !ValidIdentifier(d.Name) || !ValidIdentifier(d.Username) {
+		return fmt.Errorf("invalid database or user name")
+	}
+	switch d.Engine {
+	case db.EngineMariaDB:
+		name := strings.NewReplacer("_", `\_`, "%", `\%`).Replace(d.Name)
+		grant := mariaGrant(d)
+		if ro {
+			grant = fmt.Sprintf("GRANT SELECT, DELETE, DROP, LOCK TABLES, SHOW VIEW ON `%s`.* TO '%s'@'%%'", name, d.Username)
+		}
+		// REVOKE fails when nothing is granted; grant something first.
+		if _, err := o.runSQL(ctx, d.Engine,
+			fmt.Sprintf("GRANT USAGE ON `%s`.* TO '%s'@'%%'", name, d.Username),
+			fmt.Sprintf("REVOKE ALL PRIVILEGES ON `%s`.* FROM '%s'@'%%'", name, d.Username),
+			grant, "FLUSH PRIVILEGES"); err != nil {
+			return err
+		}
+		ids, err := o.runSQL(ctx, d.Engine, fmt.Sprintf("SELECT id FROM information_schema.processlist WHERE user = '%s'", d.Username))
+		if err != nil {
+			return err
+		}
+		var kills []string
+		for _, id := range strings.Fields(ids) {
+			if _, err := strconv.ParseInt(id, 10, 64); err == nil {
+				kills = append(kills, "KILL CONNECTION "+id)
+			}
+		}
+		if len(kills) > 0 {
+			_, _ = o.runSQL(ctx, d.Engine, kills...) // a connection may close by itself meanwhile
+		}
+		return nil
+	case db.EnginePostgres:
+		set := fmt.Sprintf(`ALTER ROLE "%s" IN DATABASE "%s" RESET default_transaction_read_only`, d.Username, d.Name)
+		if ro {
+			set = fmt.Sprintf(`ALTER ROLE "%s" IN DATABASE "%s" SET default_transaction_read_only = on`, d.Username, d.Name)
+		}
+		_, err := o.runSQL(ctx, d.Engine, set,
+			fmt.Sprintf(`SELECT count(pg_terminate_backend(pid)) FROM pg_stat_activity WHERE usename = '%s' AND datname = '%s'`, d.Username, d.Name))
+		return err
+	}
+	return fmt.Errorf("%s databases have no size limit", d.Engine)
+}
+
+// AnalyzeDatabase refreshes the table statistics of a MariaDB database, so
+// that its measured size drops once rows are deleted.
+func (o *Orchestrator) AnalyzeDatabase(ctx context.Context, d *db.Database) error {
+	if d.Engine != db.EngineMariaDB || !ValidIdentifier(d.Name) {
+		return nil
+	}
+	res, err := o.runSQL(ctx, d.Engine, fmt.Sprintf("SELECT table_name FROM information_schema.tables WHERE table_schema = '%s' AND table_type = 'BASE TABLE'", d.Name))
+	if err != nil {
+		return err
+	}
+	var tables []string
+	for _, t := range strings.Split(strings.TrimRight(res, "\n"), "\n") {
+		if t != "" {
+			// Table names are the tenant's: quote them (a backtick is doubled).
+			tables = append(tables, fmt.Sprintf("`%s`.`%s`", d.Name, strings.ReplaceAll(t, "`", "``")))
+		}
+	}
+	for len(tables) > 0 {
+		n := min(len(tables), 200)
+		if _, err := o.runSQL(ctx, d.Engine, "ANALYZE TABLE "+strings.Join(tables[:n], ", ")); err != nil {
+			return err
+		}
+		tables = tables[n:]
+	}
+	return nil
 }

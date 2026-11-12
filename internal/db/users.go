@@ -31,29 +31,31 @@ func ValidRole(r string) bool {
 
 // User is a panel account.
 type User struct {
-	ID           int64     `json:"id"`
-	Username     string    `json:"username"`
-	Email        string    `json:"email"`
-	PasswordHash string    `json:"-"`
-	Role         string    `json:"role"`
-	ParentID     *int64    `json:"parent_id"`
-	TOTPSecret   string    `json:"-"`
-	TOTPEnabled  bool      `json:"totp_enabled"`
-	Disabled     bool      `json:"disabled"`
-	MaxDomains   int       `json:"max_domains"`
-	MaxDatabases int       `json:"max_databases"`
-	Locale       string    `json:"locale"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID           int64  `json:"id"`
+	Username     string `json:"username"`
+	Email        string `json:"email"`
+	PasswordHash string `json:"-"`
+	Role         string `json:"role"`
+	ParentID     *int64 `json:"parent_id"`
+	TOTPSecret   string `json:"-"`
+	TOTPEnabled  bool   `json:"totp_enabled"`
+	Disabled     bool   `json:"disabled"`
+	MaxDomains   int    `json:"max_domains"`
+	MaxDatabases int    `json:"max_databases"`
+	// MaxDBSizeMB limits each database of the account that has no limit of its own (0 = none).
+	MaxDBSizeMB int       `json:"max_db_size_mb"`
+	Locale      string    `json:"locale"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-const userCols = `id, username, email, password_hash, role, parent_id, totp_secret, totp_enabled, disabled, max_domains, max_databases, locale, created_at, updated_at`
+const userCols = `id, username, email, password_hash, role, parent_id, totp_secret, totp_enabled, disabled, max_domains, max_databases, max_db_size_mb, locale, created_at, updated_at`
 
 func scanUser(row interface{ Scan(...any) error }) (*User, error) {
 	var u User
 	var parent sql.NullInt64
 	if err := row.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role, &parent,
-		&u.TOTPSecret, &u.TOTPEnabled, &u.Disabled, &u.MaxDomains, &u.MaxDatabases, &u.Locale, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		&u.TOTPSecret, &u.TOTPEnabled, &u.Disabled, &u.MaxDomains, &u.MaxDatabases, &u.MaxDBSizeMB, &u.Locale, &u.CreatedAt, &u.UpdatedAt); err != nil {
 		return nil, mapErr(err)
 	}
 	u.ParentID = ptrInt(parent)
@@ -63,9 +65,9 @@ func scanUser(row interface{ Scan(...any) error }) (*User, error) {
 // CreateUser inserts u and sets its ID and timestamps.
 func (d *DB) CreateUser(ctx context.Context, u *User) error {
 	u.CreatedAt, u.UpdatedAt = now(), now()
-	res, err := d.sql.ExecContext(ctx, `INSERT INTO users (username, email, password_hash, role, parent_id, totp_secret, totp_enabled, disabled, max_domains, max_databases, locale, created_at, updated_at)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		strings.TrimSpace(u.Username), u.Email, u.PasswordHash, u.Role, u.ParentID, u.TOTPSecret, u.TOTPEnabled, u.Disabled, u.MaxDomains, u.MaxDatabases, u.Locale, u.CreatedAt, u.UpdatedAt)
+	res, err := d.sql.ExecContext(ctx, `INSERT INTO users (username, email, password_hash, role, parent_id, totp_secret, totp_enabled, disabled, max_domains, max_databases, max_db_size_mb, locale, created_at, updated_at)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		strings.TrimSpace(u.Username), u.Email, u.PasswordHash, u.Role, u.ParentID, u.TOTPSecret, u.TOTPEnabled, u.Disabled, u.MaxDomains, u.MaxDatabases, u.MaxDBSizeMB, u.Locale, u.CreatedAt, u.UpdatedAt)
 	if err != nil {
 		return mapErr(err)
 	}
@@ -123,8 +125,8 @@ func (d *DB) CountUsers(ctx context.Context) (int, error) {
 // UpdateUser persists mutable profile fields (email, role, parent, disabled, quota, locale, TOTP, password).
 func (d *DB) UpdateUser(ctx context.Context, u *User) error {
 	u.UpdatedAt = now()
-	res, err := d.sql.ExecContext(ctx, `UPDATE users SET email=?, password_hash=?, role=?, parent_id=?, totp_secret=?, totp_enabled=?, disabled=?, max_domains=?, max_databases=?, locale=?, updated_at=? WHERE id=?`,
-		u.Email, u.PasswordHash, u.Role, u.ParentID, u.TOTPSecret, u.TOTPEnabled, u.Disabled, u.MaxDomains, u.MaxDatabases, u.Locale, u.UpdatedAt, u.ID)
+	res, err := d.sql.ExecContext(ctx, `UPDATE users SET email=?, password_hash=?, role=?, parent_id=?, totp_secret=?, totp_enabled=?, disabled=?, max_domains=?, max_databases=?, max_db_size_mb=?, locale=?, updated_at=? WHERE id=?`,
+		u.Email, u.PasswordHash, u.Role, u.ParentID, u.TOTPSecret, u.TOTPEnabled, u.Disabled, u.MaxDomains, u.MaxDatabases, u.MaxDBSizeMB, u.Locale, u.UpdatedAt, u.ID)
 	if err != nil {
 		return mapErr(err)
 	}

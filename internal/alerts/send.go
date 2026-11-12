@@ -26,13 +26,14 @@ const (
 	KindBackupFailed    = "backup_failed"
 	KindSiteDown        = "site_down"
 	KindDiskFull        = "disk_full"
+	KindDatabaseFull    = "database_full"
 	KindCertExpiring    = "cert_expiring"
 	KindUpdateAvailable = "update_available"
 	KindUpdateFailed    = "update_failed"
 )
 
 // Kinds lists every alert kind.
-var Kinds = []string{KindBackupFailed, KindSiteDown, KindDiskFull, KindCertExpiring, KindUpdateAvailable, KindUpdateFailed}
+var Kinds = []string{KindBackupFailed, KindSiteDown, KindDiskFull, KindDatabaseFull, KindCertExpiring, KindUpdateAvailable, KindUpdateFailed}
 
 // Languages the e-mails are written in.
 var Languages = []string{"en", "es", "ca"}

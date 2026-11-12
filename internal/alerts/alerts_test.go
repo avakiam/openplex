@@ -223,3 +223,28 @@ func TestValidateAndMessage(t *testing.T) {
 		t.Fatal("test without a mail service did not fail")
 	}
 }
+
+func TestDatabaseOverLimit(t *testing.T) {
+	ctx := context.Background()
+	m, store, box, _, _ := setup(t)
+	u := &db.User{Username: "ana", PasswordHash: "x", Role: db.RoleCustomer, MaxDBSizeMB: 200}
+	_ = store.CreateUser(ctx, u)
+	d := &db.Database{OwnerID: u.ID, Engine: db.EngineMariaDB, Name: "ana_shop", Username: "ana_shop"}
+	if err := store.CreateDatabase(ctx, d); err != nil {
+		t.Fatal(err)
+	}
+	_ = store.SetDatabaseLocked(ctx, d.ID, true)
+	_ = m.Check(ctx)
+	if got := box.take(); len(got) != 1 || !strings.Contains(got[0], "Database over its size limit: ana_shop") {
+		t.Fatalf("over-limit alert: %v", got)
+	}
+	_ = m.Check(ctx)
+	if got := box.take(); len(got) != 0 {
+		t.Fatalf("sent again: %v", got)
+	}
+	_ = store.SetDatabaseLocked(ctx, d.ID, false)
+	_ = m.Check(ctx)
+	if got := box.take(); len(got) != 1 || !strings.Contains(got[0], "Database writable again: ana_shop") {
+		t.Fatalf("resolved: %v", got)
+	}
+}

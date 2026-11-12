@@ -129,7 +129,7 @@ func (s *Server) handleSetDatabaseRemote(w http.ResponseWriter, r *http.Request)
 	}
 	s.audit(r, "database.remote_access", d.Name, detail)
 	d.RemoteAllow = allow
-	writeJSON(w, http.StatusOK, s.viewOf(d))
+	writeJSON(w, http.StatusOK, s.viewOf(r, d))
 }
 
 // syncRemote refreshes remote access after a database is gone.

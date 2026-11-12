@@ -46,6 +46,7 @@ type Server struct {
 	updates  *update.Manager
 	sftp     *SFTPInfo
 	remote   RemoteDB
+	dbLimits chan struct{} // asks RunDatabaseLimits for a check
 	alerts   *alerts.Manager
 	log      *slog.Logger
 	ui       http.Handler
@@ -102,6 +103,7 @@ func New(o Options) *Server {
 		updates:        o.Updates,
 		sftp:           o.SFTP,
 		remote:         o.RemoteDB,
+		dbLimits:       make(chan struct{}, 1),
 		alerts:         o.Alerts,
 		loginLimiter:   newLimiter(10, 5*time.Minute),
 		webhookLimiter: newLimiter(20, 10*time.Minute),
@@ -248,6 +250,7 @@ func (s *Server) routes() http.Handler {
 			r.Get("/databases/{id}/credentials", s.handleDatabaseCredentials)
 			r.Post("/databases/{id}/rotate-password", s.handleRotateDatabasePassword)
 			r.Put("/databases/{id}/remote", s.handleSetDatabaseRemote)
+			r.Put("/databases/{id}/limit", s.handleSetDatabaseLimit)
 			r.Get("/databases/{id}/backups", s.handleItemBackups)
 			r.Post("/databases/{id}/backups", s.handleItemBackupNow)
 			r.Post("/databases/{id}/backups/{snap}/restore", s.handleItemRestore)

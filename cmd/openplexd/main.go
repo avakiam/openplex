@@ -311,6 +311,8 @@ func run(args []string) error {
 	workers.Add(1)
 	go func() { defer workers.Done(); srv.RunAppUpdateChecks(ctx) }()
 	workers.Add(1)
+	go func() { defer workers.Done(); srv.RunDatabaseLimits(ctx) }()
+	workers.Add(1)
 	go func() { defer workers.Done(); exts.Reconcile(ctx) }()
 	httpSrv := &http.Server{
 		Handler:           srv.Handler(),

@@ -90,7 +90,11 @@ has been verified on the Linux test server. One commit per milestone.
       addresses on no list before any greeting, requires TLS (own certificate, fingerprint + download), reads the
       user (and PostgreSQL database) from the handshake and forwards only what that database allows; the panel
       firewall opens the port to the listed addresses only; ufw warning; Redis excluded
-- [ ] Per-database size limits
+- [x] Per-database size limits: per account (each database) and per database (MB; resellers capped by their own),
+      checked every 5 min and right after a change; over the limit the database turns read-only (MariaDB: only
+      SELECT/DELETE/DROP/LOCK TABLES/SHOW VIEW kept, statistics refreshed so deletes count; PostgreSQL: sessions
+      start read-only, a stop for applications, not a barrier for the owner) and writable again once under; usage
+      bars and a read-only badge; e-mail alert (database_full)
 
 ## M8 — Mail
 - [x] Mail stack: docker-mailserver 16.0.1 (Postfix 3.10, Dovecot 2.4, Rspamd with Redis; no ClamAV/SpamAssassin),
@@ -535,3 +539,10 @@ has been verified on the Linux test server. One commit per milestone.
   remote access off, and deleting the databases, closed the listeners; restarting the daemon reopened them with the
   same certificate. Dialog (list, my address, anyone warning, ufw warning, turn off, how to connect) checked in the
   browser (Spanish).
+- 2026-11-12 — Database size limits (0.26.90): on the LAN, a customer's MariaDB database filled to 33.6 MB with a
+  10 MB limit of its own turned read-only within seconds of setting it (INSERT and CREATE denied, SELECT and DELETE
+  allowed); after deleting most rows it came back writable at the next check (3.6 MB, once InnoDB had purged them)
+  with ALL privileges again. A PostgreSQL database at 40.9 MB went read-only when the account limit was set to
+  10 MB ("cannot execute INSERT in a read-only transaction", reads fine) and writable again when it was raised to
+  100 MB; the database's own 10 MB limit kept precedence over the account's 100. Size bars, the read-only badge
+  and the limit dialog checked in the browser (Spanish).

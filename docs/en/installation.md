@@ -102,6 +102,7 @@ needs attention. It checks every minute:
 | A backup fails | each failed backup, once |
 | A website is down | after two minutes in error, and again when it is back up |
 | The disk is almost full | above 90 % of the data disk, and again below 85 % |
+| A database goes over its size limit | when it becomes read-only, and again when it is back under (see [databases](databases.md#size-limits)) |
 | A certificate is not renewing | when one for a name still in use is close to expiring (renewal has failed for a while: usually DNS or port 80) |
 | A new OpenPlex version | once per version |
 | An OpenPlex update fails | when an update is undone or fails |

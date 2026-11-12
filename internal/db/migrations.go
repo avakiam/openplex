@@ -474,6 +474,13 @@ CREATE TABLE git_deploys (
 `,
 	// 22: remote access to a database (comma-separated allowed addresses/networks; empty = off)
 	`ALTER TABLE databases ADD COLUMN remote_allow TEXT NOT NULL DEFAULT '';`,
+	// 23: database size limits (MB; 0 = none): per database, and the default of an account's databases
+	`
+ALTER TABLE databases ADD COLUMN max_size_mb INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE databases ADD COLUMN size_locked INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN max_db_size_mb INTEGER NOT NULL DEFAULT 0;
+UPDATE alert_settings SET events = events || ',database_full' WHERE ',' || events || ',' LIKE '%,disk_full,%';
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

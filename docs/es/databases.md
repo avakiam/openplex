@@ -8,6 +8,45 @@ que actives el acceso remoto. **Abrir en Adminer** abre la base de datos en
 Adminer con la sesión ya iniciada, y **Copias de seguridad** hace o restaura la
 copia de una base de datos.
 
+## Límites de tamaño
+
+Los administradores, y los revendedores para sus clientes, pueden limitar
+cuánto crecen las bases de datos:
+
+- **Tamaño de cada base de datos (MB)** en la configuración de la cuenta
+  (**Usuarios**) se aplica a todas sus bases de datos MariaDB y PostgreSQL.
+- **Límite de tamaño** en el menú de una base de datos le da un límite propio
+  (0 vuelve al de la cuenta).
+
+Un revendedor con un límite propio no puede dar más a sus clientes ni
+quitarles el límite. Las instancias de Redis mantienen su límite de memoria
+fijo.
+
+**Bases de datos** muestra el tamaño de cada base de datos frente a su límite.
+Los tamaños se comprueban cada cinco minutos (y justo después de cambiar un
+límite). Una base de datos por encima de su límite pasa a **solo lectura** para
+sus aplicaciones: pueden leerla pero no guardar nada, así que sus webs pueden
+dar errores al intentarlo. El propietario la recupera borrando datos (o
+pidiendo que le suban el límite): en la siguiente comprobación por debajo del
+límite vuelve a admitir escrituras. Con **Alertas** activadas, los
+administradores reciben un correo cuando una base de datos supera su límite y
+otro cuando vuelve a estar por debajo.
+
+Qué significa solo lectura en cada motor:
+
+- **MariaDB**: el usuario conserva solo SELECT, DELETE, DROP, LOCK TABLES y
+  SHOW VIEW, y se cierran sus conexiones abiertas. Borrar filas, vaciar tablas
+  (`TRUNCATE`) o eliminarlas libera espacio; el tamaño cuenta lo que contienen
+  las tablas, así que las filas borradas cuentan cuando MariaDB las ha
+  limpiado, normalmente en la siguiente comprobación.
+- **PostgreSQL**: las sesiones nuevas empiezan en solo lectura
+  (`default_transaction_read_only`) y se cierran las abiertas. Las aplicaciones
+  dejan de escribir pero, como propietario de la base de datos, su usuario aún
+  puede desactivarlo a propósito en una sesión, así que es un freno para las
+  aplicaciones más que una barrera infranqueable. El tamaño es el espacio que
+  ocupa en disco: tras borrar filas, ejecuta `VACUUM FULL` sobre la tabla (en
+  una sesión con `SET default_transaction_read_only = off`) para liberarlo.
+
 ## Acceso remoto
 
 Para trabajar con una base de datos MariaDB o PostgreSQL desde tu propio

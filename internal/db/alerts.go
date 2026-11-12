@@ -23,9 +23,12 @@ type AlertSettings struct {
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 
+// DefaultAlertEvents are the alert kinds sent until the administrator chooses.
+const DefaultAlertEvents = "backup_failed,site_down,disk_full,database_full,cert_expiring,update_available,update_failed"
+
 // GetAlertSettings returns the settings, creating defaults on first use.
 func (db *DB) GetAlertSettings(ctx context.Context) (*AlertSettings, error) {
-	if _, err := db.sql.ExecContext(ctx, `INSERT OR IGNORE INTO alert_settings (id, updated_at) VALUES (1, ?)`, now()); err != nil {
+	if _, err := db.sql.ExecContext(ctx, `INSERT OR IGNORE INTO alert_settings (id, events, updated_at) VALUES (1, ?, ?)`, DefaultAlertEvents, now()); err != nil {
 		return nil, err
 	}
 	var s AlertSettings

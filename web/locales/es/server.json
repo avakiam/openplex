@@ -291,5 +291,9 @@
   "the website is not running, so the build command could not run; start it and deploy again": "la web no está en marcha, así que el comando de compilación no se pudo ejecutar; iníciala y vuelve a desplegar",
   "only the owner of this database can change its remote access": "solo el propietario de esta base de datos puede cambiar su acceso remoto",
   "this database cannot be reached remotely": "a esta base de datos no se puede acceder de forma remota",
-  "remote access is off on this server": "el acceso remoto está desactivado en este servidor"
+  "remote access is off on this server": "el acceso remoto está desactivado en este servidor",
+  "only an administrator, or the reseller of this account, can change the size limit": "solo un administrador, o el revendedor de esta cuenta, puede cambiar el límite de tamaño",
+  "Redis instances have a fixed memory limit": "Las instancias de Redis tienen un límite de memoria fijo",
+  "the database size limit cannot be negative": "el límite de tamaño de la base de datos no puede ser negativo",
+  "the database size limit is at most 1048576 MB": "el límite de tamaño de la base de datos es como máximo 1048576 MB"
 }

@@ -40,9 +40,9 @@ function UserDialog({ open, onOpenChange, edit }: { open: boolean; onOpenChange:
   const { t } = useT();
   const { user: me } = useAuth();
   const users = useUsers();
-  const [f, setF] = useState({ username: "", email: "", password: "", role: "customer" as Role, parent_id: "", max_domains: "0", max_databases: "0", locale: "" as LocalePref });
+  const [f, setF] = useState({ username: "", email: "", password: "", role: "customer" as Role, parent_id: "", max_domains: "0", max_databases: "0", max_db_size_mb: "0", locale: "" as LocalePref });
   const resellers = (users.data ?? []).filter((u) => u.role === "reseller");
-  const reset = () => setF(edit ? { username: edit.username, email: edit.email, password: "", role: edit.role, parent_id: edit.parent_id ? String(edit.parent_id) : "", max_domains: String(edit.max_domains), max_databases: String(edit.max_databases), locale: edit.locale } : { username: "", email: "", password: "", role: "customer", parent_id: "", max_domains: "0", max_databases: "0", locale: "" });
+  const reset = () => setF(edit ? { username: edit.username, email: edit.email, password: "", role: edit.role, parent_id: edit.parent_id ? String(edit.parent_id) : "", max_domains: String(edit.max_domains), max_databases: String(edit.max_databases), max_db_size_mb: String(edit.max_db_size_mb), locale: edit.locale } : { username: "", email: "", password: "", role: "customer", parent_id: "", max_domains: "0", max_databases: "0", max_db_size_mb: "0", locale: "" });
   const save = useAction(
     () =>
       edit
@@ -50,7 +50,7 @@ function UserDialog({ open, onOpenChange, edit }: { open: boolean; onOpenChange:
             email: f.email,
             locale: f.locale,
             ...(isAdmin(me) && edit.id !== me?.id ? { role: f.role, parent_id: f.role === "customer" ? Number(f.parent_id || 0) : 0 } : {}),
-            ...(edit.id !== me?.id ? { max_domains: Number(f.max_domains), max_databases: Number(f.max_databases) } : {}),
+            ...(edit.id !== me?.id ? { max_domains: Number(f.max_domains), max_databases: Number(f.max_databases), max_db_size_mb: Number(f.max_db_size_mb) } : {}),
           })
         : api.post("/users", {
             username: f.username,
@@ -60,6 +60,7 @@ function UserDialog({ open, onOpenChange, edit }: { open: boolean; onOpenChange:
             parent_id: f.role === "customer" && f.parent_id ? Number(f.parent_id) : undefined,
             max_domains: Number(f.max_domains),
             max_databases: Number(f.max_databases),
+            max_db_size_mb: Number(f.max_db_size_mb),
             locale: f.locale,
           }),
     { success: edit ? t("User updated") : t("User created"), invalidate: [keys.users], onSuccess: () => onOpenChange(false) },
@@ -103,12 +104,15 @@ function UserDialog({ open, onOpenChange, edit }: { open: boolean; onOpenChange:
             </div>
           )}
           {edit?.id !== me?.id && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-3">
               <Field label={t("Website quota")} hint={t("0 = unlimited")}>
                 <Input type="number" min={0} value={f.max_domains} onChange={(e) => setF({ ...f, max_domains: e.target.value })} />
               </Field>
               <Field label={t("Database quota")} hint={t("0 = unlimited")}>
                 <Input type="number" min={0} value={f.max_databases} onChange={(e) => setF({ ...f, max_databases: e.target.value })} />
+              </Field>
+              <Field label={t("Size of each database (MB)")} hint={t("0 = unlimited")}>
+                <Input type="number" min={0} value={f.max_db_size_mb} onChange={(e) => setF({ ...f, max_db_size_mb: e.target.value })} />
               </Field>
             </div>
           )}

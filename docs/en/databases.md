@@ -7,6 +7,42 @@ reach them by the host names shown under **Connection details** (`mariadb`,
 switch on remote access. **Open in Adminer** opens the database in Adminer
 already logged in, and **Backups** backs up or restores one database.
 
+## Size limits
+
+Administrators, and resellers for their customers, can limit how big
+databases grow:
+
+- **Size of each database (MB)** in the account's settings (**Users**)
+  applies to every MariaDB and PostgreSQL database of that account.
+- **Size limit** in a database's menu gives that database its own limit
+  instead (0 goes back to the account's).
+
+A reseller with a limit of its own cannot give its customers more, nor take the
+limit away. Redis instances keep their fixed memory limit.
+
+**Databases** shows each database's size against its limit. Sizes are checked
+every five minutes (and right after a limit changes). A database over its limit
+becomes **read-only** for its applications: they can read it but not save
+anything, so its websites may show errors when they try. The owner gets it
+back by deleting data (or by having the limit raised): at the next check under
+the limit it is writable again. With **Alerts** on, administrators get an
+e-mail when a database goes over its limit, and another when it is back under.
+
+What read-only means for each engine:
+
+- **MariaDB**: the user keeps only SELECT, DELETE, DROP, LOCK TABLES and SHOW
+  VIEW, and its open connections are closed. Deleting rows, emptying tables
+  (`TRUNCATE`) or dropping tables frees space; the size counts what the tables
+  hold, so deleted rows count once MariaDB has cleared them, usually by the
+  next check.
+- **PostgreSQL**: new sessions start read-only (`default_transaction_read_only`)
+  and the open ones are closed. Applications stop writing, but, as the owner of
+  the database, its user can still turn that off for a session on purpose, so
+  this is a stop for applications rather than a hard barrier. The size is the
+  space the database takes on disk: after deleting rows, run `VACUUM FULL` on
+  the table (in a session with `SET default_transaction_read_only = off`) to
+  give the space back.
+
 ## Remote access
 
 To work on a MariaDB or PostgreSQL database from your own computer (DBeaver,

@@ -148,5 +148,15 @@
   "How to connect": "Com connectar-s'hi",
   "Use host {host}, port {port}, the database's own user name and password (Connection details), and TLS (SSL) set to required. The server's certificate is OpenPlex's own: download it to let your client verify it, or compare its fingerprint.": "Fes servir l'amfitrió {host}, el port {port}, l'usuari i la contrasenya de la base de dades (Dades de connexió) i TLS (SSL) obligatori. El certificat del servidor és propi d'OpenPlex: descarrega'l perquè el teu client el verifiqui, o compara'n l'empremta.",
   "Certificate fingerprint (SHA-256)": "Empremta del certificat (SHA-256)",
-  "Download certificate": "Descarrega el certificat"
+  "Download certificate": "Descarrega el certificat",
+  "{pct}% of {limit}": "{pct}% de {limit}",
+  "Over its size limit: its applications can read it but not save anything.": "Supera el seu límit de mida: les seves aplicacions la poden llegir però no hi poden desar res.",
+  "Read-only": "Només lectura",
+  "Size limit": "Límit de mida",
+  "Size limit saved": "Límit de mida desat",
+  "Size limit of {name}": "Límit de mida de {name}",
+  "Checked every five minutes. Over the limit, the database becomes read-only for its applications until data is deleted or the limit is raised.": "Es comprova cada cinc minuts. Per sobre del límit, la base de dades passa a només lectura per a les seves aplicacions fins que se n'esborrin dades o se'n pugi el límit.",
+  "Limit (MB)": "Límit (MB)",
+  "0 = the account's limit ({limit} for each database).": "0 = el límit del compte ({limit} per base de dades).",
+  "0 = the account's limit (none at the moment).": "0 = el límit del compte (ara mateix cap)."
 }

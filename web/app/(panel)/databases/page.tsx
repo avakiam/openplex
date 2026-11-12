@@ -1,8 +1,9 @@
 "use client";
-import { Archive, Check, Copy, Database as DbIcon, Eye, EyeOff, Globe, KeyRound, Loader2, MoreHorizontal, Plus, SquareArrowOutUpRight, Trash2 } from "lucide-react";
+import { Archive, Check, Copy, Database as DbIcon, Eye, EyeOff, Gauge, Globe, KeyRound, Loader2, MoreHorizontal, Plus, SquareArrowOutUpRight, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { LimitDialog, SizeCell } from "@/components/database-limit";
 import { RemoteAccessDialog } from "@/components/database-remote";
 import { ItemBackups } from "@/components/item-backups";
 import {
@@ -34,7 +35,6 @@ import { useT } from "@/lib/i18n";
 import { roleLabels } from "@/components/status";
 import { keys, useAction, useDatabaseSizes, useDatabases, useEngines, useUsers } from "@/lib/hooks";
 import type { Database, DatabaseCredentials, Engine } from "@/lib/types";
-import { bytes } from "@/lib/utils";
 
 function prefixFor(username: string) {
   return username.toLowerCase().replace(/[.-]/g, "_").slice(0, 16);
@@ -297,6 +297,7 @@ export default function DatabasesPage() {
   const [del, setDel] = useState<Database | null>(null);
   const [backups, setBackups] = useState<Database | null>(null);
   const [remote, setRemote] = useState<Database | null>(null);
+  const [limit, setLimit] = useState<Database | null>(null);
   const remove = useAction((id: number) => api.del(`/databases/${id}`), {
     success: t("Database is being deleted"),
     invalidate: [keys.databases],
@@ -367,7 +368,9 @@ export default function DatabasesPage() {
                       </Badge>
                     )}
                   </Td>
-                  <Td className="tabular text-right text-muted-foreground">{sizes.data?.[d.id] !== undefined ? bytes(sizes.data[d.id]) : "—"}</Td>
+                  <Td className="tabular text-right text-muted-foreground">
+                    <SizeCell db={d} size={sizes.data?.[d.id]} />
+                  </Td>
                   <Td>
                     {d.status === "running" ? (
                       <Badge tone="success">{t("Ready")}</Badge>
@@ -378,6 +381,11 @@ export default function DatabasesPage() {
                     ) : (
                       <Badge tone="danger" title={d.status_message}>
                         {t("Error")}
+                      </Badge>
+                    )}
+                    {d.size_locked && (
+                      <Badge tone="danger" className="ml-1" title={t("Over its size limit: its applications can read it but not save anything.")}>
+                        {t("Read-only")}
                       </Badge>
                     )}
                     {d.status === "error" && (
@@ -411,6 +419,11 @@ export default function DatabasesPage() {
                             <Globe /> {t("Remote access")}
                           </DropdownItem>
                         )}
+                        {d.can_limit && (
+                          <DropdownItem onSelect={() => setLimit(d)}>
+                            <Gauge /> {t("Size limit")}
+                          </DropdownItem>
+                        )}
                         <DropdownItem disabled={d.status !== "running"} onSelect={() => setBackups(d)}>
                           <Archive /> {t("Backups")}
                         </DropdownItem>
@@ -434,6 +447,7 @@ export default function DatabasesPage() {
       <CreateDialog open={create} onOpenChange={setCreate} />
       <CredentialsDialog db={connect} onClose={() => setConnect(null)} />
       <RemoteAccessDialog key={remote?.id ?? 0} db={remote} onClose={() => setRemote(null)} />
+      <LimitDialog key={`limit-${limit?.id ?? 0}`} db={limit} onClose={() => setLimit(null)} />
       <Dialog open={!!backups} onOpenChange={(o) => !o && setBackups(null)}>
         <DialogContent title={t("Backups of {name}", { name: backups?.name ?? "" })} className="max-w-2xl">
           {backups && (

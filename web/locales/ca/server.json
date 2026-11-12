@@ -291,5 +291,9 @@
   "the website is not running, so the build command could not run; start it and deploy again": "el web no està en marxa, així que l'ordre de compilació no s'ha pogut executar; engega'l i torna a desplegar",
   "only the owner of this database can change its remote access": "només el propietari d'aquesta base de dades en pot canviar l'accés remot",
   "this database cannot be reached remotely": "a aquesta base de dades no s'hi pot accedir de forma remota",
-  "remote access is off on this server": "l'accés remot està desactivat en aquest servidor"
+  "remote access is off on this server": "l'accés remot està desactivat en aquest servidor",
+  "only an administrator, or the reseller of this account, can change the size limit": "només un administrador, o el revenedor d'aquest compte, pot canviar el límit de mida",
+  "Redis instances have a fixed memory limit": "Les instàncies de Redis tenen un límit de memòria fix",
+  "the database size limit cannot be negative": "el límit de mida de la base de dades no pot ser negatiu",
+  "the database size limit is at most 1048576 MB": "el límit de mida de la base de dades és com a màxim 1048576 MB"
 }

@@ -26,16 +26,20 @@ type Database struct {
 	StatusMessage string `json:"status_message"`
 	// RemoteAllow lists the addresses/networks (comma-separated) allowed to
 	// reach the database remotely; empty = no remote access.
-	RemoteAllow string    `json:"-"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	RemoteAllow string `json:"-"`
+	// MaxSizeMB limits the database's size (0: the account's limit applies).
+	MaxSizeMB int `json:"max_size_mb"`
+	// SizeLocked is set while the database is read-only for being over its limit.
+	SizeLocked bool      `json:"size_locked"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
-const databaseCols = `id, owner_id, engine, name, username, password_enc, status, status_message, remote_allow, created_at, updated_at`
+const databaseCols = `id, owner_id, engine, name, username, password_enc, status, status_message, remote_allow, max_size_mb, size_locked, created_at, updated_at`
 
 func scanDatabase(row interface{ Scan(...any) error }) (*Database, error) {
 	var d Database
-	if err := row.Scan(&d.ID, &d.OwnerID, &d.Engine, &d.Name, &d.Username, &d.PasswordEnc, &d.Status, &d.StatusMessage, &d.RemoteAllow, &d.CreatedAt, &d.UpdatedAt); err != nil {
+	if err := row.Scan(&d.ID, &d.OwnerID, &d.Engine, &d.Name, &d.Username, &d.PasswordEnc, &d.Status, &d.StatusMessage, &d.RemoteAllow, &d.MaxSizeMB, &d.SizeLocked, &d.CreatedAt, &d.UpdatedAt); err != nil {
 		return nil, mapErr(err)
 	}
 	return &d, nil
@@ -155,4 +159,34 @@ func (db *DB) RemoteDatabases(ctx context.Context) ([]*Database, error) {
 		out = append(out, d)
 	}
 	return out, rows.Err()
+}
+
+// SetDatabaseLimit sets the size limit of a database (MB, 0 = the account's).
+func (db *DB) SetDatabaseLimit(ctx context.Context, id int64, mb int) error {
+	res, err := db.sql.ExecContext(ctx, `UPDATE databases SET max_size_mb = ?, updated_at = ? WHERE id = ?`, mb, now(), id)
+	if err != nil {
+		return mapErr(err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// SetDatabaseLocked records whether a database is read-only for being over its limit.
+func (db *DB) SetDatabaseLocked(ctx context.Context, id int64, locked bool) error {
+	_, err := db.sql.ExecContext(ctx, `UPDATE databases SET size_locked = ?, updated_at = ? WHERE id = ?`, locked, now(), id)
+	return mapErr(err)
+}
+
+// LimitMB is the size limit that applies to d (MB, 0 = none): its own, or
+// else its owner account's.
+func (d *Database) LimitMB(owner *User) int {
+	if d.MaxSizeMB > 0 {
+		return d.MaxSizeMB
+	}
+	if owner != nil {
+		return owner.MaxDBSizeMB
+	}
+	return 0
 }

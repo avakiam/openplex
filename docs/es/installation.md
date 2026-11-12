@@ -103,6 +103,7 @@ cuando algo necesita atención. Lo comprueba cada minuto:
 | Falla una copia de seguridad | cada copia fallida, una vez |
 | Una web está caída | tras dos minutos con error, y otra vez cuando se recupera |
 | El disco está casi lleno | por encima del 90 % del disco de datos, y otra vez por debajo del 85 % |
+| Una base de datos supera su límite de tamaño | cuando pasa a solo lectura, y otra vez cuando vuelve a estar por debajo (ver [bases de datos](databases.md#límites-de-tamaño)) |
 | Un certificado no se renueva | cuando el de un nombre en uso está a punto de caducar (la renovación lleva tiempo fallando: suele ser el DNS o el puerto 80) |
 | Nueva versión de OpenPlex | una vez por versión |
 | Falla una actualización de OpenPlex | cuando una actualización se deshace o falla |

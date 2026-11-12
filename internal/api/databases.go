@@ -42,12 +42,23 @@ type databaseView struct {
 	// RemotePort is the public port remote clients use (0: not reachable remotely).
 	RemotePort  int      `json:"remote_port"`
 	RemoteAllow []string `json:"remote_allow"`
+	// LimitMB is the size limit that applies (its own or the account's; 0 = none).
+	LimitMB int `json:"limit_mb"`
+	// CanLimit tells whether the caller may change the size limit.
+	CanLimit bool `json:"can_limit"`
 }
 
-func (s *Server) viewOf(d *db.Database) databaseView {
+func (s *Server) viewOf(r *http.Request, d *db.Database) databaseView {
 	e := docker.Engines[d.Engine]
-	return databaseView{Database: d, Host: docker.DatabaseHost(d), Port: e.Port, Label: e.Label,
+	v := databaseView{Database: d, Host: docker.DatabaseHost(d), Port: e.Port, Label: e.Label,
 		RemotePort: s.remotePort(d), RemoteAllow: splitAllow(d.RemoteAllow)}
+	if limitable(d) {
+		if owner, err := s.db.GetUser(r.Context(), d.OwnerID); err == nil {
+			v.LimitMB = d.LimitMB(owner)
+			v.CanLimit = canLimitDatabase(actor(r), owner)
+		}
+	}
+	return v
 }
 
 func (s *Server) loadDatabase(w http.ResponseWriter, r *http.Request) *db.Database {
@@ -108,7 +119,7 @@ func (s *Server) handleListDatabases(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]databaseView, 0, len(list))
 	for _, d := range list {
-		v := s.viewOf(d)
+		v := s.viewOf(r, d)
 		v.Shared = shared[d.ID]
 		out = append(out, v)
 	}
@@ -132,7 +143,7 @@ func (s *Server) handleDatabaseSizes(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleGetDatabase(w http.ResponseWriter, r *http.Request) {
 	if d := s.loadDatabase(w, r); d != nil {
-		writeJSON(w, http.StatusOK, s.viewOf(d))
+		writeJSON(w, http.StatusOK, s.viewOf(r, d))
 	}
 }
 
@@ -211,7 +222,7 @@ func (s *Server) handleCreateDatabase(w http.ResponseWriter, r *http.Request) {
 		}
 		return s.db.SetDatabaseStatus(ctx, cp.ID, db.StatusRunning, "")
 	})
-	writeJSON(w, http.StatusCreated, s.viewOf(d))
+	writeJSON(w, http.StatusCreated, s.viewOf(r, d))
 }
 
 func (s *Server) handleDatabaseCredentials(w http.ResponseWriter, r *http.Request) {
@@ -224,7 +235,7 @@ func (s *Server) handleDatabaseCredentials(w http.ResponseWriter, r *http.Reques
 		s.fail(w, r, err)
 		return
 	}
-	v := s.viewOf(d)
+	v := s.viewOf(r, d)
 	var uri string
 	switch d.Engine {
 	case db.EngineMariaDB:
