@@ -219,7 +219,9 @@ has been verified on the Linux test server. One commit per milestone.
       managers too), locale-aware numbers/dates, fixed API error messages translated; the build fails on a
       missing translation (`scripts/check-i18n.mjs`)
 - [ ] Turn dynamic API messages (quotas, overlaps, invalid JSON) into fixed, translatable strings
-- [ ] Trim the embedded Monaco bundle (~25 MB of the 41 MB binary) to the languages we need
+- [x] Trim the embedded Monaco bundle: scripts/copy-monaco.mjs leaves out what the panel never loads (the editor's
+      UI translations, the old copies of the workers, and the 7 MB TypeScript/JavaScript language service, whose
+      features the editor turns off; highlighting stays) — 25 → 7.5 MB, binary 43.9 → 27.0 MB
 
 ## M15 — Extensions (`internal/extensions`, design in `docs/adr/0001-extensions.md`)
 - [x] Manifest `openplex-extension.json` (schema 1, localized texts, permissions, events, settings, pages,
@@ -551,3 +553,6 @@ has been verified on the Linux test server. One commit per milestone.
 - 2026-11-12 — Off-site copy check (0.27.90): unit-tested on a fake /proc + /sys (partitions, LVM, md RAID, btrfs on
   LVM, ZFS, NFS, sshfs with a space in its mount point, S3 on loopback / own address / elsewhere); on the LAN the
   default repository was reported on the same disk as the data (sda, from /dev/sda2).
+- 2026-11-12 — Monaco trim (0.28.90): on the LAN the file manager's editor opened JavaScript (highlighted, no request
+  for the TypeScript worker, no worker errors), CSS (the CSS worker flagged a misspelled property and showed color
+  swatches) and saved a file; the binary went from 43.9 MB to 27.0 MB.

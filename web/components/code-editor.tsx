@@ -56,6 +56,17 @@ export function CodeEditor({
       value={value}
       theme={dark ? "vs-dark" : "light"}
       loading={<Spinner />}
+      beforeMount={(monaco) => {
+        // The TypeScript/JavaScript language service is not shipped (scripts/copy-monaco.mjs):
+        // with every feature off its worker is never started. Highlighting stays.
+        const off = {
+          completionItems: false, hovers: false, documentSymbols: false, definitions: false, references: false,
+          documentHighlights: false, rename: false, diagnostics: false, documentRangeFormattingEdits: false,
+          signatureHelp: false, onTypeFormattingEdits: false, codeActions: false, inlayHints: false,
+        };
+        monaco.typescript.typescriptDefaults.setModeConfiguration(off);
+        monaco.typescript.javascriptDefaults.setModeConfiguration(off);
+      }}
       onChange={(v) => onChange(v ?? "")}
       onMount={(editor, monaco) => {
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, onSave);
