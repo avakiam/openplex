@@ -20,6 +20,7 @@ import {
   Share2,
   Square,
   SquareTerminal,
+  GitBranch,
   Trash2,
   X,
 } from "lucide-react";
@@ -30,6 +31,7 @@ import { Suspense, useEffect, useState } from "react";
 
 import { CreateDomainDialog } from "@/components/create-domain-dialog";
 import { CronJobs } from "@/components/cron-jobs";
+import { GitDeployTab } from "@/components/git-deploy";
 import { DNSRecords } from "@/components/dns-records";
 import { ExtensionFrame } from "@/components/extension-frame";
 import { MailTab } from "@/components/mail-tab";
@@ -661,6 +663,11 @@ function DomainView() {
               <SquareTerminal /> {t("Terminal")}
             </TabsTrigger>
           )}
+          {d.kind !== "alias" && acc.can("files") && acc.can("site") && (
+            <TabsTrigger value="git">
+              <GitBranch /> Git
+            </TabsTrigger>
+          )}
           {d.kind !== "alias" && acc.can("site") && (
             <TabsTrigger value="cron">
               <CalendarClock /> {t("Scheduled tasks")}
@@ -724,6 +731,9 @@ function DomainView() {
             <CardBody>{tab === "terminal" && <WebTerminal domainId={d.id} canRoot={isAdmin(user)} />}</CardBody>
           </Card>
         </TabsContent>
+        {d.kind !== "alias" && (
+          <TabsContent value="git">{tab === "git" && <GitDeployTab d={d} readOnly={acc.readOnly} />}</TabsContent>
+        )}
         {d.kind !== "alias" && (
           <TabsContent value="cron">
             <CronJobs domain={d} />

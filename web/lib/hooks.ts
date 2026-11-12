@@ -7,6 +7,7 @@ import { api } from "./api";
 import { t } from "./i18n";
 import type {
   AlertsStatus,
+  GitDeploy,
   PHPSettings,
   SFTPStatus,
   AppInfo,
@@ -53,6 +54,7 @@ export const keys = {
   domain: (id: number) => ["domains", id] as const,
   redirects: (id: number) => ["domains", id, "redirects"] as const,
   cron: (id: number) => ["domains", id, "cron"] as const,
+  git: (id: number) => ["domains", id, "git"] as const,
   cronRuns: (id: number, jid: number) => ["domains", id, "cron", jid, "runs"] as const,
   files: (id: number, path: string) => ["domains", id, "files", path] as const,
   runtimes: ["runtimes"] as const,
@@ -199,6 +201,15 @@ export const useItemBackups = (base: string, enabled = true) =>
     enabled,
     retry: false,
     refetchInterval: (q) => (q.state.data?.runs.some((r) => r.status === "running") ? 2000 : false),
+  });
+
+// ---------- Git deploy ----------
+
+export const useGitDeploy = (id: number) =>
+  useQuery({
+    queryKey: keys.git(id),
+    queryFn: () => api.get<GitDeploy | null>(`/domains/${id}/git`),
+    refetchInterval: (q) => (q.state.data?.status === "running" ? 3000 : false),
   });
 
 // ---------- Scheduled tasks (cron) ----------

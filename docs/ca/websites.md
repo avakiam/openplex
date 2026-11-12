@@ -3,7 +3,7 @@
 [English](../en/websites.md) · [Español](../es/websites.md) · **Català**
 
 Tot sobre allotjar un web: crear-lo, instal·lar-hi una aplicació, canviar-ne
-la configuració de PHP i accedir als seus fitxers per SFTP.
+la configuració de PHP, desplegar-lo des de Git i accedir als seus fitxers per SFTP.
 
 ## Crear un web
 
@@ -177,6 +177,45 @@ En desar es reinicia el contenidor del web (uns segons). Els valors s'apliquen
 al web, a les seves tasques programades i al seu terminal web per igual.
 Deixa **Mostrar els errors** desactivat en un web en producció: els missatges
 d'error poden revelar camins i configuració als visitants.
+
+## Desplegar des de Git
+
+La pestanya **Git** d'un web hi desplega una branca d'un repositori, a mà o
+a cada push.
+
+1. Escriu l'**adreça del repositori**: SSH
+   (`git@github.com:propietari/repo.git`, `ssh://git@host:port/camí`) per a
+   repositoris privats, o HTTPS per als públics (sense contrasenya ni token a
+   l'adreça). Després la **branca** i la **carpeta** del directori del web on
+   va el codi: l'arrel de documents (`public`) si el repositori és el mateix
+   web, o buida (el directori del web) per a un framework el repositori del
+   qual té la seva pròpia carpeta `public`, com Laravel.
+2. **Configura el desplegament des de Git** crea una clau de desplegament per
+   a aquest web. Afegeix-la al repositori com a clau de desplegament només de
+   lectura (GitHub: *Settings → Deploy keys*; GitLab: *Settings → Repository
+   → Deploy keys*).
+3. **Desplega ara**. Per desplegar a cada push, afegeix l'**adreça del
+   webhook** al repositori com a webhook de push (tipus de contingut
+   `application/json`) i deixa activat **Desplega a cada push**. Els push a
+   altres branques s'ignoren.
+
+Cada desplegament descarrega el darrer commit de la branca i fa que els
+fitxers controlats de la carpeta hi coincideixin. Es conserven els fitxers
+que el repositori no controla (pujades, memòries cau, `.env`). Després:
+
+- l'**ordre de compilació**, si n'hi ha, s'executa a la carpeta: dins del
+  mateix contenidor del web en PHP, Node.js, Python i Go
+  (`composer install --no-dev`, `npm ci && npm run build`…), i en un shell
+  amb git i eines habituals als webs estàtics;
+- les aplicacions Node.js, Python i Go es reinicien.
+
+La pestanya mostra el commit desplegat, qui el va iniciar (a mà o el
+webhook) i la sortida del darrer desplegament. Un push mentre es desplega
+llança un altre desplegament quan acaba. L'adreça del webhook és secreta:
+**Canvia l'adreça** si es filtra. La descàrrega es fa com l'usuari del web en
+un contenidor temporal que només veu els fitxers del web; les claus d'amfitrió
+SSH s'accepten el primer cop i es comproven després. Treure el desplegament
+des de Git deixa els fitxers.
 
 ## Fitxers per SFTP
 

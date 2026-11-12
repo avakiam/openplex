@@ -277,5 +277,16 @@
   "the live website's application is busy: wait for its current task to finish": "l'aplicació del web en producció està ocupada: espera que acabi la seva tasca en curs",
   "the application has no database linked in the panel": "l'aplicació no té cap base de dades vinculada al tauler",
   "choose at least one fix": "tria almenys una correcció",
-  "the security checks gave no result": "les comprovacions de seguretat no van donar cap resultat"
+  "the security checks gave no result": "les comprovacions de seguretat no van donar cap resultat",
+  "aliases have no files of their own; set up Git on the website": "els àlies no tenen fitxers propis; configura Git al web",
+  "the repository must be an SSH or HTTPS address such as git@github.com:owner/repo.git": "el repositori ha de ser una adreça SSH o HTTPS com git@github.com:propietari/repo.git",
+  "the repository address is not valid": "l'adreça del repositori no és vàlida",
+  "don't put a password or token in the address: use the deploy key with an SSH address": "no posis cap contrasenya ni token a l'adreça: fes servir la clau de desplegament amb una adreça SSH",
+  "the branch name is not valid": "el nom de la branca no és vàlid",
+  "the folder must be inside the website's directory": "la carpeta ha de ser dins del directori del web",
+  "the logs folder cannot hold the repository": "la carpeta de registres no pot contenir el repositori",
+  "the build command is too long": "l'ordre de compilació és massa llarga",
+  "a deploy is running; wait for it to finish": "hi ha un desplegament en curs; espera que acabi",
+  "the deploy was interrupted by a panel restart; deploy again": "el desplegament es va interrompre per un reinici del tauler; torna a desplegar",
+  "the website is not running, so the build command could not run; start it and deploy again": "el web no està en marxa, així que l'ordre de compilació no s'ha pogut executar; engega'l i torna a desplegar"
 }

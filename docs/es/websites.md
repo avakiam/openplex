@@ -3,7 +3,7 @@
 [English](../en/websites.md) · **Español** · [Català](../ca/websites.md)
 
 Todo sobre alojar una web: crearla, instalar una aplicación, cambiar su
-configuración de PHP y acceder a sus archivos por SFTP.
+configuración de PHP, desplegarla desde Git y acceder a sus archivos por SFTP.
 
 ## Crear una web
 
@@ -176,6 +176,45 @@ Al guardar se reinicia el contenedor de la web (unos segundos). Los valores se
 aplican a la web, a sus tareas programadas y a su terminal web por igual.
 Deja **Mostrar los errores** desactivado en una web en producción: los
 mensajes de error pueden revelar rutas y configuración a los visitantes.
+
+## Desplegar desde Git
+
+La pestaña **Git** de una web despliega en ella una rama de un repositorio,
+a mano o en cada push.
+
+1. Escribe la **dirección del repositorio**: SSH
+   (`git@github.com:propietario/repo.git`, `ssh://git@host:puerto/ruta`) para
+   repositorios privados, o HTTPS para los públicos (sin contraseña ni token
+   en la dirección). Después la **rama** y la **carpeta** del directorio de
+   la web donde va el código: la raíz de documentos (`public`) si el
+   repositorio es la propia web, o vacía (el directorio de la web) para un
+   framework cuyo repositorio tiene su propia carpeta `public`, como Laravel.
+2. **Configurar el despliegue desde Git** crea una clave de despliegue para
+   esta web. Añádela al repositorio como clave de despliegue de solo lectura
+   (GitHub: *Settings → Deploy keys*; GitLab: *Settings → Repository →
+   Deploy keys*).
+3. **Desplegar ahora**. Para desplegar en cada push, añade la **dirección
+   del webhook** al repositorio como webhook de push (tipo de contenido
+   `application/json`) y deja activado **Desplegar en cada push**. Los push a
+   otras ramas se ignoran.
+
+Cada despliegue descarga el último commit de la rama y hace que los archivos
+controlados de la carpeta coincidan con él. Se conservan los archivos que el
+repositorio no controla (subidas, cachés, `.env`). Después:
+
+- el **comando de compilación**, si hay, se ejecuta en la carpeta: dentro
+  del propio contenedor de la web en PHP, Node.js, Python y Go
+  (`composer install --no-dev`, `npm ci && npm run build`…), y en un shell
+  con git y herramientas habituales en las webs estáticas;
+- las aplicaciones Node.js, Python y Go se reinician.
+
+La pestaña muestra el commit desplegado, quién lo inició (a mano o el
+webhook) y la salida del último despliegue. Un push mientras se despliega
+lanza otro despliegue cuando termina. La dirección del webhook es secreta:
+**Cambiar la dirección** si se filtra. La descarga se hace como el usuario
+de la web en un contenedor temporal que solo ve los archivos de la web; las
+claves de host SSH se aceptan la primera vez y se comprueban después. Quitar
+el despliegue desde Git deja los archivos.
 
 ## Archivos por SFTP
 

@@ -168,6 +168,10 @@ func siteArea(r *http.Request) (area string, write bool) {
 		return db.AreaFiles, write
 	case "terminal":
 		return areaShell, true
+	case "git":
+		// It changes the files and runs the build command; reading shows the
+		// webhook secret.
+		return areaShell, write
 	case "dns":
 		return db.AreaDNS, write
 	case "mail":

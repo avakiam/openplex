@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -403,6 +404,8 @@ func (s *Server) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 				if err := s.orch.RemoveSite(ctx, c, purge); err != nil {
 					return fmt.Errorf("remove %s: %w", c.Name, err)
 				}
+				// Its Git deploy went with the website (known hosts, accounts).
+				_ = os.RemoveAll(s.orch.GitDir(c.ID))
 			}
 			return s.orch.ApplyEdge(ctx)
 		})

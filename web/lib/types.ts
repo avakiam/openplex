@@ -729,3 +729,24 @@ export interface AlertsStatus {
   recent: AlertEntry[];
   available: boolean;
 }
+
+export interface GitDeploy {
+  domain_id: number;
+  repo_url: string;
+  branch: string;
+  target: string;
+  build_command: string;
+  auto_deploy: boolean;
+  public_key: string;
+  webhook_path: string;
+  status: "" | "running" | "success" | "error";
+  pending: boolean;
+  last_commit: string;
+  last_subject: string;
+  last_output: string;
+  last_error: string;
+  last_trigger: "" | "manual" | "webhook";
+  last_deploy_at: string | null;
+  created_at: string;
+  updated_at: string;
+}

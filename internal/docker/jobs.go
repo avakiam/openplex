@@ -28,6 +28,9 @@ type Job struct {
 	// Isolated: no network and only the capabilities to copy files as root
 	// (chown, read and write regardless of permissions).
 	Isolated bool
+	// User runs the job as "uid:gid" instead of the image's user, with no
+	// capabilities.
+	User string
 }
 
 // JobResult holds a finished job's output.
@@ -49,11 +52,14 @@ func (o *Orchestrator) RunJob(ctx context.Context, j Job) (*JobResult, error) {
 	suffix := make([]byte, 4)
 	_, _ = rand.Read(suffix)
 	name := "opx-job-" + hex.EncodeToString(suffix)
-	cc := &container.Config{Image: j.Image, Cmd: j.Cmd, Env: j.Env, Labels: managedLabels("job")}
+	cc := &container.Config{Image: j.Image, Cmd: j.Cmd, Env: j.Env, Labels: managedLabels("job"), User: j.User}
 	hc := &container.HostConfig{
 		Mounts:      j.Mounts,
 		Resources:   container.Resources{Memory: int64(mem) << 20},
 		SecurityOpt: []string{"no-new-privileges:true"},
+	}
+	if j.User != "" {
+		hc.CapDrop = []string{"ALL"}
 	}
 	if j.Isolated {
 		hc.NetworkMode = "none"

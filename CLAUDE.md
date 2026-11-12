@@ -56,7 +56,8 @@ internal/alerts/      e-mail alerts (backups, websites down, disk, certificates,
 internal/dns/          authoritative DNS: zones/records in the panel DB, pushed to a PowerDNS container via its API
 internal/mail/         mail domains, mailboxes, aliases, DKIM → docker-mailserver files + DNS records; Roundcube webmail + its plugin
 internal/captcha/      login captcha verification (Turnstile, hCaptcha, reCAPTCHA)
-internal/apps/        one-click application installs (WordPress, Joomla, Drupal): catalog + install scripts
+internal/apps/        WordPress, Joomla, Drupal: catalog + scripts to install, update, check, harden and stage them
+internal/gitdeploy/   Git deploy settings validation and deploy keys (the deploy runs in a container)
 internal/update/      panel updates: release check, signature verification, install with rollback
 internal/extensions/  extension manifest, .opx packages + signatures, lifecycle, API sockets, events, marketplace
 internal/backup/ terminal/   (see PROGRESS.md for status)

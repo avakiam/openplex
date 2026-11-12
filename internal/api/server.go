@@ -51,6 +51,7 @@ type Server struct {
 	version  string
 
 	loginLimiter    *limiter
+	webhookLimiter  *limiter // wrong Git webhook tokens, per IP
 	tickets         ticketStore
 	captchaPasses   ticketStore // captcha solved, password right: the 2FA step may skip it
 	adminerSessions ticketStore // signed-in panel users allowed into /tools/adminer/
@@ -88,20 +89,21 @@ type Options struct {
 func New(o Options) *Server {
 	return &Server{
 		cfg: o.Config, db: o.DB, orch: o.Orchestrator, mon: o.Monitor, log: o.Logger, ui: o.UI, version: o.Version,
-		signer:       auth.NewSigner(o.Config.Secret, o.Config.AccessTTL),
-		box:          o.Box,
-		backups:      o.Backups,
-		cron:         o.Cron,
-		firewall:     o.Firewall,
-		dns:          o.DNS,
-		mail:         o.Mail,
-		ext:          o.Extensions,
-		updates:      o.Updates,
-		sftp:         o.SFTP,
-		alerts:       o.Alerts,
-		loginLimiter: newLimiter(10, 5*time.Minute),
-		captcha:      captcha.NewVerifier(),
-		baseCtx:      o.BaseContext,
+		signer:         auth.NewSigner(o.Config.Secret, o.Config.AccessTTL),
+		box:            o.Box,
+		backups:        o.Backups,
+		cron:           o.Cron,
+		firewall:       o.Firewall,
+		dns:            o.DNS,
+		mail:           o.Mail,
+		ext:            o.Extensions,
+		updates:        o.Updates,
+		sftp:           o.SFTP,
+		alerts:         o.Alerts,
+		loginLimiter:   newLimiter(10, 5*time.Minute),
+		webhookLimiter: newLimiter(20, 10*time.Minute),
+		captcha:        captcha.NewVerifier(),
+		baseCtx:        o.BaseContext,
 	}
 }
 
@@ -126,6 +128,7 @@ func (s *Server) routes() http.Handler {
 		r.Get("/auth/captcha", s.handleLoginCaptcha)
 		r.Post("/auth/refresh", s.handleRefresh)
 		r.Post("/auth/logout", s.handleLogout)
+		r.Post("/hooks/git/{id}/{token}", s.handleGitWebhook)
 
 		r.Group(func(r chi.Router) {
 			r.Use(s.authenticate)
@@ -182,6 +185,10 @@ func (s *Server) routes() http.Handler {
 				r.Post("/app/staging", s.handleCreateStaging)
 				r.Post("/app/push", s.handlePushStaging)
 				r.Post("/app/harden", s.handleHardenSiteApp)
+				r.Get("/git", s.handleGetGit)
+				r.Put("/git", s.handlePutGit)
+				r.Delete("/git", s.handleDeleteGit)
+				r.Post("/git/deploy", s.handleGitDeployNow)
 				r.Get("/backups", s.handleItemBackups)
 				r.Post("/backups", s.handleItemBackupNow)
 				r.Post("/backups/{snap}/restore", s.handleItemRestore)

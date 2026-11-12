@@ -305,8 +305,17 @@ has been verified on the Linux test server. One commit per milestone.
       with the site and alias names as trusted hosts, chmod), keeps a copy of the configuration file and puts it
       back if the site stops answering, then re-checks. Drupal staging copies add their own name to the trusted
       hosts. The install form no longer defaults the administrator to `admin`
-- [ ] Git deploy: clone a repository into a website (deploy key), pull on a webhook or by hand, optional
-      build command
+- [x] Git deploy (`internal/gitdeploy`, migration v21 `git_deploys`): Git tab per website (files + site areas, like
+      the terminal); SSH or HTTPS repository (no credentials in the URL, no local paths or other transports),
+      branch, folder inside the site directory (not logs/), optional build command, deploy on push. A new deploy
+      gets an Ed25519 deploy key (sealed) and a webhook token; `POST /api/v1/hooks/git/{id}/{token}` (no session,
+      constant-time token check, wrong tokens rate-limited per IP; GitHub ping answered; pushes to other branches
+      ignored). A deploy runs `git init/fetch --depth 1/checkout --force FETCH_HEAD` (+ submodules) in a throwaway
+      shell-image container as the site user, seeing only the site directory and its key dir (generated
+      passwd/group so ssh runs; host keys accepted on first use; connect and stall timeouts); untracked files are
+      kept; then the build command in the site's own container (shell container for static sites) and a restart
+      for Node.js, Python and Go. A push during a deploy queues one more; restarts fail running deploys; the last
+      commit, trigger, error and 32 KB of output are shown
 
 ## Verification log
 - 2026-11-06 — Local smoke test on Docker Desktop 29.9 (openplexd in a container with the
@@ -504,3 +513,12 @@ has been verified on the Linux test server. One commit per milestone.
   wp-config.php 600, settings.php 444, installation/ gone, Drupal refused a foreign Host with 400. XML-RPC first
   stayed on (the `xmlrpc_enabled` filter only drops authenticated methods): the mu-plugin now answers 403. A
   staging copy of the hardened Drupal site answered 200. Refusals: an unknown fix, no fix. Card checked (Spanish).
+- 2026-11-12 — Git deploy (0.24.94): on the LAN, a public HTTPS repository deployed into a static site with a build
+  command (files owned by the site user, an untracked upload kept, page served); a private repository over SSH
+  (a throwaway SSH Git server authorised with the generated deploy key) deployed into a PHP site with a build
+  command run in its PHP 8.3 container; after a new commit the push webhook deployed it, a second push during
+  that deploy queued and ran one more, a push to another branch was ignored and a wrong token got 404. A failing
+  build, a missing branch and an unreachable host (33 s, connect timeout) were reported; the private key file
+  is removed after each deploy and the git folder goes with the website. Found on the way: ssh refused to run
+  for a uid without a passwd entry (generated passwd/group are now mounted) and git refused files left by
+  another owner (safe.directory allowed inside the job). Git tab checked in the browser (Spanish).

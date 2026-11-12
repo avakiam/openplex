@@ -277,5 +277,16 @@
   "the live website's application is busy: wait for its current task to finish": "la aplicación de la web en producción está ocupada: espera a que termine su tarea en curso",
   "the application has no database linked in the panel": "la aplicación no tiene ninguna base de datos vinculada en el panel",
   "choose at least one fix": "elige al menos una corrección",
-  "the security checks gave no result": "las comprobaciones de seguridad no dieron ningún resultado"
+  "the security checks gave no result": "las comprobaciones de seguridad no dieron ningún resultado",
+  "aliases have no files of their own; set up Git on the website": "los alias no tienen archivos propios; configura Git en la web",
+  "the repository must be an SSH or HTTPS address such as git@github.com:owner/repo.git": "el repositorio debe ser una dirección SSH o HTTPS como git@github.com:propietario/repo.git",
+  "the repository address is not valid": "la dirección del repositorio no es válida",
+  "don't put a password or token in the address: use the deploy key with an SSH address": "no pongas una contraseña ni un token en la dirección: usa la clave de despliegue con una dirección SSH",
+  "the branch name is not valid": "el nombre de la rama no es válido",
+  "the folder must be inside the website's directory": "la carpeta debe estar dentro del directorio de la web",
+  "the logs folder cannot hold the repository": "la carpeta de registros no puede contener el repositorio",
+  "the build command is too long": "el comando de compilación es demasiado largo",
+  "a deploy is running; wait for it to finish": "hay un despliegue en curso; espera a que termine",
+  "the deploy was interrupted by a panel restart; deploy again": "el despliegue se interrumpió por un reinicio del panel; vuelve a desplegar",
+  "the website is not running, so the build command could not run; start it and deploy again": "la web no está en marcha, así que el comando de compilación no se pudo ejecutar; iníciala y vuelve a desplegar"
 }

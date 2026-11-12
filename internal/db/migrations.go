@@ -448,6 +448,30 @@ ALTER TABLE site_apps ADD COLUMN last_update_at TIMESTAMP;
 ALTER TABLE site_apps ADD COLUMN staging_of INTEGER REFERENCES domains(id) ON DELETE SET NULL;
 CREATE INDEX site_apps_staging ON site_apps(staging_of);
 `,
+	// v21: deploying websites from Git repositories.
+	`
+CREATE TABLE git_deploys (
+	domain_id      INTEGER PRIMARY KEY REFERENCES domains(id) ON DELETE CASCADE,
+	repo_url       TEXT NOT NULL,
+	branch         TEXT NOT NULL,
+	target         TEXT NOT NULL DEFAULT '',
+	build_command  TEXT NOT NULL DEFAULT '',
+	auto_deploy    INTEGER NOT NULL DEFAULT 1,
+	webhook_token  TEXT NOT NULL,
+	key_enc        TEXT NOT NULL,
+	public_key     TEXT NOT NULL,
+	status         TEXT NOT NULL DEFAULT '' CHECK (status IN ('', 'running', 'success', 'error')),
+	pending        INTEGER NOT NULL DEFAULT 0,
+	last_commit    TEXT NOT NULL DEFAULT '',
+	last_subject   TEXT NOT NULL DEFAULT '',
+	last_output    TEXT NOT NULL DEFAULT '',
+	last_error     TEXT NOT NULL DEFAULT '',
+	last_trigger   TEXT NOT NULL DEFAULT '',
+	last_deploy_at TIMESTAMP,
+	created_at     TIMESTAMP NOT NULL,
+	updated_at     TIMESTAMP NOT NULL
+);
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

@@ -98,6 +98,10 @@ func run(args []string) error {
 		log.Warn("application installs interrupted by the restart", "count", n)
 	}
 
+	if err := store.FailInterruptedGitDeploys(ctx, "the deploy was interrupted by a panel restart; deploy again"); err != nil {
+		return err
+	}
+
 	mon := monitor.New(2*time.Second, 300, cfg.DataDir, log)
 	var workers sync.WaitGroup
 	workers.Add(1)

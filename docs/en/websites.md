@@ -3,7 +3,7 @@
 **English** · [Español](../es/websites.md) · [Català](../ca/websites.md)
 
 Everything about hosting a website: creating it, installing an application,
-changing its PHP settings and reaching its files over SFTP.
+changing its PHP settings, deploying it from Git and reaching its files over SFTP.
 
 ## Creating a website
 
@@ -166,6 +166,42 @@ Saving restarts the website's container (a few seconds). The values apply to
 the website, its scheduled tasks and its web terminal alike. Keep
 **Show errors** off on a live site: error messages can reveal paths and
 settings to visitors.
+
+## Deploying from Git
+
+The **Git** tab of a website deploys a branch of a repository into it, by
+hand or on every push.
+
+1. Enter the **repository address**: SSH (`git@github.com:owner/repo.git`,
+   `ssh://git@host:port/path`) for private repositories, or HTTPS for public
+   ones (no password or token in the address). Then the **branch**, and the
+   **folder** inside the website's directory where the code goes: the
+   document root (`public`) for a site whose repository is the site itself,
+   or empty (the website's directory) for a framework whose repository has a
+   `public` folder of its own, such as Laravel.
+2. **Set up Git deploy** creates a deploy key for this website. Add it to the
+   repository as a read-only deploy key (GitHub: *Settings → Deploy keys*;
+   GitLab: *Settings → Repository → Deploy keys*).
+3. **Deploy now**. To deploy on every push, add the **webhook address** to
+   the repository as a push webhook (content type `application/json`) and
+   keep **Deploy on every push** on. Pushes to other branches are ignored.
+
+Each deploy fetches the latest commit of the branch and makes the folder's
+tracked files match it. Files the repository does not track (uploads,
+caches, `.env`) are kept. Then:
+
+- the **build command**, if any, runs in the folder: inside the website's
+  own container for PHP, Node.js, Python and Go (`composer install
+  --no-dev`, `npm ci && npm run build`…), in a shell with git and common
+  tools for static websites;
+- Node.js, Python and Go applications are restarted.
+
+The tab shows the deployed commit, who started it (by hand or the webhook)
+and the output of the last deploy. A push while a deploy runs starts one
+more deploy when it ends. The webhook address is a secret: **Change the
+address** if it leaks. Fetching runs as the website's user in a throwaway
+container that sees only the website's files; SSH host keys are accepted the
+first time and checked afterwards. Removing Git deploy leaves the files.
 
 ## Files over SFTP
 
