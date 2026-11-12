@@ -43,9 +43,141 @@ curl -s -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
 curl -s -H "Authorization: Bearer $KEY" https://panel.example.com/api/v1/domains/12
 ```
 
-The request and response bodies follow what the dashboard shows on each page;
+[Provisioning fields](#provisioning-fields) below details the bodies a billing
+or provisioning system uses (accounts, websites, databases, mail, sharing, API
+keys). For the rest, the bodies follow what the dashboard shows on each page;
 the easiest way to see one is the browser's network tab while doing the same
 thing in the dashboard.
+
+## Provisioning fields
+
+What a billing or provisioning system sends and gets back. In `PATCH`
+requests every field is optional: only the ones sent change. Unknown fields
+are refused (`400`). A limit of `0` means *no limit*.
+
+A typical new customer: `POST /users` (with quotas), `POST /domains` with its
+`owner_id`, `POST /domains/{id}/mail` and `POST /domains/{id}/mail/mailboxes`,
+`POST /databases` with its `owner_id`; suspending it is `PATCH /users/{id}`
+`{"disabled": true}`.
+
+### Accounts
+
+`POST /users` (`201`, the account) and `PATCH /users/{id}`:
+
+| Field | Type | |
+|---|---|---|
+| `username` | string | 3–32 characters: lowercase letters, digits, `_`, `.`, `-`, starting with a letter. Only on creation |
+| `password` | string | at least 10 characters with letters and digits. Only on creation; later `POST /users/{id}/password` `{"password"}` |
+| `email` | string | contact address (administrators also get the e-mail alerts there) |
+| `role` | string | `customer` (default), `reseller` or `admin`. Resellers can only create customers |
+| `parent_id` | integer | an admin creating a customer for a reseller: the reseller's ID. A reseller's customers get it automatically |
+| `max_domains` | integer | websites the account (a reseller: all its customers together) may have; `0` = no limit |
+| `max_databases` | integer | databases, the same way |
+| `max_db_size_mb` | integer | default size limit of the account's databases (a database's own limit, `PUT /databases/{id}/limit`, overrides it); a reseller's customers stay within the reseller's |
+| `locale` | string | dashboard language: `en`, `es`, `ca`, or `""` to follow the browser |
+| `disabled` | boolean | `PATCH` only: `true` suspends the account (it can't sign in; its API keys stop working) |
+
+The account as returned (`GET /users`, `GET /users/{id}`):
+
+| Field | Type | |
+|---|---|---|
+| `id` | integer | |
+| `username`, `email`, `role`, `parent_id`, `max_domains`, `max_databases`, `max_db_size_mb`, `locale`, `disabled` | | as above |
+| `totp_enabled` | boolean | two-factor authentication is on |
+| `created_at`, `updated_at` | time | |
+
+### Websites
+
+`POST /domains` (`201`, the website) and `PATCH /domains/{id}`:
+
+| Field | Type | |
+|---|---|---|
+| `name` | string | host name, lowercase (`example.com`, `shop.example.com`). Only on creation |
+| `kind` | string | `primary` (default: a website), `subdomain` (a website under a primary domain) or `alias` (another name for a website). Only on creation |
+| `parent_id` | integer | for `subdomain` and `alias`: the website it belongs to |
+| `owner_id` | integer | the account that owns it (default: the caller). Admins and resellers create websites for their accounts with it |
+| `runtime` | string | `static` (default), `php`, `node`, `python` or `go` (`GET /runtimes` lists them) |
+| `runtime_version` | string | for example `8.3` for PHP; default: the runtime's default |
+| `document_root` | string | folder served, relative to the website's files (default `public`) |
+| `start_command` | string | node, python and go: the command that starts the app |
+| `app_port` | integer | node, python and go: the port the app listens on |
+| `ssl_enabled` | boolean | HTTPS certificate (default `true`) |
+| `force_https` | boolean | redirect HTTP to HTTPS (default `true`) |
+| `memory_mb` | integer | memory limit of the website's container (default 512) |
+| `cpus` | number | CPU limit (default 1) |
+| `env` | object | environment variables for the app (`{"NAME": "value"}`) |
+
+The website as returned also has `id`, `status` (`pending`, `running`,
+`stopped`, `error`, `disabled`), `status_message`, `container_id`, `created_at` and
+`updated_at`. Creating one answers at once; the container starts in the
+background, so poll `GET /domains/{id}` until `status` is `running`.
+`403` with `quota_exceeded` means the owner (or its reseller) reached
+`max_domains`.
+
+### Databases
+
+`POST /databases` (`201`, the database):
+
+| Field | Type | |
+|---|---|---|
+| `engine` | string | `mariadb`, `postgres` or `redis` (`GET /database-engines`) |
+| `name` | string | the database name |
+| `owner_id` | integer | the account that owns it (default: the caller) |
+
+The database as returned: `id`, `owner_id`, `engine`, `name`, `username`,
+`status` (`pending`, `running`, `error`), `status_message`, `max_size_mb`,
+`size_locked`, `created_at`, `updated_at`. The password is not in it:
+`GET /databases/{id}/credentials` answers `host`, `port`, `database`,
+`username`, `password` and `url` (a connection string).
+`PUT /databases/{id}/limit` `{"max_size_mb"}` sets its size limit (`0`: the owner's
+`max_db_size_mb`).
+
+### Mail
+
+`POST /domains/{id}/mail` turns mail on for a website's domain (no body;
+`201`, the mail domain: `id`, `domain_id`, `name`, `dkim_selector`). The DNS
+records it needs are added to the domain's zone when OpenPlex serves its DNS;
+`GET /domains/{id}/mail` lists them with the mailboxes and aliases.
+
+`POST /domains/{id}/mail/mailboxes` (`201`) and
+`PATCH /domains/{id}/mail/mailboxes/{mid}`:
+
+| Field | Type | |
+|---|---|---|
+| `local_part` | string | the part before `@`. Only on creation |
+| `password` | string | the mailbox password, 10 to 128 characters |
+| `quota_mb` | integer | mailbox size, 10 MB to 100 GB (default 1024) |
+| `enabled` | boolean | `PATCH` only: `false` stops it receiving and signing in |
+
+`POST /domains/{id}/mail/aliases` (`201`) and
+`PATCH /domains/{id}/mail/aliases/{aid}`:
+
+| Field | Type | |
+|---|---|---|
+| `local_part` | string | the part before `@` |
+| `destinations` | array | 1 to 50 addresses the mail is forwarded to |
+
+Mailboxes and aliases come back with `id`, `mail_domain_id`, `created_at` and
+`updated_at` besides the fields above (never the password).
+
+### Sharing
+
+`PUT /users/{id}/access` lets an account work on a website or database
+someone else owns:
+
+| Field | Type | |
+|---|---|---|
+| `kind` | string | `site` or `database` |
+| `resource_id` | integer | the website's or database's ID |
+| `areas` | array | websites only, at least one of `site` (settings, start/stop, logs, redirects, cron), `files` (file manager and terminal), `dns`, `mail`, `backups` |
+| `read_only` | boolean | websites only: see but not change |
+
+### API keys
+
+`POST /api-keys` `{"name", "expires_in_days"}` (`0` = never, at most 3650)
+answers `201` with `key` — the full key, shown only this once — and
+`api_key`, its description: `id`, `user_id`, `name`, `prefix` (the start of
+the key, to recognise it), `last_used_at`, `expires_at`, `created_at`.
 
 ## Endpoints
 

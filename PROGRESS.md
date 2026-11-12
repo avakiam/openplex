@@ -271,6 +271,9 @@ has been verified on the Linux test server. One commit per milestone.
       signatures still checked against the release keys)
 - [x] Published API reference `docs/{en,es,ca}/api.md`; `TestAPIReferenceListsEveryRoute` walks the router and
       fails when the list and the routes differ
+- [x] API reference: request/response fields for provisioning (accounts, websites, databases, mail, sharing, API
+      keys) with defaults and allowed values; `TestAPIReferenceFieldsExist` fails when a documented field has no JSON
+      field in `internal/api` or `internal/db`
 - [x] Release build (`linux/amd64`, `linux/arm64`) + checksums: `.github/workflows/release.yml` builds a draft on a
       `v*` tag; `scripts/sign-release.sh` signs `SHA256SUMS` offline (key `avakiam-release-2026`) and publishes
       (see `RELEASING.md`); CI runs `make check` + the dashboard build on every push
@@ -592,3 +595,6 @@ has been verified on the Linux test server. One commit per milestone.
   LAN panel (0.30.0) reads its catalogue through `GET /extensions/marketplace` (200, empty until something is
   published). Locally the service published the signed Cloudflare extension 1.1.0, refused a download without a
   key (402), served it byte-identical with a licence key, and refused buying without Stripe configured (503).
+- 2026-11-12 — Password change signs out (0.30.0) on the LAN, in the dashboard with a temporary account: after
+  changing the password it stays on the sign-in page with "password changed, sign in again" (before, it went back to
+  the dashboard), a protected page then asks to sign in, the old password is refused (401) and the new one works.

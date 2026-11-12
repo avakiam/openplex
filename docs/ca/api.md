@@ -4,8 +4,8 @@
 
 Tot el que fa el tauler passa per la mateixa API REST, de manera que un
 sistema de facturació, un script o el teu propi portal també ho poden fer. La
-llista completa d'endpoints, amb el que fa cadascun, és a la
-[versió anglesa](../en/api.md#endpoints); una prova del codi falla si la llista
+llista completa d'endpoints, amb el que fa cadascun, i els camps que fa servir
+un sistema de facturació són a la [versió anglesa](../en/api.md#provisioning-fields); una prova del codi falla si la llista
 i el servidor no coincideixen.
 
 ## El bàsic

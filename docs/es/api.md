@@ -4,8 +4,8 @@
 
 Todo lo que hace el panel pasa por la misma API REST, así que un sistema de
 facturación, un script o tu propio portal pueden hacerlo también. La lista
-completa de endpoints, con lo que hace cada uno, está en la
-[versión inglesa](../en/api.md#endpoints); una prueba del código falla si la
+completa de endpoints, con lo que hace cada uno, y los campos que usa un
+sistema de facturación están en la [versión inglesa](../en/api.md#provisioning-fields); una prueba del código falla si la
 lista y el servidor no coinciden.
 
 ## Lo básico
