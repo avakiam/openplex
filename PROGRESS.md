@@ -248,7 +248,10 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] IPv6 for the DNS and mail servers: they move to a dual-stack `openplex_public` network (created like the edge
       network), so Docker publishes their ports on IPv6 with ip6tables DNAT (real client addresses, no ufw INPUT
       in the way); outgoing mail prefers IPv4 (`smtp_address_preference = ipv4`)
-- [ ] Marketplace service (catalog + paid downloads) — the client side is done (`OPENPLEX_MARKETPLACE_URL`)
+- [x] Marketplace service: a separate, private Avakiam service (not part of this repository) live at
+      `https://marketplace.openplex.dev`, the panel's default `OPENPLEX_MARKETPLACE_URL` — catalogue filtered by panel
+      version and architecture, signed packages only, paid downloads with licence keys (Stripe Checkout, refunds revoke
+      them), `POST /api/v1/licenses/verify` for extensions
 
 ## M14 — Installer & packaging
 - [x] `scripts/install.sh`: unattended Ubuntu/Debian install (Docker, user, dirs, binary, systemd, firewall)
@@ -585,3 +588,7 @@ has been verified on the Linux test server. One commit per milestone.
   `invalid_link`, audited), `--ttl 200h` and unknown users refused; in the dashboard the link, even over another
   session, landed on `/account/?from=link` without the current-password field; the new password signed in and the
   audit shows "self, after a sign-in link". `install.sh --image` itself only checked with `bash -n` (no fresh VM).
+- 2026-11-12 — Marketplace live at https://marketplace.openplex.dev (Cloudflare, Full strict, origin certificate): the
+  LAN panel (0.30.0) reads its catalogue through `GET /extensions/marketplace` (200, empty until something is
+  published). Locally the service published the signed Cloudflare extension 1.1.0, refused a download without a
+  key (402), served it byte-identical with a licence key, and refused buying without Stripe configured (503).
