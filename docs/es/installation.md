@@ -75,6 +75,12 @@ sudo openplexd reset-password admin
 El cortafuegos se gestiona en **Firewall** dentro del panel. Se queda
 apagado si `ufw` está activo, para que no se pisen las reglas.
 
+Con IPv6 en el servidor (y Docker 27 o posterior), las webs, el panel, el
+servidor DNS y el correo responden también por IPv6 y ven las direcciones
+reales de los clientes. El correo saliente sigue prefiriendo IPv4: configura
+también el DNS inverso de la dirección IPv6 del servidor antes de contar con
+ella.
+
 ## Configuración
 
 Los ajustes están en `/etc/openplex/openplex.env` (`CLAVE=valor`; reinicia el

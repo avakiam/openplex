@@ -75,6 +75,11 @@ sudo openplexd reset-password admin
 El tallafocs es gestiona a **Tallafocs** dins del tauler. Es queda apagat si
 `ufw` està actiu, perquè no es trepitgin les regles.
 
+Amb IPv6 al servidor (i Docker 27 o posterior), els webs, el tauler, el
+servidor DNS i el correu responen també per IPv6 i veuen les adreces reals
+dels clients. El correu sortint continua preferint IPv4: configura també el
+DNS invers de l'adreça IPv6 del servidor abans de comptar-hi.
+
 ## Configuració
 
 Els paràmetres són a `/etc/openplex/openplex.env` (`CLAU=valor`; reinicia el

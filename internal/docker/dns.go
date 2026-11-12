@@ -65,7 +65,7 @@ func (o *Orchestrator) EnsureDNS(ctx context.Context, apiKey string, listen []ne
 		}
 	}
 	ports["8081/tcp"] = []nat.PortBinding{{HostIP: "127.0.0.1", HostPort: strconv.Itoa(DNSAPIPort)}}
-	sum := sha256.Sum256([]byte(DNSImage + "|" + strings.Join(addrs, ",") + "|" + conf))
+	sum := sha256.Sum256([]byte(DNSImage + "|" + strings.Join(addrs, ",") + "|" + conf + "|net=" + PublicNetwork))
 	hash := hex.EncodeToString(sum[:8])
 
 	c, err := o.findContainer(ctx, DNSContainer)
@@ -86,6 +86,9 @@ func (o *Orchestrator) EnsureDNS(ctx context.Context, apiKey string, listen []ne
 	if err := o.ensureImage(ctx, DNSImage); err != nil {
 		return err
 	}
+	if err := o.ensurePublicNetwork(ctx); err != nil {
+		return err
+	}
 	labels := managedLabels("dns")
 	labels[labelConfig] = hash
 	cc := &container.Config{
@@ -95,6 +98,7 @@ func (o *Orchestrator) EnsureDNS(ctx context.Context, apiKey string, listen []ne
 	}
 	hc := &container.HostConfig{
 		PortBindings:  ports,
+		NetworkMode:   container.NetworkMode(PublicNetwork),
 		RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyUnlessStopped},
 		Mounts: []mount.Mount{
 			{Type: mount.TypeVolume, Source: DNSVolume, Target: "/var/lib/powerdns"},
@@ -106,7 +110,7 @@ func (o *Orchestrator) EnsureDNS(ctx context.Context, apiKey string, listen []ne
 		Resources:   container.Resources{Memory: 256 << 20},
 		LogConfig:   container.LogConfig{Type: "json-file", Config: map[string]string{"max-size": "10m", "max-file": "3"}},
 	}
-	created, err := o.cli.ContainerCreate(ctx, cc, hc, nil, nil, DNSContainer)
+	created, err := o.cli.ContainerCreate(ctx, cc, hc, publicEndpoint(), nil, DNSContainer)
 	if err != nil {
 		return fmt.Errorf("create dns: %w", err)
 	}

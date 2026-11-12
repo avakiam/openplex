@@ -74,6 +74,11 @@ sudo openplexd reset-password admin
 The firewall is managed from **Firewall** in the panel. It is left off when
 `ufw` is active, so they don't fight over the rules.
 
+With IPv6 on the server (and Docker 27 or later), the websites, the panel, the
+DNS server and mail answer on IPv6 as well, and see the clients' real
+addresses. Outgoing mail still prefers IPv4: set up the reverse DNS of the
+server's IPv6 address too before relying on it.
+
 ## Configuration
 
 Settings live in `/etc/openplex/openplex.env` (`KEY=value`, restart the

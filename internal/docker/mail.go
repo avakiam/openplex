@@ -53,7 +53,7 @@ func (o *Orchestrator) EnsureMail(ctx context.Context, hostname, configDir strin
 	if err := o.ensureNetwork(ctx, MailNetwork, true); err != nil {
 		return err
 	}
-	sum := sha256.Sum256([]byte(MailImage + "|" + hostname + "|" + configDir + "|" + strings.Join(env, ",") + "|net=" + MailNetwork))
+	sum := sha256.Sum256([]byte(MailImage + "|" + hostname + "|" + configDir + "|" + strings.Join(env, ",") + "|net=" + MailNetwork + "," + PublicNetwork))
 	hash := hex.EncodeToString(sum[:8])
 	c, err := o.findContainer(ctx, MailContainer)
 	if err != nil {
@@ -73,6 +73,9 @@ func (o *Orchestrator) EnsureMail(ctx context.Context, hostname, configDir strin
 	if err := o.ensureImage(ctx, MailImage); err != nil {
 		return err
 	}
+	if err := o.ensurePublicNetwork(ctx); err != nil {
+		return err
+	}
 	ports, exposed := nat.PortMap{}, nat.PortSet{}
 	for _, p := range MailPorts {
 		port := nat.Port(p + "/tcp")
@@ -84,6 +87,7 @@ func (o *Orchestrator) EnsureMail(ctx context.Context, hostname, configDir strin
 	cc := &container.Config{Image: MailImage, Hostname: hostname, Env: env, Labels: labels, ExposedPorts: exposed, StopTimeout: ptrInt(30)}
 	hc := &container.HostConfig{
 		PortBindings:  ports,
+		NetworkMode:   container.NetworkMode(PublicNetwork),
 		RestartPolicy: container.RestartPolicy{Name: container.RestartPolicyUnlessStopped},
 		Mounts: []mount.Mount{
 			{Type: mount.TypeVolume, Source: MailDataVolume, Target: "/var/mail"},
@@ -95,7 +99,7 @@ func (o *Orchestrator) EnsureMail(ctx context.Context, hostname, configDir strin
 		Resources:   container.Resources{Memory: 1536 << 20},
 		LogConfig:   container.LogConfig{Type: "json-file", Config: map[string]string{"max-size": "20m", "max-file": "3"}},
 	}
-	created, err := o.cli.ContainerCreate(ctx, cc, hc, nil, nil, MailContainer)
+	created, err := o.cli.ContainerCreate(ctx, cc, hc, publicEndpoint(), nil, MailContainer)
 	if err != nil {
 		return fmt.Errorf("create mail server: %w", err)
 	}

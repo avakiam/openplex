@@ -27,6 +27,12 @@ const edgeV6Subnet = "fd6f:706c:7865:6467::/64"
 // engine or kernel without IPv6). v4 keeps an existing IPv4 range (the webmail
 // trusts the edge by it); empty lets the engine pick one.
 func edgeNetworkAttempts(v4 []network.IPAMConfig, ipv6Only bool) []network.CreateOptions {
+	return dualStackAttempts(edgeV6Subnet, v4, ipv6Only)
+}
+
+// dualStackAttempts are the ways to create a dual-stack network, best first:
+// IPv6 from the engine's pool, IPv6 from v6Subnet, and IPv4 only.
+func dualStackAttempts(v6Subnet string, v4 []network.IPAMConfig, ipv6Only bool) []network.CreateOptions {
 	opts := func(v6 bool, extra ...network.IPAMConfig) network.CreateOptions {
 		o := network.CreateOptions{Driver: "bridge", Labels: managedLabels("network")}
 		if v6 {
@@ -37,7 +43,7 @@ func edgeNetworkAttempts(v4 []network.IPAMConfig, ipv6Only bool) []network.Creat
 		}
 		return o
 	}
-	out := []network.CreateOptions{opts(true), opts(true, network.IPAMConfig{Subnet: edgeV6Subnet})}
+	out := []network.CreateOptions{opts(true), opts(true, network.IPAMConfig{Subnet: v6Subnet})}
 	if !ipv6Only {
 		out = append(out, opts(false))
 	}
@@ -57,12 +63,17 @@ func ipv4Ranges(cfg []network.IPAMConfig) []network.IPAMConfig {
 
 // createEdgeNetwork creates name with the first attempt the engine accepts.
 func (o *Orchestrator) createEdgeNetwork(ctx context.Context, name string, v4 []network.IPAMConfig, ipv6Only bool) error {
+	return o.createDualStackNetwork(ctx, name, edgeV6Subnet, v4, ipv6Only)
+}
+
+// createDualStackNetwork creates name with the first attempt the engine accepts.
+func (o *Orchestrator) createDualStackNetwork(ctx context.Context, name, v6Subnet string, v4 []network.IPAMConfig, ipv6Only bool) error {
 	var errs []error
-	for _, opts := range edgeNetworkAttempts(v4, ipv6Only) {
+	for _, opts := range dualStackAttempts(v6Subnet, v4, ipv6Only) {
 		_, err := o.cli.NetworkCreate(ctx, name, opts)
 		if err == nil || strings.Contains(err.Error(), "already exists") {
 			if len(errs) > 0 {
-				o.log.Warn("edge network created after a fallback", "network", name, "ipv6", opts.EnableIPv6 != nil, "err", errors.Join(errs...))
+				o.log.Warn("network created after a fallback", "network", name, "ipv6", opts.EnableIPv6 != nil, "err", errors.Join(errs...))
 			}
 			return nil
 		}

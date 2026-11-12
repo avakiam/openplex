@@ -245,7 +245,9 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] IPv6 on the edge network (v0.17.1), so the edge sees IPv6 visitors' addresses (logs, PHP, Fail2Ban,
       restrictions): created dual-stack (engine pool, then a fixed ULA, then IPv4 only); an IPv4-only network is
       rebuilt once, keeping its IPv4 range, removing the edge and reconnecting the other members
-- [ ] IPv6 for the DNS and mail containers' published ports (they don't answer over IPv6 behind ufw)
+- [x] IPv6 for the DNS and mail servers: they move to a dual-stack `openplex_public` network (created like the edge
+      network), so Docker publishes their ports on IPv6 with ip6tables DNAT (real client addresses, no ufw INPUT
+      in the way); outgoing mail prefers IPv4 (`smtp_address_preference = ipv4`)
 - [ ] Marketplace service (catalog + paid downloads) — the client side is done (`OPENPLEX_MARKETPLACE_URL`)
 
 ## M14 — Installer & packaging
@@ -563,3 +565,8 @@ has been verified on the Linux test server. One commit per milestone.
   body and an unknown field with their template and values (and a duplicate user with "already exists" instead of
   the SQLite text); in the browser, in Spanish, the remote access dialog showed "abc no es una dirección IP ni una
   red (CIDR)".
+- 2026-11-12 — IPv6 for DNS and mail (0.29.90) on the VPS (Docker 29.9, ufw active): before, from a container on the
+  edge network, the public IPv6 refused SMTP, submission and IMAPS and DNS timed out while IPv4 answered; the update
+  created `openplex_public` (172.21.0.0/16 + fd39:ff54:8444:1::/64) and recreated PowerDNS and the mail server on it
+  in seconds; after it, 25/587/993 and DNS (UDP and TCP) answered on IPv6 as on IPv4. Postfix keeps
+  `smtp_address_preference = ipv4`; external IPv4 clients still show their own addresses.
