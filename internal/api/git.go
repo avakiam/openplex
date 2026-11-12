@@ -86,7 +86,7 @@ func (s *Server) handlePutGit(w http.ResponseWriter, r *http.Request) {
 		err = gitdeploy.ValidBuild(in.BuildCommand)
 	}
 	if err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	ctx := r.Context()

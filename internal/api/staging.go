@@ -13,6 +13,7 @@ import (
 	"openplex.dev/openplex/internal/apps"
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/docker"
+	"openplex.dev/openplex/internal/msg"
 	"openplex.dev/openplex/internal/secrets"
 )
 
@@ -31,7 +32,7 @@ func (s *Server) appDatabase(ctx context.Context, a *db.SiteApp) (*db.Database, 
 		return nil, err
 	}
 	if d.Engine != db.EngineMariaDB || d.Status != db.StatusRunning {
-		return nil, fmt.Errorf("the database %s is not a running MariaDB database", d.Name)
+		return nil, msg.New("the database {name} is not a running MariaDB database", "name", d.Name)
 	}
 	return d, nil
 }
@@ -76,7 +77,7 @@ func (s *Server) handleCreateStaging(w http.ResponseWriter, r *http.Request) {
 	}
 	liveDB, err := s.appDatabase(ctx, a)
 	if err != nil {
-		writeErr(w, http.StatusConflict, "conflict", err.Error())
+		writeErrFrom(w, http.StatusConflict, "conflict", err)
 		return
 	}
 	owner, err := s.db.GetUser(ctx, live.OwnerID)
@@ -98,20 +99,20 @@ func (s *Server) handleCreateStaging(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.checkNameOwnership(ctx, name, owner.ID); err != nil {
-		writeErr(w, http.StatusConflict, "conflict", err.Error())
+		writeErrFrom(w, http.StatusConflict, "conflict", err)
 		return
 	}
 	for _, dbs := range []bool{false, true} {
-		if msg, err := s.quotaReached(ctx, owner, dbs); err != nil {
+		if q, err := s.quotaReached(ctx, owner, dbs); err != nil {
 			s.fail(w, r, err)
 			return
-		} else if msg != "" {
-			writeErr(w, http.StatusForbidden, "quota_exceeded", msg)
+		} else if q != nil {
+			writeMsg(w, http.StatusForbidden, "quota_exceeded", q)
 			return
 		}
 	}
 	if _, err := s.db.GetDomainByName(ctx, name); err == nil {
-		writeErr(w, http.StatusConflict, "conflict", fmt.Sprintf("%s already exists; delete it or choose another name", name))
+		writeMsg(w, http.StatusConflict, "conflict", msg.New("{name} already exists; delete it or choose another name", "name", name))
 		return
 	} else if !errors.Is(err, db.ErrNotFound) {
 		s.fail(w, r, err)
@@ -130,7 +131,7 @@ func (s *Server) handleCreateStaging(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		_ = s.db.EndSiteAppTask(context.WithoutCancel(ctx), live.ID, "")
 		if errors.Is(err, db.ErrConflict) {
-			writeErr(w, http.StatusConflict, "conflict", fmt.Sprintf("%s already exists; delete it or choose another name", name))
+			writeMsg(w, http.StatusConflict, "conflict", msg.New("{name} already exists; delete it or choose another name", "name", name))
 			return
 		}
 		s.fail(w, r, err)
@@ -197,7 +198,7 @@ func (s *Server) createStagingSite(ctx context.Context, r *http.Request, live *d
 		}
 	}
 	if err == nil && !docker.ValidIdentifier(stgDB.Name) {
-		err = fmt.Errorf("database name %s is not valid", stgDB.Name)
+		err = msg.New("database name {name} is not valid", "name", stgDB.Name)
 	}
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("creating the database of the copy: %w", err)
@@ -227,7 +228,7 @@ func (s *Server) waitRunning(ctx context.Context, id int64) (*db.Domain, error) 
 		case db.StatusError:
 			return nil, fmt.Errorf("the website could not start: %s", cur.StatusMessage)
 		case db.StatusStopped, db.StatusDisabled:
-			return nil, fmt.Errorf("the website %s is stopped", cur.Name)
+			return nil, msg.New("the website {name} is stopped", "name", cur.Name)
 		}
 		select {
 		case <-ctx.Done():
@@ -374,7 +375,7 @@ func (s *Server) handlePushStaging(w http.ResponseWriter, r *http.Request) {
 			liveDB, err = s.appDatabase(ctx, la)
 		}
 		if err != nil {
-			writeErr(w, http.StatusConflict, "conflict", err.Error())
+			writeErrFrom(w, http.StatusConflict, "conflict", err)
 			return
 		}
 	}

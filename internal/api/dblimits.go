@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"openplex.dev/openplex/internal/db"
+	"openplex.dev/openplex/internal/msg"
 )
 
 // dbLimitEvery is how often database sizes are checked against their limits.
@@ -19,16 +20,16 @@ func limitable(d *db.Database) bool {
 
 // dbSizeCap checks a database size limit (MB) a can set: a reseller with a
 // limit of its own cannot give more, nor take the limit away.
-func dbSizeCap(a *db.User, mb int) string {
+func dbSizeCap(a *db.User, mb int) *msg.Error {
 	switch {
 	case mb < 0:
-		return "the database size limit cannot be negative"
+		return msg.New("the database size limit cannot be negative")
 	case mb > 1<<20:
-		return "the database size limit is at most 1048576 MB"
+		return msg.New("the database size limit is at most 1048576 MB")
 	case a.Role == db.RoleReseller && a.MaxDBSizeMB > 0 && (mb == 0 || mb > a.MaxDBSizeMB):
-		return fmt.Sprintf("the database size limit must be between 1 and %d MB (your own limit)", a.MaxDBSizeMB)
+		return msg.New("the database size limit must be between 1 and {limit} MB (your own limit)", "limit", a.MaxDBSizeMB)
 	}
-	return ""
+	return nil
 }
 
 // canLimitDatabase reports whether a may change the size limit of a database
@@ -72,8 +73,8 @@ func (s *Server) handleSetDatabaseLimit(w http.ResponseWriter, r *http.Request) 
 	if eff == 0 {
 		eff = owner.MaxDBSizeMB
 	}
-	if msg := dbSizeCap(a, eff); msg != "" {
-		badRequest(w, msg)
+	if m := dbSizeCap(a, eff); m != nil {
+		writeMsg(w, http.StatusBadRequest, "bad_request", m)
 		return
 	}
 	if err := s.db.SetDatabaseLimit(r.Context(), d.ID, in.MaxSizeMB); err != nil {

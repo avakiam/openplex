@@ -12,11 +12,16 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"openplex.dev/openplex/internal/db"
+	"openplex.dev/openplex/internal/msg"
 )
 
 type apiError struct {
 	Error   string `json:"error"`
 	Message string `json:"message"`
+	// Template and Params let the dashboard translate a message with values
+	// (msg.Error): Message is Template with Params filled in.
+	Template string            `json:"template,omitempty"`
+	Params   map[string]string `json:"params,omitempty"`
 	// CaptchaPass lets the two-factor step skip a second captcha.
 	CaptchaPass string `json:"captcha_pass,omitempty"`
 }
@@ -34,13 +39,36 @@ func writeErr(w http.ResponseWriter, status int, code, msg string) {
 	writeJSON(w, status, apiError{Error: code, Message: msg})
 }
 
+// writeMsg writes a message with values, translatable by the dashboard.
+func writeMsg(w http.ResponseWriter, status int, code string, m *msg.Error) {
+	writeJSON(w, status, apiError{Error: code, Message: m.Error(), Template: m.Template, Params: m.Params})
+}
+
+// writeErrFrom writes err as the message, keeping its template when it is a msg.Error.
+func writeErrFrom(w http.ResponseWriter, status int, code string, err error) {
+	if m, ok := msg.From(err); ok {
+		writeMsg(w, status, code, m)
+		return
+	}
+	writeErr(w, status, code, err.Error())
+}
+
+// badRequestErr is badRequest for a validation error.
+func badRequestErr(w http.ResponseWriter, err error) {
+	writeErrFrom(w, http.StatusBadRequest, "bad_request", err)
+}
+
 // fail maps well-known errors to HTTP responses; anything else is a logged 500.
 func (s *Server) fail(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, db.ErrNotFound), errors.Is(err, fs.ErrNotExist):
 		writeErr(w, http.StatusNotFound, "not_found", "resource not found")
 	case errors.Is(err, db.ErrConflict), errors.Is(err, fs.ErrExist):
-		writeErr(w, http.StatusConflict, "conflict", err.Error())
+		if m, ok := msg.From(err); ok {
+			writeMsg(w, http.StatusConflict, "conflict", m)
+		} else {
+			writeErr(w, http.StatusConflict, "conflict", "already exists")
+		}
 	case errors.Is(err, fs.ErrPermission):
 		writeErr(w, http.StatusForbidden, "forbidden", "permission denied")
 	default:
@@ -68,7 +96,7 @@ func decodeLarge(w http.ResponseWriter, r *http.Request, v any) bool {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil && !errors.Is(err, io.EOF) {
-		badRequest(w, "invalid JSON body: "+err.Error())
+		writeMsg(w, http.StatusBadRequest, "bad_request", msg.New("invalid JSON body: {detail}", "detail", strings.TrimPrefix(err.Error(), "json: ")))
 		return false
 	}
 	return true
@@ -77,7 +105,7 @@ func decodeLarge(w http.ResponseWriter, r *http.Request, v any) bool {
 func idParam(w http.ResponseWriter, r *http.Request, name string) (int64, bool) {
 	id, err := strconv.ParseInt(chi.URLParam(r, name), 10, 64)
 	if err != nil || id <= 0 {
-		badRequest(w, "invalid "+name)
+		writeMsg(w, http.StatusBadRequest, "bad_request", msg.New("invalid {name}", "name", name))
 		return 0, false
 	}
 	return id, true

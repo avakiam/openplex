@@ -168,7 +168,7 @@ func (s *Server) handlePutCaptcha(w http.ResponseWriter, r *http.Request) {
 				writeErr(w, http.StatusBadRequest, "captcha_test_failed", "solve the captcha shown here with the new keys before turning it on")
 				return
 			case err != nil:
-				writeErr(w, http.StatusBadRequest, "captcha_test_failed", err.Error())
+				writeErrFrom(w, http.StatusBadRequest, "captcha_test_failed", err)
 				return
 			}
 		}

@@ -97,7 +97,9 @@ Runtime data dir (default `/var/lib/openplex`): `openplex.db`, `secret.key`,
   English source; translations live in `web/locales/{es,ca}/<area>.json` (plural forms as objects,
   English plurals in `web/locales/en`). `npm run build` runs `scripts/check-i18n.mjs` and fails on a
   missing translation. API error messages stay English in Go; fixed ones are translated in
-  `web/locales/*/server.json`. Code, comments and commits are always English.
+  `web/locales/*/server.json`. A message with values is a `msg.New("quota of {limit} reached", "limit", n)`
+  (`internal/msg`): the API sends its template and values, the dashboard translates the template;
+  `go test ./internal/msg` fails when a template lacks its es/ca entry in `server.json`. Code, comments and commits are always English.
 
 ## Context-saving rules for agents
 

@@ -53,13 +53,13 @@ func (s *Server) handleInstallUpdate(w http.ResponseWriter, r *http.Request) {
 		s.updates.MarkAudited()
 		switch {
 		case errors.Is(err, update.ErrBusy):
-			writeErr(w, http.StatusConflict, "busy", err.Error())
+			writeErrFrom(w, http.StatusConflict, "busy", err)
 		case errors.Is(err, update.ErrNoUpdate), errors.Is(err, update.ErrDevBuild), errors.Is(err, update.ErrUnsupported):
-			writeErr(w, http.StatusConflict, "not_installable", err.Error())
+			writeErrFrom(w, http.StatusConflict, "not_installable", err)
 		case errors.Is(err, update.ErrBadRelease):
-			writeErr(w, http.StatusBadGateway, "bad_release", err.Error())
+			writeErrFrom(w, http.StatusBadGateway, "bad_release", err)
 		default:
-			writeErr(w, http.StatusBadGateway, "update_failed", err.Error())
+			writeErrFrom(w, http.StatusBadGateway, "update_failed", err)
 		}
 		return
 	}

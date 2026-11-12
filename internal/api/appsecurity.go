@@ -55,7 +55,7 @@ func (s *Server) handleHardenSiteApp(w http.ResponseWriter, r *http.Request) {
 	if cur, err := s.db.GetSiteApp(r.Context(), d.ID); err == nil {
 		if app, ok := apps.Get(cur.App); ok {
 			if err := app.ValidFixes(in.Fixes); err != nil {
-				badRequest(w, err.Error())
+				badRequestErr(w, err)
 				return
 			}
 		}

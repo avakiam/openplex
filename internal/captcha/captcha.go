@@ -14,6 +14,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"openplex.dev/openplex/internal/msg"
 )
 
 // Provider is one captcha service.
@@ -87,7 +89,7 @@ func (v *Verifier) Verify(ctx context.Context, provider, secret, token, remoteIP
 	if !out.Success {
 		for _, c := range out.Codes {
 			if strings.Contains(c, "secret") {
-				return fmt.Errorf("%s rejected the secret key (%s)", p.Name, c)
+				return msg.New("{provider} rejected the secret key ({code})", "provider", p.Name, "code", c)
 			}
 		}
 		return ErrFailed

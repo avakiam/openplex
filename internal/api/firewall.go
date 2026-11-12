@@ -52,9 +52,9 @@ func (s *Server) panelDirect(r *http.Request) (bool, int) {
 func (s *Server) firewallErr(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, firewall.ErrUnavailable):
-		writeErr(w, http.StatusConflict, "unavailable", err.Error())
+		writeErrFrom(w, http.StatusConflict, "unavailable", err)
 	case errors.Is(err, firewall.ErrNoPending):
-		writeErr(w, http.StatusConflict, "no_pending", err.Error())
+		writeErrFrom(w, http.StatusConflict, "no_pending", err)
 	case errors.Is(err, firewall.ErrTooMany):
 		writeErr(w, http.StatusForbidden, "quota_exceeded", "the firewall already has the maximum number of entries")
 	case errors.Is(err, db.ErrConflict):
@@ -82,7 +82,7 @@ func (s *Server) handleApplyFirewall(w http.ResponseWriter, r *http.Request) {
 	for i := range in.Rules {
 		in.Rules[i].ID = 0
 		if err := firewall.NormalizeRule(&in.Rules[i]); err != nil {
-			badRequest(w, err.Error())
+			badRequestErr(w, err)
 			return
 		}
 	}
@@ -145,7 +145,7 @@ func (s *Server) handleCreateFirewallBlock(w http.ResponseWriter, r *http.Reques
 	}
 	p, err := firewall.NormalizeBlock(in.Address)
 	if err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	if ip, err := netip.ParseAddr(clientIP(r)); err == nil && p.Contains(ip.Unmap()) {
@@ -219,10 +219,10 @@ func (s *Server) handleFail2BanUnban(w http.ResponseWriter, r *http.Request) {
 	err := s.firewall.Unban(r.Context(), in.Jail, in.IP)
 	switch {
 	case errors.Is(err, firewall.ErrBadAddress), errors.Is(err, firewall.ErrNoSuchJail):
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	case errors.Is(err, firewall.ErrFail2BanDown):
-		writeErr(w, http.StatusConflict, "unavailable", err.Error())
+		writeErrFrom(w, http.StatusConflict, "unavailable", err)
 		return
 	case err != nil:
 		s.log.Error("fail2ban unban failed", "err", err)

@@ -19,6 +19,7 @@ import (
 
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/docker"
+	"openplex.dev/openplex/internal/msg"
 	"openplex.dev/openplex/internal/secrets"
 )
 
@@ -185,14 +186,14 @@ func (s *Server) handleCreateDatabase(w http.ResponseWriter, r *http.Request) {
 	}
 	full := dbPrefix(owner.Username) + "_" + suffix
 	if !docker.ValidIdentifier(full) {
-		badRequest(w, "resulting database name "+full+" is not valid")
+		writeMsg(w, http.StatusBadRequest, "bad_request", msg.New("resulting database name {name} is not valid", "name", full))
 		return
 	}
-	if msg, err := s.quotaReached(ctx, owner, true); err != nil {
+	if q, err := s.quotaReached(ctx, owner, true); err != nil {
 		s.fail(w, r, err)
 		return
-	} else if msg != "" {
-		writeErr(w, http.StatusForbidden, "quota_exceeded", msg)
+	} else if q != nil {
+		writeMsg(w, http.StatusForbidden, "quota_exceeded", q)
 		return
 	}
 	password := secrets.Password(24)

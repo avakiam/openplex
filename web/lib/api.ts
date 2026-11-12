@@ -58,15 +58,19 @@ async function parseError(res: Response): Promise<ApiError> {
   let code = "http_" + res.status;
   let message = res.statusText || t("Request failed");
   let captchaPass: string | undefined;
+  let template: string | undefined;
+  let params: Record<string, string> | undefined;
   try {
     const body = await res.json();
     code = body.error ?? code;
     message = body.message ?? message;
     captchaPass = body.captcha_pass || undefined;
+    template = body.template || undefined;
+    params = body.params || undefined;
   } catch {
     /* non-JSON error body */
   }
-  return new ApiError(res.status, code, tServer(message), captchaPass);
+  return new ApiError(res.status, code, tServer(message, template, params), captchaPass);
 }
 
 /** Exchanges the refresh cookie for a new access token (deduplicated). */

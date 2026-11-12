@@ -75,8 +75,13 @@ export function t(key: string, vars?: Vars): string {
  * constants); translate it with t(value) at render time. */
 export const tk = (s: string) => s;
 
-/** Translates a message that came from the API (server strings are English). */
-export const tServer = (message: string) => (message in catalogues[current] || message in catalogues.en ? t(message) : message);
+/** Translates a message that came from the API (server strings are English).
+ * A message with values comes with its template ({name} placeholders) and
+ * the values: the template is translated, then filled. */
+export function tServer(message: string, template?: string, params?: Record<string, string>) {
+  if (template && (template in catalogues[current] || template in catalogues.en)) return t(template, params ?? {});
+  return message in catalogues[current] || message in catalogues.en ? t(message) : message;
+}
 
 const numberFormats = new Map<string, Intl.NumberFormat>();
 export function fmtNumber(n: number, digits?: number) {

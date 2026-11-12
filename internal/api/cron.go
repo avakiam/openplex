@@ -191,7 +191,7 @@ func (s *Server) handleRunCron(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := s.cron.RunNow(j); err != nil {
 		if errors.Is(err, cron.ErrBusy) {
-			writeErr(w, http.StatusConflict, "busy", err.Error())
+			writeErrFrom(w, http.StatusConflict, "busy", err)
 			return
 		}
 		s.fail(w, r, err)
@@ -225,7 +225,7 @@ func (s *Server) handleCronPreview(w http.ResponseWriter, r *http.Request) {
 	}
 	next, err := cron.NextRuns(strings.Join(strings.Fields(in.Schedule), " "), time.Now(), 5)
 	if err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	out := make([]time.Time, len(next))

@@ -16,6 +16,7 @@ import (
 	"openplex.dev/openplex/internal/apps"
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/docker"
+	"openplex.dev/openplex/internal/msg"
 	"openplex.dev/openplex/internal/secrets"
 	"openplex.dev/openplex/internal/ssl"
 )
@@ -178,7 +179,7 @@ func (s *Server) handleInstallSiteApp(w http.ResponseWriter, r *http.Request) {
 	}
 	p := apps.Params{Title: in.Title, AdminUser: in.AdminUser, AdminEmail: in.AdminEmail, AdminPassword: in.AdminPassword, Language: in.Language}
 	if err := app.Validate(&p); err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	switch {
@@ -189,7 +190,7 @@ func (s *Server) handleInstallSiteApp(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusConflict, "needs_php", "applications need a PHP website; change the runtime to PHP first")
 		return
 	case !app.SupportsPHP(d.RuntimeVersion):
-		writeErr(w, http.StatusConflict, "needs_php", fmt.Sprintf("%s needs PHP %s or later; change the website's PHP version first", app.Name, app.MinPHP))
+		writeMsg(w, http.StatusConflict, "needs_php", msg.New("{app} needs PHP {version} or later; change the website's PHP version first", "app", app.Name, "version", app.MinPHP))
 		return
 	}
 	if cur, err := s.db.GetSiteApp(ctx, d.ID); err == nil && cur.Status != db.AppError {
@@ -211,11 +212,11 @@ func (s *Server) handleInstallSiteApp(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
-	if msg, err := s.quotaReached(ctx, owner, true); err != nil {
+	if q, err := s.quotaReached(ctx, owner, true); err != nil {
 		s.fail(w, r, err)
 		return
-	} else if msg != "" {
-		writeErr(w, http.StatusForbidden, "quota_exceeded", msg)
+	} else if q != nil {
+		writeMsg(w, http.StatusForbidden, "quota_exceeded", q)
 		return
 	}
 
@@ -247,7 +248,7 @@ func (s *Server) handleInstallSiteApp(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if err == nil && !docker.ValidIdentifier(dbr.Name) {
-		err = fmt.Errorf("database name %s is not valid", dbr.Name)
+		err = msg.New("database name {name} is not valid", "name", dbr.Name)
 	}
 	if err != nil {
 		_ = s.db.FinishSiteApp(ctx, d.ID, db.AppError, "", "could not create its database")

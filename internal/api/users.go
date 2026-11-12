@@ -95,12 +95,12 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	if a.Role == db.RoleReseller && in.MaxDBSize == 0 {
 		in.MaxDBSize = a.MaxDBSizeMB // a reseller's customers stay within its own limit
 	}
-	if msg := dbSizeCap(a, in.MaxDBSize); msg != "" {
-		badRequest(w, msg)
+	if m := dbSizeCap(a, in.MaxDBSize); m != nil {
+		writeMsg(w, http.StatusBadRequest, "bad_request", m)
 		return
 	}
 	if err := auth.CheckPolicy(in.Password); err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	hash, err := auth.HashPassword(in.Password)
@@ -204,8 +204,8 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 			u.MaxDatabases = *in.MaxDBs
 		}
 		if in.MaxDBSize != nil {
-			if msg := dbSizeCap(a, *in.MaxDBSize); msg != "" {
-				badRequest(w, msg)
+			if m := dbSizeCap(a, *in.MaxDBSize); m != nil {
+				writeMsg(w, http.StatusBadRequest, "bad_request", m)
 				return
 			}
 			u.MaxDBSizeMB = *in.MaxDBSize
@@ -258,7 +258,7 @@ func (s *Server) handleSetUserPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.setPassword(r, u, in.Password); err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	s.audit(r, "user.password_reset", u.Username, "")
@@ -364,7 +364,7 @@ func (s *Server) handleCreateSSHKey(w http.ResponseWriter, r *http.Request) {
 	}
 	norm, fp, err := auth.ParseSSHPublicKey(in.PublicKey)
 	if err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	k := &db.SSHKey{UserID: actor(r).ID, Name: in.Name, PublicKey: norm, Fingerprint: fp}

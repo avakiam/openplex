@@ -17,6 +17,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"openplex.dev/openplex/internal/msg"
 )
 
 // Engines served.
@@ -289,10 +291,10 @@ func ParseAllow(list []string) ([]netip.Prefix, error) {
 		} else if p, err = netip.ParsePrefix(s); err == nil {
 			p = netip.PrefixFrom(p.Addr().Unmap(), p.Bits()).Masked()
 		} else {
-			return nil, fmt.Errorf("%q is not an IP address or network (CIDR)", s)
+			return nil, msg.New("{value} is not an IP address or network (CIDR)", "value", s)
 		}
 		if !p.IsValid() || p.Addr().Zone() != "" || strings.Contains(s, "%") {
-			return nil, fmt.Errorf("%q is not an IP address or network (CIDR)", s)
+			return nil, msg.New("{value} is not an IP address or network (CIDR)", "value", s)
 		}
 		dup := false
 		for _, q := range out {
@@ -303,7 +305,7 @@ func ParseAllow(list []string) ([]netip.Prefix, error) {
 		}
 	}
 	if len(out) > 20 {
-		return nil, errors.New("at most 20 addresses or networks")
+		return nil, msg.New("at most 20 addresses or networks")
 	}
 	return out, nil
 }

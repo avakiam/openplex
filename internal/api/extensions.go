@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"openplex.dev/openplex/internal/ssl"
 	"reflect"
 	"regexp"
 	"slices"
@@ -19,6 +18,8 @@ import (
 
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/extensions"
+	"openplex.dev/openplex/internal/msg"
+	"openplex.dev/openplex/internal/ssl"
 )
 
 // emit tells subscribed extensions about a change.
@@ -89,7 +90,7 @@ func (s *Server) handleUploadExtension(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMarketplace(w http.ResponseWriter, r *http.Request) {
 	cat, err := s.ext.Catalog(r.Context())
 	if err != nil {
-		writeErr(w, http.StatusBadGateway, "marketplace_unavailable", err.Error())
+		writeErrFrom(w, http.StatusBadGateway, "marketplace_unavailable", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, cat)
@@ -220,16 +221,16 @@ func (s *Server) extensionError(w http.ResponseWriter, r *http.Request, err erro
 	case errors.Is(err, db.ErrNotFound):
 		writeErr(w, http.StatusNotFound, "not_found", "extension not found")
 	case errors.Is(err, extensions.ErrUnavailable):
-		writeErr(w, http.StatusServiceUnavailable, "docker_unavailable", err.Error())
+		writeErrFrom(w, http.StatusServiceUnavailable, "docker_unavailable", err)
 	case errors.Is(err, extensions.ErrMarketplace):
-		writeErr(w, http.StatusBadGateway, "marketplace_unavailable", err.Error())
+		writeErrFrom(w, http.StatusBadGateway, "marketplace_unavailable", err)
 	default:
 		var mb *http.MaxBytesError
 		if errors.As(err, &mb) {
 			writeErr(w, http.StatusRequestEntityTooLarge, "too_large", "the package is too big")
 			return
 		}
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 	}
 }
 
@@ -503,7 +504,7 @@ func (s *Server) ExtensionAPI(id string) http.Handler {
 			return
 		}
 		if scope != "" && !slices.Contains(man.Permissions, scope) {
-			writeErr(w, http.StatusForbidden, "forbidden", "this extension was not given the "+scope+" permission")
+			writeMsg(w, http.StatusForbidden, "forbidden", msg.New("this extension was not given the {scope} permission", "scope", scope))
 			return
 		}
 		u := &db.User{Username: "extension:" + id, Role: db.RoleAdmin}
@@ -550,7 +551,7 @@ func (s *Server) handleExtensionEdge(w http.ResponseWriter, r *http.Request, id 
 		}
 		p, err := s.validEdgePolicy(r.Context(), in)
 		if err != nil {
-			badRequest(w, err.Error())
+			badRequestErr(w, err)
 			return
 		}
 		old, err := s.db.GetExtensionEdgePolicy(r.Context(), id)

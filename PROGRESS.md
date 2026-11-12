@@ -218,7 +218,10 @@ has been verified on the Linux test server. One commit per milestone.
       the login page, per-user preference stored on the account (`users.locale`, `PATCH /auth/me`, set by
       managers too), locale-aware numbers/dates, fixed API error messages translated; the build fails on a
       missing translation (`scripts/check-i18n.mjs`)
-- [ ] Turn dynamic API messages (quotas, overlaps, invalid JSON) into fixed, translatable strings
+- [x] Dynamic API messages translatable: `internal/msg` templates ({name} placeholders + values); errors carry
+      `template`/`params` next to the English `message`, the dashboard translates the template (quotas, overlaps,
+      invalid JSON/ids, PHP settings, allow-lists, size limits, e-mail addresses, captcha keys…); a test keeps every
+      template translated; unique-constraint conflicts answer a fixed "already exists"
 - [x] Trim the embedded Monaco bundle: scripts/copy-monaco.mjs leaves out what the panel never loads (the editor's
       UI translations, the old copies of the workers, and the 7 MB TypeScript/JavaScript language service, whose
       features the editor turns off; highlighting stays) — 25 → 7.5 MB, binary 43.9 → 27.0 MB
@@ -556,3 +559,7 @@ has been verified on the Linux test server. One commit per milestone.
 - 2026-11-12 — Monaco trim (0.28.90): on the LAN the file manager's editor opened JavaScript (highlighted, no request
   for the TypeScript worker, no worker errors), CSS (the CSS worker flagged a misspelled property and showed color
   swatches) and saved a file; the binary went from 43.9 MB to 27.0 MB.
+- 2026-11-12 — Translatable API messages (0.28.91): on the LAN the API answered a bad allow-list, a bad id, a bad JSON
+  body and an unknown field with their template and values (and a duplicate user with "already exists" instead of
+  the SQLite text); in the browser, in Spanish, the remote access dialog showed "abc no es una dirección IP ni una
+  red (CIDR)".

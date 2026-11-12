@@ -9,6 +9,7 @@ import (
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/dbproxy"
 	"openplex.dev/openplex/internal/firewall"
+	"openplex.dev/openplex/internal/msg"
 )
 
 // RemoteDB is remote access to the shared database servers (dbproxy.Proxy).
@@ -103,7 +104,7 @@ func (s *Server) handleSetDatabaseRemote(w http.ResponseWriter, r *http.Request)
 	}
 	list, err := dbproxy.ParseAllow(req.Allow)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid", err.Error())
+		writeErrFrom(w, http.StatusBadRequest, "invalid", err)
 		return
 	}
 	parts := make([]string, len(list))
@@ -120,7 +121,7 @@ func (s *Server) handleSetDatabaseRemote(w http.ResponseWriter, r *http.Request)
 		_ = s.db.SetDatabaseRemote(context.WithoutCancel(r.Context()), d.ID, d.RemoteAllow)
 		_ = s.remote.Sync(context.WithoutCancel(r.Context()))
 		s.log.Warn("remote database access", "err", err)
-		writeErr(w, http.StatusConflict, "remote_unavailable", "remote access could not be switched on: "+err.Error())
+		writeMsg(w, http.StatusConflict, "remote_unavailable", msg.New("remote access could not be switched on: {error}", "error", err.Error()))
 		return
 	}
 	detail := "off"

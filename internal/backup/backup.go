@@ -29,6 +29,7 @@ import (
 	"openplex.dev/openplex/internal/config"
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/docker"
+	"openplex.dev/openplex/internal/msg"
 	"openplex.dev/openplex/internal/secrets"
 )
 
@@ -419,7 +420,7 @@ func (m *Manager) doBackup(ctx context.Context, scope string, prune bool) (int64
 				return 0, "", err
 			}
 			if dbr.Status != db.StatusRunning {
-				return 0, "", fmt.Errorf("the database %s is not running", dbr.Name)
+				return 0, "", msg.New("the database {name} is not running", "name", dbr.Name)
 			}
 			dbs = append(dbs, dbr)
 		}

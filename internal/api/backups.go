@@ -22,7 +22,7 @@ func (s *Server) requireBackups(w http.ResponseWriter) bool {
 
 func (s *Server) backupErr(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, backup.ErrBusy) {
-		writeErr(w, http.StatusConflict, "busy", err.Error())
+		writeErrFrom(w, http.StatusConflict, "busy", err)
 		return
 	}
 	s.fail(w, r, err)
@@ -89,7 +89,7 @@ func (s *Server) handlePutBackupSettings(w http.ResponseWriter, r *http.Request)
 	st.ScheduleEnabled, st.ScheduleTime = in.ScheduleEnabled, in.ScheduleTime
 	st.KeepDaily, st.KeepWeekly, st.KeepMonthly = in.KeepDaily, in.KeepWeekly, in.KeepMonthly
 	if err := s.backups.Validate(st); err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	if err := s.db.SaveBackupSettings(r.Context(), st); err != nil {
@@ -110,7 +110,7 @@ func (s *Server) handleTestBackupRepo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.backups.EnsureRepository(r.Context(), st); err != nil {
-		writeErr(w, http.StatusBadGateway, "repository_error", err.Error())
+		writeErrFrom(w, http.StatusBadGateway, "repository_error", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "location": s.backups.Location(st)})
@@ -254,7 +254,7 @@ func (s *Server) handleItemRestore(w http.ResponseWriter, r *http.Request) {
 	run, err := s.backups.Restore(r.Context(), scope, snap, &actor(r).ID)
 	if err != nil {
 		if err.Error() == "invalid snapshot id" {
-			badRequest(w, err.Error())
+			badRequestErr(w, err)
 			return
 		}
 		s.backupErr(w, r, err)

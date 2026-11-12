@@ -35,7 +35,7 @@ func TestDatabaseLimitRules(t *testing.T) {
 		{reseller, 500, true}, {reseller, 1, true}, {reseller, 0, false}, {reseller, 501, false},
 		{freeReseller, 0, true},
 	} {
-		if got := dbSizeCap(tt.actor, tt.mb) == ""; got != tt.ok {
+		if got := dbSizeCap(tt.actor, tt.mb) == nil; got != tt.ok {
 			t.Errorf("dbSizeCap(%s %d, %d) ok = %v", tt.actor.Role, tt.actor.MaxDBSizeMB, tt.mb, got)
 		}
 	}

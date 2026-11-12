@@ -43,7 +43,7 @@ func (s *Server) handlePutMailSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.mail.UpdateSettings(r.Context(), in); err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	s.audit(r, "mail.settings_updated", "mail", in.Hostname)
@@ -188,11 +188,11 @@ func (s *Server) handleCreateMailbox(w http.ResponseWriter, r *http.Request) {
 	}
 	local, err := mail.NormalizeLocal(in.LocalPart)
 	if err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	if err := mail.CheckPassword(in.Password); err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	if in.QuotaMB == 0 {
@@ -262,7 +262,7 @@ func (s *Server) handleUpdateMailbox(w http.ResponseWriter, r *http.Request) {
 	detail := ""
 	if in.Password != nil {
 		if err := mail.CheckPassword(*in.Password); err != nil {
-			badRequest(w, err.Error())
+			badRequestErr(w, err)
 			return
 		}
 		b.PasswordHash = mail.HashPassword(*in.Password)
@@ -334,12 +334,12 @@ func (s *Server) handleCreateAlias(w http.ResponseWriter, r *http.Request) {
 	}
 	local, err := mail.NormalizeLocal(in.LocalPart)
 	if err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	dests, err := normalizeDestinations(in.Destinations)
 	if err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	if slices.Contains(dests, local+"@"+d.Name) {
@@ -401,7 +401,7 @@ func (s *Server) handleUpdateAlias(w http.ResponseWriter, r *http.Request) {
 	}
 	dests, err := normalizeDestinations(in.Destinations)
 	if err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	if slices.Contains(dests, a.LocalPart+"@"+d.Name) {
@@ -446,7 +446,7 @@ func (s *Server) handleWebmailLogin(w http.ResponseWriter, r *http.Request) {
 	addr := b.LocalPart + "@" + md.Name
 	url, err := s.mail.WebmailLogin(r.Context(), addr)
 	if err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	s.audit(r, "mail.webmail_login", addr, "")

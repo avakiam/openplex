@@ -15,6 +15,7 @@ import (
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/docker"
 	"openplex.dev/openplex/internal/files"
+	"openplex.dev/openplex/internal/msg"
 )
 
 const maxUploadBytes = 2 << 30 // 2 GiB per upload request
@@ -36,9 +37,9 @@ func (s *Server) jailFor(w http.ResponseWriter, r *http.Request) (*db.Domain, *f
 func (s *Server) fileErr(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, files.ErrTooLarge):
-		writeErr(w, http.StatusRequestEntityTooLarge, "too_large", err.Error())
+		writeErrFrom(w, http.StatusRequestEntityTooLarge, "too_large", err)
 	case errors.Is(err, files.ErrRoot):
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 	default:
 		if strings.Contains(err.Error(), "escapes from parent") {
 			badRequest(w, "path escapes the site directory")
@@ -136,7 +137,7 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		if err != nil {
-			badRequest(w, "malformed upload: "+err.Error())
+			writeMsg(w, http.StatusBadRequest, "bad_request", msg.New("malformed upload: {error}", "error", err.Error()))
 			return
 		}
 		if part.FileName() == "" {

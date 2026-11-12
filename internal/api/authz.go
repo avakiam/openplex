@@ -3,12 +3,12 @@ package api
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"slices"
 	"strings"
 
 	"openplex.dev/openplex/internal/db"
+	"openplex.dev/openplex/internal/msg"
 )
 
 // RBAC model:
@@ -203,7 +203,7 @@ func (s *Server) loadManagedUser(w http.ResponseWriter, r *http.Request) *db.Use
 // quotaReached says (as an error message) whether owner may not get another
 // website (or database). A reseller's limit covers its customers too, so it
 // can't be bypassed by creating customers without limits.
-func (s *Server) quotaReached(ctx context.Context, owner *db.User, databases bool) (string, error) {
+func (s *Server) quotaReached(ctx context.Context, owner *db.User, databases bool) (*msg.Error, error) {
 	check := []*db.User{owner}
 	if owner.ParentID != nil {
 		if p, err := s.db.GetUser(ctx, *owner.ParentID); err == nil && p.Role == db.RoleReseller {
@@ -222,7 +222,7 @@ func (s *Server) quotaReached(ctx context.Context, owner *db.User, databases boo
 		if u.Role == db.RoleReseller {
 			var err error
 			if ids, err = s.visibleOwnerIDs(ctx, u); err != nil {
-				return "", err
+				return nil, err
 			}
 		}
 		n := 0
@@ -235,7 +235,7 @@ func (s *Server) quotaReached(ctx context.Context, owner *db.User, databases boo
 				c, err = s.db.CountDomainsByOwner(ctx, id)
 			}
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 			n += c
 		}
@@ -244,14 +244,14 @@ func (s *Server) quotaReached(ctx context.Context, owner *db.User, databases boo
 		}
 		switch {
 		case u.ID != owner.ID && databases:
-			return fmt.Sprintf("the reseller's database quota of %d is reached", limit), nil
+			return msg.New("the reseller's database quota of {limit} is reached", "limit", limit), nil
 		case u.ID != owner.ID:
-			return fmt.Sprintf("the reseller's website quota of %d is reached", limit), nil
+			return msg.New("the reseller's website quota of {limit} is reached", "limit", limit), nil
 		case databases:
-			return fmt.Sprintf("database quota of %d reached", limit), nil
+			return msg.New("database quota of {limit} reached", "limit", limit), nil
 		default:
-			return fmt.Sprintf("website quota of %d reached", limit), nil
+			return msg.New("website quota of {limit} reached", "limit", limit), nil
 		}
 	}
-	return "", nil
+	return nil, nil
 }

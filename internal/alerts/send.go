@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"openplex.dev/openplex/internal/db"
+	"openplex.dev/openplex/internal/msg"
 )
 
 // Kinds of alerts, in display order.
@@ -64,7 +65,7 @@ func Validate(s *db.AlertSettings) error {
 			continue
 		}
 		if !validAddress(r) {
-			return fmt.Errorf("%q is not a valid e-mail address", r)
+			return msg.New("{address} is not a valid e-mail address", "address", r)
 		}
 		if !slices.Contains(rcpt, r) {
 			rcpt = append(rcpt, r)

@@ -109,7 +109,7 @@ func (s *Server) handleSetSFTPPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := auth.CheckPolicy(in.Password); err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	if auth.VerifyPassword(u.PasswordHash, in.Password) {

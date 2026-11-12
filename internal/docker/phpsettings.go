@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 	_ "time/tzdata" // validate time zones even on hosts without zoneinfo
+
+	"openplex.dev/openplex/internal/msg"
 )
 
 // PHPOption is a PHP setting a website may change. The defaults are the
@@ -63,7 +65,7 @@ func ValidatePHPSettings(in map[string]string, memoryMB int) (map[string]string,
 	for k, v := range in {
 		i := slices.IndexFunc(PHPOptions, func(o PHPOption) bool { return o.Key == k })
 		if i < 0 {
-			return nil, fmt.Errorf("%s is not a PHP setting that can be changed", k)
+			return nil, msg.New("{setting} is not a PHP setting that can be changed", "setting", k)
 		}
 		o := PHPOptions[i]
 		v = strings.TrimSpace(v)
@@ -79,12 +81,12 @@ func ValidatePHPSettings(in map[string]string, memoryMB int) (map[string]string,
 				max = int64(memoryMB)
 			}
 			if !ok || mb < o.Min || mb > max {
-				return nil, fmt.Errorf("%s must be between %dM and %dM (e.g. 128M or 1G)", k, o.Min, max)
+				return nil, msg.New("{setting} must be between {min}M and {max}M (e.g. 128M or 1G)", "setting", k, "min", o.Min, "max", max)
 			}
 		case "int":
 			n, err := strconv.ParseInt(v, 10, 64)
 			if err != nil || n < o.Min || n > o.Max {
-				return nil, fmt.Errorf("%s must be a whole number between %d and %d", k, o.Min, o.Max)
+				return nil, msg.New("{setting} must be a whole number between {min} and {max}", "setting", k, "min", o.Min, "max", o.Max)
 			}
 			v = strconv.FormatInt(n, 10)
 		case "bool":
@@ -94,16 +96,16 @@ func ValidatePHPSettings(in map[string]string, memoryMB int) (map[string]string,
 			case "off", "0", "false", "no":
 				v = "Off"
 			default:
-				return nil, fmt.Errorf("%s must be On or Off", k)
+				return nil, msg.New("{setting} must be On or Off", "setting", k)
 			}
 		case "timezone":
 			if _, err := time.LoadLocation(v); err != nil || v == "Local" || len(v) > 64 {
-				return nil, fmt.Errorf("%s must be a time zone such as Europe/Madrid", k)
+				return nil, msg.New("{setting} must be a time zone such as Europe/Madrid", "setting", k)
 			}
 		case "list":
 			v = strings.Join(strings.Fields(strings.ReplaceAll(v, ",", " ")), ",")
 			if v != "" && (!listRe.MatchString(v) || len(v) > 2000) {
-				return nil, fmt.Errorf("%s must be a comma-separated list of function names", k)
+				return nil, msg.New("{setting} must be a comma-separated list of function names", "setting", k)
 			}
 		}
 		if v != o.Default {

@@ -221,7 +221,7 @@ func (s *Server) handleChangeOwnPassword(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if err := s.setPassword(r, u, in.NewPassword); err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	s.audit(r, "user.password_changed", u.Username, "self")
@@ -323,7 +323,7 @@ func (s *Server) handleTOTPDisable(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleWSTicket(w http.ResponseWriter, r *http.Request) {
 	t, err := s.tickets.issue(actor(r).ID)
 	if err != nil {
-		writeErr(w, http.StatusServiceUnavailable, "unavailable", err.Error())
+		writeErrFrom(w, http.StatusServiceUnavailable, "unavailable", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"ticket": t})

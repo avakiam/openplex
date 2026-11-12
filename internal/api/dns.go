@@ -56,7 +56,7 @@ func (s *Server) handlePutDNSSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.dns.UpdateSettings(r.Context(), in); err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	s.audit(r, "dns.settings_updated", "dns", in.NS1+" "+in.NS2)
@@ -124,7 +124,7 @@ type recordInput struct {
 // saveRecord validates r against its zone and stores it (create when ID is 0).
 func (s *Server) saveRecord(w http.ResponseWriter, r *http.Request, d *db.Domain, z *db.DNSZone, rec *db.DNSRecord) bool {
 	if err := dns.NormalizeRecord(rec, z.Name); err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return false
 	}
 	others, err := s.db.ListDNSRecords(r.Context(), z.ID)
@@ -133,7 +133,7 @@ func (s *Server) saveRecord(w http.ResponseWriter, r *http.Request, d *db.Domain
 		return false
 	}
 	if err := dns.CheckConflicts(*rec, others); err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return false
 	}
 	if rec.ID == 0 {

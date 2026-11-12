@@ -14,6 +14,7 @@ import (
 
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/docker"
+	"openplex.dev/openplex/internal/msg"
 	"openplex.dev/openplex/internal/ssl"
 )
 
@@ -89,7 +90,7 @@ func (in *domainInput) apply(d *db.Domain) error {
 	}
 	if rt.NeedsCommand {
 		if d.StartCommand == "" || len(d.StartCommand) > 2000 || strings.ContainsRune(d.StartCommand, 0) {
-			return fmt.Errorf("runtime %s requires start_command (max 2000 chars)", rt.Name)
+			return msg.New("the {runtime} runtime needs a start command (2000 characters at most)", "runtime", rt.Name)
 		}
 		if d.AppPort == 0 {
 			d.AppPort = rt.DefaultPort
@@ -114,10 +115,10 @@ func (in *domainInput) apply(d *db.Domain) error {
 	}
 	for k, v := range d.Env {
 		if !envKeyRe.MatchString(k) {
-			return fmt.Errorf("invalid environment variable name %q", k)
+			return msg.New("invalid environment variable name {name}", "name", k)
 		}
 		if len(v) > 8192 || strings.ContainsRune(v, 0) {
-			return fmt.Errorf("environment variable %s is too long or contains NUL", k)
+			return msg.New("environment variable {name} is too long or contains a NUL character", "name", k)
 		}
 	}
 	return nil
@@ -216,7 +217,7 @@ func (s *Server) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.checkNameOwnership(ctx, d.Name, d.OwnerID); err != nil {
-		writeErr(w, http.StatusConflict, "conflict", err.Error())
+		writeErrFrom(w, http.StatusConflict, "conflict", err)
 		return
 	}
 	if d.Kind != db.KindAlias {
@@ -225,16 +226,16 @@ func (s *Server) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 			s.fail(w, r, err)
 			return
 		}
-		if msg, err := s.quotaReached(ctx, owner, false); err != nil {
+		if q, err := s.quotaReached(ctx, owner, false); err != nil {
 			s.fail(w, r, err)
 			return
-		} else if msg != "" {
-			writeErr(w, http.StatusForbidden, "quota_exceeded", msg)
+		} else if q != nil {
+			writeMsg(w, http.StatusForbidden, "quota_exceeded", q)
 			return
 		}
 	}
 	if err := in.apply(d); err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	if d.Kind == db.KindAlias {
@@ -309,7 +310,7 @@ func (s *Server) checkNameOwnership(ctx context.Context, name string, ownerID in
 			continue
 		}
 		if strings.HasSuffix(name, "."+o.Name) || strings.HasSuffix(o.Name, "."+name) {
-			return fmt.Errorf("%s overlaps with a domain owned by another account", name)
+			return msg.New("{name} overlaps with a domain owned by another account", "name", name)
 		}
 	}
 	return nil
@@ -337,7 +338,7 @@ func (s *Server) handleUpdateDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := in.apply(d); err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	if err := s.db.UpdateDomain(r.Context(), d); err != nil {
@@ -513,7 +514,7 @@ func (s *Server) handleCreateRedirect(w http.ResponseWriter, r *http.Request) {
 	}
 	rule := ssl.Redirect{Path: strings.TrimSpace(in.SourcePath), Target: strings.TrimSpace(in.TargetURL), Code: in.StatusCode}
 	if err := ssl.ValidRedirect(rule); err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	rd := &db.Redirect{DomainID: d.ID, SourcePath: rule.Path, TargetURL: rule.Target, StatusCode: rule.Code}

@@ -57,7 +57,7 @@ func (s *Server) handlePutPHPSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	settings, err := docker.ValidatePHPSettings(in.Settings, d.MemoryMB)
 	if err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return
 	}
 	if err := s.db.SavePHPSettings(r.Context(), d.ID, settings); err != nil {

@@ -6,6 +6,7 @@ import (
 
 	"openplex.dev/openplex/internal/alerts"
 	"openplex.dev/openplex/internal/db"
+	"openplex.dev/openplex/internal/msg"
 )
 
 type alertsView struct {
@@ -91,7 +92,7 @@ func (s *Server) readAlertSettings(w http.ResponseWriter, r *http.Request) *db.A
 		}
 	}
 	if err := alerts.Validate(&st); err != nil {
-		badRequest(w, err.Error())
+		badRequestErr(w, err)
 		return nil
 	}
 	return &st
@@ -125,7 +126,7 @@ func (s *Server) handleTestAlert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.alerts.Test(r.Context(), st); err != nil {
-		writeErr(w, http.StatusBadGateway, "send_failed", "the test e-mail could not be sent: "+err.Error())
+		writeMsg(w, http.StatusBadGateway, "send_failed", msg.New("the test e-mail could not be sent: {error}", "error", err.Error()))
 		return
 	}
 	s.audit(r, "alerts.test_sent", "", "")

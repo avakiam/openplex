@@ -11,6 +11,7 @@ import (
 
 	"openplex.dev/openplex/internal/apps"
 	"openplex.dev/openplex/internal/db"
+	"openplex.dev/openplex/internal/msg"
 	"openplex.dev/openplex/internal/ssl"
 )
 
@@ -126,7 +127,7 @@ func (s *Server) handleUpdateSiteApp(w http.ResponseWriter, r *http.Request) {
 	}
 	if cur, err := s.db.GetSiteApp(r.Context(), d.ID); err == nil {
 		if app, ok := apps.Get(cur.App); ok && app.ManualExtensions && !in.Core {
-			badRequest(w, fmt.Sprintf("%s extensions are updated from its own administration", app.Name))
+			writeMsg(w, http.StatusBadRequest, "bad_request", msg.New("{app} extensions are updated from its own administration", "app", app.Name))
 			return
 		}
 	}
