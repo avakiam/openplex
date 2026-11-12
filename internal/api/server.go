@@ -130,6 +130,7 @@ func (s *Server) routes() http.Handler {
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/system/health", s.handleHealth)
 		r.Post("/auth/login", s.handleLogin)
+		r.Post("/auth/link", s.handleLoginLink)
 		r.Get("/auth/captcha", s.handleLoginCaptcha)
 		r.Post("/auth/refresh", s.handleRefresh)
 		r.Post("/auth/logout", s.handleLogout)

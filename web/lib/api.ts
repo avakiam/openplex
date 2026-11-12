@@ -120,6 +120,18 @@ export async function login(username: string, password: string, totpCode?: strin
   return adopt(await res.json()).user;
 }
 
+/** Signs in with a one-time link from `openplexd login-link`. */
+export async function loginWithLink(token: string) {
+  const res = await fetch(`${API}/auth/link`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  if (!res.ok) throw await parseError(res);
+  return adopt(await res.json()).user;
+}
+
 export async function logout() {
   await fetch(`${API}/auth/logout`, { method: "POST", credentials: "same-origin" }).catch(() => {});
   setSession(null);

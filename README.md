@@ -73,6 +73,7 @@ upgrades and rebuilding a lost server.
 - [Websites: applications, PHP settings and SFTP](docs/en/websites.md)
 - [Databases: size limits and remote access](docs/en/databases.md)
 - [OpenPlex for hosting providers](docs/en/hosting-providers.md)
+- [API reference](docs/en/api.md)
 - [Licensing, extensions and trademark](docs/en/licensing.md)
 - [Building an extension](docs/en/extensions.md)
 

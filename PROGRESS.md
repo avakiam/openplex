@@ -257,8 +257,17 @@ has been verified on the Linux test server. One commit per milestone.
       (`LICENSE-EXCEPTION.md`, to be reviewed by a lawyer), `TRADEMARKS.md`, `SECURITY.md`, `CONTRIBUTING.md`
       (no code contributions yet; CLA when opened), README and `docs/` (installation, hosting providers,
       licensing) in en/es/ca
-- [ ] Image mode for providers (prepare a template without initialising; first boot generates secrets),
-      one-time sign-in link, signed releases + update channel, published API reference
+- [x] Image mode for providers: `install.sh --image [--php LIST] [--no-mail]` installs everything and runs
+      `openplexd prepare-image` (pulls/builds the images, refuses once `secret.key`/`openplex.db` exist) without
+      starting the service; `OPENPLEX_PANEL_DOMAIN=auto` takes the host name (or its full name from `/etc/hosts`);
+      `secret.key` is created atomically (link), so the daemon and a CLI command on first boot agree on it
+- [x] One-time sign-in link: `openplexd login-link [--user] [--ttl ≤168h]` (waits on first boot for the admin account),
+      `POST /auth/link` (hashed, single use, no 2FA accounts, fail2ban-visible), dashboard `/login/?link=` →
+      account page, where the password can be set without the current one for 30 minutes
+- [x] Provider update channel: `install.sh --update-url` → `OPENPLEX_UPDATE_URL` (a file in GitHub's release format;
+      signatures still checked against the release keys)
+- [x] Published API reference `docs/{en,es,ca}/api.md`; `TestAPIReferenceListsEveryRoute` walks the router and
+      fails when the list and the routes differ
 - [x] Release build (`linux/amd64`, `linux/arm64`) + checksums: `.github/workflows/release.yml` builds a draft on a
       `v*` tag; `scripts/sign-release.sh` signs `SHA256SUMS` offline (key `avakiam-release-2026`) and publishes
       (see `RELEASING.md`); CI runs `make check` + the dashboard build on every push
@@ -570,3 +579,9 @@ has been verified on the Linux test server. One commit per milestone.
   created `openplex_public` (172.21.0.0/16 + fd39:ff54:8444:1::/64) and recreated PowerDNS and the mail server on it
   in seconds; after it, 25/587/993 and DNS (UDP and TCP) answered on IPv6 as on IPv4. Postfix keeps
   `smtp_address_preference = ipv4`; external IPv4 clients still show their own addresses.
+- 2026-11-12 — Provider image mode and hand-over (0.29.9x) on the LAN server: `prepare-image` refused the initialised
+  data dir and, on an empty one, pulled/checked every image in 7 s (`--php 9.9` refused); `login-link` for a test
+  account printed the link (no panel domain: the tunnel hint), the link signed in once (second use and garbage → 401
+  `invalid_link`, audited), `--ttl 200h` and unknown users refused; in the dashboard the link, even over another
+  session, landed on `/account/?from=link` without the current-password field; the new password signed in and the
+  audit shows "self, after a sign-in link". `install.sh --image` itself only checked with `bash -n` (no fresh VM).

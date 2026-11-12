@@ -481,6 +481,15 @@ ALTER TABLE databases ADD COLUMN size_locked INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN max_db_size_mb INTEGER NOT NULL DEFAULT 0;
 UPDATE alert_settings SET events = events || ',database_full' WHERE ',' || events || ',' LIKE '%,disk_full,%';
 `,
+	// 24: one-time sign-in links (openplexd login-link)
+	`CREATE TABLE login_links (
+	id          INTEGER PRIMARY KEY AUTOINCREMENT,
+	user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	token_hash  TEXT NOT NULL UNIQUE,
+	expires_at  TIMESTAMP NOT NULL,
+	used_at     TIMESTAMP,
+	created_at  TIMESTAMP NOT NULL
+);`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

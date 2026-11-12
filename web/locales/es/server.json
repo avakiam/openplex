@@ -328,5 +328,6 @@
   "{setting} must be a comma-separated list of function names": "{setting} debe ser una lista de nombres de funciones separados por comas",
   "{address} is not a valid e-mail address": "{address} no es una dirección de correo válida",
   "{provider} rejected the secret key ({code})": "{provider} ha rechazado la clave secreta ({code})",
-  "the database {name} is not running": "la base de datos {name} no está en marcha"
+  "the database {name} is not running": "la base de datos {name} no está en marcha",
+  "this sign-in link is not valid: it was used already or has expired": "Este enlace de acceso no es válido: ya se ha usado o ha caducado"
 }

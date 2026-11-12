@@ -13,6 +13,10 @@ PANEL_DOMAIN=""
 ACME_EMAIL=""
 LISTEN="127.0.0.1:7080"
 FIREWALL=1
+IMAGE=0
+PHP_VERSIONS=""
+NO_MAIL=0
+UPDATE_URL=""
 DATA_DIR=/var/lib/openplex
 ETC_DIR=/etc/openplex
 BIN_PATH=/usr/local/bin/openplexd
@@ -27,6 +31,14 @@ Usage: install.sh [options]
   --acme-email EMAIL      contact address for Let's Encrypt / ZeroSSL
   --listen ADDR           direct panel listen address (default: 127.0.0.1:7080)
   --no-firewall           leave the host firewall alone (no nftables rules, no Fail2Ban)
+  --image                 prepare a provider's template: install everything and download the
+                          container images, but don't start OpenPlex (each server made from the
+                          template initialises itself on first boot; the panel domain defaults
+                          to its host name)
+  --php LIST              with --image: PHP versions to build ahead (default: the default one)
+  --no-mail               with --image: skip the mail server and webmail images (~1 GB)
+  --update-url URL        where the panel looks for new releases (default: GitHub); a provider
+                          can serve its own file there to choose the version its servers take
   -h, --help              show this help
 
 Rebuilding a lost server: install with the same options, then
@@ -74,6 +86,10 @@ while [[ $# -gt 0 ]]; do
     --acme-email) ACME_EMAIL="$2"; shift 2 ;;
     --listen) LISTEN="$2"; shift 2 ;;
     --no-firewall) FIREWALL=0; shift ;;
+    --image) IMAGE=1; shift ;;
+    --php) PHP_VERSIONS="$2"; shift 2 ;;
+    --no-mail) NO_MAIL=1; shift ;;
+    --update-url) UPDATE_URL="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) usage; die "unknown option: $1" ;;
   esac
@@ -94,8 +110,17 @@ case "$(uname -m)" in
   *) die "unsupported architecture $(uname -m)" ;;
 esac
 command -v systemctl >/dev/null || die "systemd is required"
-if [[ -n "$PANEL_DOMAIN" && ! "$PANEL_DOMAIN" =~ ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$ ]]; then
+if [[ $IMAGE -eq 1 ]]; then
+  if [[ -e "$DATA_DIR/secret.key" || -e "$DATA_DIR/openplex.db" ]]; then
+    die "OpenPlex already ran on this server: a template made from it would give every new server the same secrets. Prepare the template on a fresh server."
+  fi
+  [[ -n "$PANEL_DOMAIN" ]] || PANEL_DOMAIN=auto
+fi
+if [[ -n "$PANEL_DOMAIN" && "$PANEL_DOMAIN" != auto && ! "$PANEL_DOMAIN" =~ ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$ ]]; then
   die "invalid --panel-domain '$PANEL_DOMAIN' (lowercase hostname expected)"
+fi
+if [[ -n "$UPDATE_URL" && ! "$UPDATE_URL" =~ ^https://[^[:space:]|]+$ ]]; then
+  die "invalid --update-url '$UPDATE_URL' (an https:// URL expected)"
 fi
 if [[ -n "$ACME_EMAIL" && ! "$ACME_EMAIL" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[a-zA-Z]{2,}$ ]]; then
   die "invalid --acme-email '$ACME_EMAIL'"
@@ -171,6 +196,7 @@ OPENPLEX_PANEL_DOMAIN=$PANEL_DOMAIN
 OPENPLEX_ACME_EMAIL=$ACME_EMAIL
 OPENPLEX_FIREWALL=$( [[ $FIREWALL -eq 1 ]] && echo true || echo false )
 EOF
+  [[ -n "$UPDATE_URL" ]] && echo "OPENPLEX_UPDATE_URL=$UPDATE_URL" >> "$ENV_FILE"
   chmod 0640 "$ENV_FILE"
 else
   # Update only the values passed explicitly on this run.
@@ -178,6 +204,7 @@ else
   [[ -n "$PANEL_DOMAIN" ]] && set_kv OPENPLEX_PANEL_DOMAIN "$PANEL_DOMAIN"
   [[ -n "$ACME_EMAIL" ]] && set_kv OPENPLEX_ACME_EMAIL "$ACME_EMAIL"
   [[ $FIREWALL -eq 0 ]] && set_kv OPENPLEX_FIREWALL false
+  [[ -n "$UPDATE_URL" ]] && set_kv OPENPLEX_UPDATE_URL "$UPDATE_URL"
   log "Kept existing $ENV_FILE"
 fi
 
@@ -226,7 +253,9 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 systemctl enable openplexd >/dev/null 2>&1
-systemctl restart openplexd
+if [[ $IMAGE -eq 0 ]]; then
+  systemctl restart openplexd
+fi
 
 # ---------- host firewall & Fail2Ban ----------
 # The host firewall is an nftables table (inet openplex) owned by openplexd and
@@ -275,6 +304,23 @@ F2B
   systemctl restart fail2ban
 else
   log "Skipping host firewall and Fail2Ban (--no-firewall)"
+fi
+
+# ---------- template (--image) ----------
+if [[ $IMAGE -eq 1 ]]; then
+  log "Downloading and building the container images (this takes a while)"
+  args=()
+  [[ -n "$PHP_VERSIONS" ]] && args+=(--php "$PHP_VERSIONS")
+  [[ $NO_MAIL -eq 1 ]] && args+=(--no-mail)
+  "$BIN_PATH" prepare-image --data-dir "$DATA_DIR" "${args[@]}"
+  echo
+  log "Template ready. OpenPlex has not started on this server and holds no secrets yet."
+  echo "    Next: generalise the system as usual (cloud-init clean, machine-id, SSH host keys),"
+  echo "    power off and take the image. Each server made from it initialises OpenPlex on first"
+  echo "    boot, with its own secret key, admin account and certificates."
+  echo "    Panel:    https://<the server's host name>  (OPENPLEX_PANEL_DOMAIN=$PANEL_DOMAIN in $ENV_FILE)"
+  echo "    Handover: openplexd login-link   prints a one-time sign-in link for the admin account"
+  exit 0
 fi
 
 # ---------- wait for health ----------

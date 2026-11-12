@@ -1,13 +1,14 @@
 "use client";
 import { ShieldCheck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { Logo } from "@/components/app-shell";
 import { CaptchaWidget } from "@/components/captcha";
 import { LanguageSelect } from "@/components/language-select";
 import { Button, Card, ErrorBox, Field, Input, Spinner } from "@/components/ui";
-import { API, ApiError, login } from "@/lib/api";
+import { API, ApiError, login, loginWithLink } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/i18n";
 import type { CaptchaProvider } from "@/lib/types";
@@ -34,7 +35,9 @@ function LoginForm() {
   const [needTotp, setNeedTotp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const link = params.get("link");
   const next = safeNext(params.get("next"));
+  const linkTried = useRef(false);
   const [captcha, setCaptcha] = useState<{ provider: Exclude<CaptchaProvider, "">; site_key: string } | null>(null);
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaPass, setCaptchaPass] = useState<string | undefined>();
@@ -50,8 +53,22 @@ function LoginForm() {
   }, []);
 
   useEffect(() => {
-    if (ready && user) router.replace(next);
-  }, [ready, user, router, next]);
+    // A one-time link signs in even over another session (below).
+    if (ready && user && !link) router.replace(next);
+  }, [ready, user, router, next, link]);
+
+  useEffect(() => {
+    if (!link || linkTried.current) return;
+    linkTried.current = true;
+    setBusy(true);
+    loginWithLink(link)
+      .then(() => {
+        toast.success(t("Signed in with a one-time link. Set a password of your own for this account now."));
+        router.replace("/account/?from=link");
+      })
+      .catch((err: Error) => setError(err.message))
+      .finally(() => setBusy(false));
+  }, [link, router, t]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

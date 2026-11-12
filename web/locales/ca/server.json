@@ -328,5 +328,6 @@
   "{setting} must be a comma-separated list of function names": "{setting} ha de ser una llista de noms de funcions separats per comes",
   "{address} is not a valid e-mail address": "{address} no és una adreça de correu vàlida",
   "{provider} rejected the secret key ({code})": "{provider} ha rebutjat la clau secreta ({code})",
-  "the database {name} is not running": "la base de dades {name} no està en marxa"
+  "the database {name} is not running": "la base de dades {name} no està en marxa",
+  "this sign-in link is not valid: it was used already or has expired": "Aquest enllaç d'accés no és vàlid: ja s'ha fet servir o ha caducat"
 }

@@ -75,6 +75,7 @@ les actualitzacions i com reconstruir un servidor perdut.
 - [Webs: aplicacions, configuració de PHP i SFTP](docs/ca/websites.md)
 - [Bases de dades: límits de mida i accés remot](docs/ca/databases.md)
 - [OpenPlex per a proveïdors d'allotjament](docs/ca/hosting-providers.md)
+- [Referència de l'API](docs/ca/api.md)
 - [Llicència, extensions i marca](docs/ca/licensing.md)
 - [Crear una extensió](docs/ca/extensions.md)
 

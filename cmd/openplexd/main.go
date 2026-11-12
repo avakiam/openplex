@@ -49,6 +49,10 @@ func main() {
 		err = resetPassword(args[1:])
 	case len(args) > 0 && args[0] == "restore-panel":
 		err = restorePanel(args[1:])
+	case len(args) > 0 && args[0] == "prepare-image":
+		err = prepareImage(args[1:])
+	case len(args) > 0 && args[0] == "login-link":
+		err = loginLink(args[1:])
 	case len(args) > 0 && args[0] == "ext":
 		err = extCommand(args[1:])
 	case len(args) > 0 && args[0] == "update":

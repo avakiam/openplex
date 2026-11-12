@@ -104,6 +104,56 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// linkPasswordWindow is how long after a link sign-in the account may set a
+// password without giving the current one.
+const linkPasswordWindow = 30 * time.Minute
+
+// handleLoginLink signs in with a one-time link from `openplexd login-link`.
+func (s *Server) handleLoginLink(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Token string `json:"token"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	ip := clientIP(r)
+	if !s.loginLimiter.allow("ip:" + ip) {
+		writeErr(w, http.StatusTooManyRequests, "rate_limited", "too many login attempts, try again later")
+		return
+	}
+	invalid := func() {
+		s.log.Warn("authentication failed", "ip", ip, "user", "(sign-in link)") // matched by the fail2ban openplex jail
+		writeErr(w, http.StatusUnauthorized, "invalid_link", "this sign-in link is not valid: it was used already or has expired")
+	}
+	if len(in.Token) < 20 || len(in.Token) > 200 {
+		invalid()
+		return
+	}
+	uid, err := s.db.UseLoginLink(r.Context(), auth.HashToken(in.Token))
+	if errors.Is(err, db.ErrNotFound) {
+		invalid()
+		return
+	}
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	_ = s.db.PruneLoginLinks(r.Context(), time.Now().Add(-30*24*time.Hour))
+	u, err := s.db.GetUser(r.Context(), uid)
+	if err != nil || u.Disabled || u.TOTPEnabled {
+		invalid()
+		return
+	}
+	resp, err := s.issueSession(w, r, u, auth.NewFamily(), 0)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	r = r.WithContext(withPrincipal(r.Context(), u))
+	s.audit(r, "auth.login_link", u.Username, "")
+	writeJSON(w, http.StatusOK, resp)
+}
+
 func presentedRefresh(r *http.Request, body string) string {
 	if body != "" {
 		return body
@@ -216,7 +266,18 @@ func (s *Server) handleChangeOwnPassword(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	u := actor(r)
-	if !auth.VerifyPassword(u.PasswordHash, in.CurrentPassword) {
+	// Someone who was just handed the account with a one-time link
+	// (openplexd login-link) doesn't know its password: they set one.
+	byLink := false
+	if in.CurrentPassword == "" && principalFrom(r.Context()).APIKeyID == 0 {
+		ok, err := s.db.LoginLinkUsedSince(r.Context(), u.ID, time.Now().Add(-linkPasswordWindow))
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		byLink = ok
+	}
+	if !byLink && !auth.VerifyPassword(u.PasswordHash, in.CurrentPassword) {
 		writeErr(w, http.StatusUnauthorized, "invalid_credentials", "current password is wrong")
 		return
 	}
@@ -224,7 +285,12 @@ func (s *Server) handleChangeOwnPassword(w http.ResponseWriter, r *http.Request)
 		badRequestErr(w, err)
 		return
 	}
-	s.audit(r, "user.password_changed", u.Username, "self")
+	detail := "self"
+	if byLink {
+		detail = "self, after a sign-in link"
+		_ = s.db.ForgetUsedLoginLinks(r.Context(), u.ID)
+	}
+	s.audit(r, "user.password_changed", u.Username, detail)
 	w.WriteHeader(http.StatusNoContent)
 }
 

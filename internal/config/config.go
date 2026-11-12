@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
@@ -82,6 +83,9 @@ func Load(args []string) (*Config, error) {
 		return nil, err
 	}
 
+	if strings.EqualFold(c.PanelDomain, "auto") {
+		c.PanelDomain = autoHostname()
+	}
 	abs, err := filepath.Abs(c.DataDir)
 	if err != nil {
 		return nil, fmt.Errorf("resolve data dir: %w", err)
@@ -116,7 +120,25 @@ func loadOrCreateSecret(path string) ([]byte, error) {
 	if _, err := rand.Read(b); err != nil {
 		return nil, fmt.Errorf("generate secret: %w", err)
 	}
-	if err := os.WriteFile(path, b, 0o600); err != nil {
+	// Another process starting at the same time (the daemon and a command such
+	// as login-link on first boot) may be creating it too: the file appears
+	// whole and only once (link fails when it exists), and the loser uses the
+	// winner's secret.
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".secret-*")
+	if err != nil {
+		return nil, fmt.Errorf("write secret: %w", err)
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(b); err != nil {
+		tmp.Close()
+		return nil, fmt.Errorf("write secret: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return nil, fmt.Errorf("write secret: %w", err)
+	}
+	if err := os.Link(tmp.Name(), path); errors.Is(err, fs.ErrExist) {
+		return loadOrCreateSecret(path)
+	} else if err != nil {
 		return nil, fmt.Errorf("write secret: %w", err)
 	}
 	return b, nil
@@ -141,4 +163,57 @@ func envBool(key string, def bool) bool {
 		return false
 	}
 	return def
+}
+
+// autoHostname is the server's own fully qualified host name, for
+// OPENPLEX_PANEL_DOMAIN=auto (a server made from a provider's template gets
+// its name on first boot); "" when the host name is not a domain name.
+func autoHostname() string {
+	h, err := os.Hostname()
+	if err != nil {
+		return ""
+	}
+	h = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(h), "."))
+	if !strings.Contains(h, ".") {
+		// A short name: its full name is in /etc/hosts (cloud-init writes it
+		// there), as `hostname -f` finds it.
+		if b, err := os.ReadFile("/etc/hosts"); err == nil {
+			h = fqdnFromHosts(string(b), h)
+		}
+	}
+	if !validAutoHost(h) {
+		return ""
+	}
+	return h
+}
+
+// fqdnFromHosts finds short's full name in a hosts file: the first name on
+// a line that lists short and starts with "short.".
+func fqdnFromHosts(hosts, short string) string {
+	for _, line := range strings.Split(hosts, "\n") {
+		line, _, _ = strings.Cut(line, "#")
+		f := strings.Fields(strings.ToLower(line))
+		if len(f) < 2 || !slices.Contains(f[1:], short) {
+			continue
+		}
+		for _, n := range f[1:] {
+			if strings.HasPrefix(n, short+".") {
+				return strings.TrimSuffix(n, ".")
+			}
+		}
+	}
+	return short
+}
+
+// validAutoHost reports whether h can be the panel's domain.
+func validAutoHost(h string) bool {
+	if !strings.Contains(h, ".") || strings.HasSuffix(h, ".localdomain") || strings.HasSuffix(h, ".local") {
+		return false
+	}
+	for _, l := range strings.Split(h, ".") {
+		if l == "" || len(l) > 63 || strings.Trim(l, "abcdefghijklmnopqrstuvwxyz0123456789-") != "" || l[0] == '-' || l[len(l)-1] == '-' {
+			return false
+		}
+	}
+	return true
 }

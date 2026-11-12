@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { roleLabels } from "@/components/status";
 import { Badge, Button, Card, CardBody, CardHeader, ErrorBox, Field, Input, PageHeader, Select } from "@/components/ui";
-import { api, refresh } from "@/lib/api";
+import { api, logout, refresh } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useAction } from "@/lib/hooks";
 import { LOCALES, browserLocale, useT, type LocalePref } from "@/lib/i18n";
@@ -15,12 +15,19 @@ function PasswordCard() {
   const { t } = useT();
   const router = useRouter();
   const [cur, setCur] = useState("");
+  // Right after a one-time sign-in link the account's owner doesn't know its
+  // password yet: the API lets them set one without it.
+  const [byLink, setByLink] = useState(false);
+  useEffect(() => {
+    setByLink(new URLSearchParams(window.location.search).get("from") === "link");
+  }, []);
   const [next, setNext] = useState("");
   const [again, setAgain] = useState("");
   const save = useAction(
     async () => {
       if (next !== again) throw new Error(t("The new passwords do not match"));
-      await api.post("/auth/password", { current_password: cur, new_password: next });
+      await api.post("/auth/password", { current_password: byLink ? "" : cur, new_password: next });
+      await logout(); // the change ended every session: this one too
     },
     { success: t("Password changed — please sign in again"), onSuccess: () => router.replace("/login/") },
   );
@@ -29,7 +36,11 @@ function PasswordCard() {
       <CardHeader title={t("Password")} description={t("Changing it signs you out everywhere.")} />
       <CardBody>
         <form className="grid max-w-sm gap-4" onSubmit={(e) => { e.preventDefault(); save.mutate(undefined); }}>
-          <Field label={t("Current password")}><Input type="password" required autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} /></Field>
+          {byLink ? (
+            <p className="text-sm text-muted-foreground">{t("You signed in with a one-time link: choose the password you'll sign in with from now on.")}</p>
+          ) : (
+            <Field label={t("Current password")}><Input type="password" required autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} /></Field>
+          )}
           <Field label={t("New password")} hint={t("At least 10 characters with letters and digits.")}><Input type="password" required minLength={10} autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} /></Field>
           <Field label={t("Repeat new password")}><Input type="password" required minLength={10} autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} /></Field>
           <ErrorBox error={save.error} />

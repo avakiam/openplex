@@ -45,29 +45,77 @@ només canvien els administradors.
 Tot el que fa el tauler passa per l'API HTTP a `/api/v1`, autenticada amb
 claus d'API (es creen a la pàgina **Claus API**). Un sistema de facturació o
 d'aprovisionament pot crear usuaris amb quotes, webs, bases de dades i
-bústies. Abans de la 1.0 es publicarà una referència de l'API.
+bústies. La [referència de l'API](api.md) recull tots els endpoints.
 
-## Important: no facis una imatge d'un servidor ja inicialitzat
+### Una plantilla amb OpenPlex a punt (mode imatge)
 
-En la seva primera arrencada `openplexd` genera la clau secreta del servidor,
-el compte d'administrador amb la seva contrasenya i els certificats. Si fas
-una instantània d'un servidor on OpenPlex ja ha arrencat i la fas servir com
-a plantilla, **tots els servidors creats a partir d'ella comparteixen
-aquests secrets**. Fins que existeixi el mode imatge descrit a sota,
-instal·la a la primera arrencada (com a dalt).
+Per crear servidors a partir de la teva pròpia imatge en lloc d'instal·lar a
+cadascun, prepara la plantilla en un servidor **acabat de crear** amb
+`--image`:
+
+```bash
+curl -fsSL https://github.com/avakiam/openplex/releases/latest/download/install.sh | bash -s -- --image --acme-email ops@provider.example
+```
+
+Instal·la Docker, el tallafoc i el servei `openplexd`, i descarrega i
+construeix les imatges de contenidor (servidor web, bases de dades, DNS,
+correu, PHP), però **no** arrenca OpenPlex: la plantilla no porta secrets.
+Opcions: `--php 8.2,8.3` construeix aquestes versions de PHP per endavant (si
+no, la de per defecte) i `--no-mail` deixa fora les imatges de correu (prop
+d'1 GB). Es nega a executar-se en un servidor on OpenPlex ja ha arrencat.
+
+Després generalitza el sistema com acostumes a fer (`cloud-init clean`, ID de
+màquina, claus d'amfitrió SSH), apaga'l i fes la imatge. A la primera
+arrencada, cada servidor creat a partir d'ella genera la seva pròpia clau
+secreta, el seu compte d'administrador i els seus certificats. El tauler
+respon al nom d'amfitrió del servidor (`OPENPLEX_PANEL_DOMAIN=auto`: el nom
+complet que té el sistema, o el que cloud-init posa a `/etc/hosts`), així que
+dona als servidors un nom complet com `vps-1234.provider.example` amb el seu
+registre DNS.
+
+### Lliurar el servidor
+
+`openplexd login-link` mostra un enllaç d'accés d'un sol ús per al compte
+d'administrador, vàlid 24 hores (`--ttl 72h` per a fins a una setmana,
+`--user NOM` per a un altre compte). El client l'obre, entra una vegada i
+arriba a la pàgina del seu compte per posar una contrasenya pròpia. A la
+primera arrencada espera que el tauler creï el compte d'administrador, així
+que cloud-init el pot executar:
+
+```yaml
+#cloud-config
+runcmd:
+  - openplexd login-link --ttl 72h > /root/openplex-link
+```
+
+i el teu sistema d'aprovisionament llegeix el fitxer (per SSH o amb el teu
+agent convidat) i envia l'enllaç al client. Un enllaç serveix una sola
+vegada; no dona accés a comptes amb verificació en dos passos. La
+contrasenya d'administrador continua també a
+`/var/lib/openplex/initial-admin-password`.
+
+### Actualitzacions
+
+Les versions van signades, i el tauler comprova la signatura abans
+d'instal·lar-ne una. Per defecte busca una versió nova a GitHub dues vegades
+al dia i l'administrador la instal·la des de la pàgina **Actualitzacions**.
+
+Per triar quina versió reben els teus servidors (per exemple, després de
+provar-la), serveix el teu propi fitxer i passa `--update-url https://…` a
+l'instal·lador (`OPENPLEX_UPDATE_URL` a `/etc/openplex/openplex.env`). El
+fitxer té el format de l'API de versions de GitHub (`tag_name`, `name`,
+`body`, `html_url`, `published_at` i `assets` amb `name` i
+`browser_download_url`): serveix una còpia de la resposta de
+`https://api.github.com/repos/avakiam/openplex/releases/tags/vX.Y.Z`, i les
+seves adreces de baixada poden apuntar al teu propi mirall. Les signatures es
+continuen comprovant amb les claus de versió d'OpenPlex, així que el teu
+fitxer tria entre les versions oficials; no les pot canviar.
 
 ## Previst per a proveïdors
 
-- **Mode imatge:** preparar una plantilla amb OpenPlex i les seves imatges de
-  contenidors ja baixades però sense inicialitzar, perquè cada servidor nou
-  acabi de configurar-se (secrets, nom, IP) en segons en arrencar.
-- **Lliurament de l'accés:** un enllaç d'accés d'un sol ús, o una contrasenya
-  d'administrador passada per cloud-init, per enviar-la al client per correu.
-- **Versions signades** i un canal d'actualitzacions.
-- **Referència de l'API** i integracions de facturació (per exemple un mòdul
-  per a WHMCS).
+- **Integracions de facturació** (per exemple, un mòdul de WHMCS).
 - **Extensions oficials**, gratuïtes i de pagament, i una interfície
-  d'extensions oberta per crear les teves.
+  d'extensions oberta per a les teves.
 
 T'interessa oferir OpenPlex? Obre un issue al
 [repositori principal](https://github.com/avakiam/openplex).
