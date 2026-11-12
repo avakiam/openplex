@@ -83,6 +83,42 @@ Notes:
   check and update, as with installs. You can still update from the
   application's own administration.
 
+### Staging copies
+
+A staging copy is a separate copy of a website, on a subdomain, to try
+updates, plugins or changes before visitors see them.
+
+**Create a staging copy** (on the **Application** card) makes the website
+`staging.<your site>` (or another name you choose) with the same runtime, PHP
+version and PHP settings, a new database, and a copy of the files and the
+database of the live website. The copy is then adapted: its configuration
+points at its own database, WordPress addresses are rewritten, and WordPress
+and Joomla ask search engines not to index it. The live website is not
+changed.
+
+The staging name must point to the server, as the live website does (it does
+when the panel manages your DNS), for the copy to be reachable and get its
+HTTPS certificate. It counts as a website and a database of the account.
+
+On the copy, **Push to `<live site>`** copies it back over the live website.
+Choose:
+
+- **Files**: code, plugins, themes and uploads. The live configuration file
+  (`wp-config.php`, `configuration.php` or `sites/default/settings.php`) is
+  kept, so the live website keeps its own database.
+- **Database**: content and settings. Whatever changed on the live website
+  since the copy was made (comments, orders, new users…) is lost.
+
+Before pushing, OpenPlex backs up the live website and its database (marked
+*before a staging push* in **Backups**); if that fails, nothing is changed.
+After pushing, WordPress gets its addresses and its search engine setting
+back, Drupal's caches are rebuilt, and OpenPlex checks the live website still
+answers; if it does not, restore that backup.
+
+To get a fresh copy, delete the staging website and create a new copy. Its
+database stays until you delete it under **Databases** (deleting the live
+website also deletes its subdomains, staging copies included).
+
 ## PHP settings
 
 On a PHP website, **Settings → PHP settings** changes these values. Empty

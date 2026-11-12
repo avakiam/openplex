@@ -18,6 +18,8 @@ const (
 const (
 	AppTaskChecking = "checking"
 	AppTaskUpdating = "updating"
+	AppTaskCopying  = "copying" // a staging copy is being made
+	AppTaskPushing  = "pushing" // a staging copy is being pushed to the live site
 )
 
 // SiteApp is an application (WordPress, Joomla, Drupal…) installed by the
@@ -33,6 +35,7 @@ type SiteApp struct {
 	Status        string    `json:"status"`
 	StatusMessage string    `json:"status_message"`
 	CreatedBy     *int64    `json:"-"`
+	StagingOf     *int64    `json:"staging_of"` // the live website this is a staging copy of
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 
@@ -44,17 +47,17 @@ type SiteApp struct {
 	LastUpdateAt *time.Time      `json:"last_update_at"`
 }
 
-const siteAppCols = `domain_id, app, version, database_id, admin_user, admin_email, language, status, status_message, created_by, created_at, updated_at`
+const siteAppCols = `domain_id, app, version, database_id, admin_user, admin_email, language, status, status_message, created_by, staging_of, created_at, updated_at`
 
 const siteAppUpdateCols = `updates, checked_at, task, task_error, last_update_at`
 
 func scanSiteApp(row interface{ Scan(...any) error }) (*SiteApp, error) {
 	var a SiteApp
-	var dbID, by sql.NullInt64
+	var dbID, by, staging sql.NullInt64
 	var updates string
 	var checked, lastUpdate sql.NullTime
 	if err := row.Scan(&a.DomainID, &a.App, &a.Version, &dbID, &a.AdminUser, &a.AdminEmail, &a.Language,
-		&a.Status, &a.StatusMessage, &by, &a.CreatedAt, &a.UpdatedAt,
+		&a.Status, &a.StatusMessage, &by, &staging, &a.CreatedAt, &a.UpdatedAt,
 		&updates, &checked, &a.Task, &a.TaskError, &lastUpdate); err != nil {
 		return nil, mapErr(err)
 	}
@@ -63,6 +66,9 @@ func scanSiteApp(row interface{ Scan(...any) error }) (*SiteApp, error) {
 	}
 	if by.Valid {
 		a.CreatedBy = &by.Int64
+	}
+	if staging.Valid {
+		a.StagingOf = &staging.Int64
 	}
 	if updates != "" {
 		a.Updates = json.RawMessage(updates)
@@ -91,9 +97,9 @@ func (db *DB) StartSiteApp(ctx context.Context, a *SiteApp) error {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM site_apps WHERE domain_id = ? AND status = ?`, a.DomainID, AppError); err != nil {
 			return err
 		}
-		_, err := tx.ExecContext(ctx, `INSERT INTO site_apps (`+siteAppCols+`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+		_, err := tx.ExecContext(ctx, `INSERT INTO site_apps (`+siteAppCols+`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 			a.DomainID, a.App, a.Version, a.DatabaseID, a.AdminUser, a.AdminEmail, a.Language, a.Status, a.StatusMessage,
-			a.CreatedBy, a.CreatedAt, a.UpdatedAt)
+			a.CreatedBy, a.StagingOf, a.CreatedAt, a.UpdatedAt)
 		return mapErr(err)
 	})
 }
@@ -197,4 +203,29 @@ func (db *DB) SiteAppsToCheck(ctx context.Context, before time.Time) ([]int64, e
 		ids = append(ids, id)
 	}
 	return ids, rows.Err()
+}
+
+// StagingCopies lists the websites that are staging copies of website liveID.
+func (db *DB) StagingCopies(ctx context.Context, liveID int64) ([]int64, error) {
+	rows, err := db.sql.QueryContext(ctx, `SELECT domain_id FROM site_apps WHERE staging_of = ? ORDER BY domain_id`, liveID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+// EndSiteAppTask ends the task running on a website's application without
+// recording a result (failure, if not empty, is shown as the last error).
+func (db *DB) EndSiteAppTask(ctx context.Context, domainID int64, failure string) error {
+	_, err := db.sql.ExecContext(ctx, `UPDATE site_apps SET task = '', task_error = ? WHERE domain_id = ?`, failure, domainID)
+	return err
 }

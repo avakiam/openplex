@@ -86,6 +86,24 @@ func TestSiteApps(t *testing.T) {
 		t.Fatalf("after update: %+v", got)
 	}
 
+	// A staging copy points at its live website; the link goes with the live website.
+	stg := &Domain{OwnerID: u.ID, Name: "staging.blog.example", Kind: KindSubdomain, ParentID: &dom.ID, Runtime: "php", RuntimeVersion: "8.3", DocumentRoot: "public"}
+	if err := d.CreateDomain(ctx, stg); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.StartSiteApp(ctx, &SiteApp{DomainID: stg.ID, App: "drupal", AdminUser: "root", AdminEmail: "r@example.com", StagingOf: &dom.ID}); err != nil {
+		t.Fatal(err)
+	}
+	if ids, err := d.StagingCopies(ctx, dom.ID); err != nil || len(ids) != 1 || ids[0] != stg.ID {
+		t.Fatalf("staging copies: %v %v", ids, err)
+	}
+	if got, _ := d.GetSiteApp(ctx, stg.ID); got.StagingOf == nil || *got.StagingOf != dom.ID {
+		t.Fatalf("staging_of: %+v", got)
+	}
+	if err := d.DeleteDomain(ctx, stg.ID); err != nil {
+		t.Fatal(err)
+	}
+
 	// The database link is cleared when the database goes, the app with the website.
 	if err := d.SetSiteAppDatabase(ctx, dom.ID, &dbr.ID); err != nil {
 		t.Fatal(err)

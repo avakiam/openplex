@@ -443,6 +443,11 @@ ALTER TABLE site_apps ADD COLUMN task TEXT NOT NULL DEFAULT '';
 ALTER TABLE site_apps ADD COLUMN task_error TEXT NOT NULL DEFAULT '';
 ALTER TABLE site_apps ADD COLUMN last_update_at TIMESTAMP;
 `,
+	// v20: staging copies of installed applications.
+	`
+ALTER TABLE site_apps ADD COLUMN staging_of INTEGER REFERENCES domains(id) ON DELETE SET NULL;
+CREATE INDEX site_apps_staging ON site_apps(staging_of);
+`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

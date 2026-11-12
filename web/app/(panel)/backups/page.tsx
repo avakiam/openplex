@@ -227,7 +227,8 @@ function RunsCard() {
                 <Td><RunStatus run={r} /></Td>
                 <Td className="text-right">{r.kind === "backup" && r.status === "success" ? bytes(r.bytes_added) : "—"}</Td>
                 <Td className="text-muted-foreground">{who(r.user_id)}{r.trigger === "scheduled" && <Badge className="ml-2">{t("scheduled")}</Badge>}
-                  {r.trigger === "app_update" && <Badge className="ml-2">{t("before an update")}</Badge>}</Td>
+                  {r.trigger === "app_update" && <Badge className="ml-2">{t("before an update")}</Badge>}
+                  {r.trigger === "staging_push" && <Badge className="ml-2">{t("before a staging push")}</Badge>}</Td>
               </tr>
             ))}
           </tbody>

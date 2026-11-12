@@ -25,6 +25,9 @@ type Job struct {
 	Mounts []mount.Mount
 	// MemoryMB limits the job (0 = 1024).
 	MemoryMB int
+	// Isolated: no network and only the capabilities to copy files as root
+	// (chown, read and write regardless of permissions).
+	Isolated bool
 }
 
 // JobResult holds a finished job's output.
@@ -51,6 +54,11 @@ func (o *Orchestrator) RunJob(ctx context.Context, j Job) (*JobResult, error) {
 		Mounts:      j.Mounts,
 		Resources:   container.Resources{Memory: int64(mem) << 20},
 		SecurityOpt: []string{"no-new-privileges:true"},
+	}
+	if j.Isolated {
+		hc.NetworkMode = "none"
+		hc.CapDrop = []string{"ALL"}
+		hc.CapAdd = []string{"CHOWN", "DAC_OVERRIDE", "DAC_READ_SEARCH", "FOWNER"}
 	}
 	created, err := o.cli.ContainerCreate(ctx, cc, hc, nil, nil, name)
 	if err != nil {

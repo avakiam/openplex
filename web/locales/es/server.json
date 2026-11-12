@@ -264,5 +264,16 @@
   "choose what to update": "elige qué actualizar",
   "this application is not known to this version of OpenPlex": "esta versión de OpenPlex no conoce esta aplicación",
   "the update check gave no result": "la comprobación de actualizaciones no dio ningún resultado",
-  "interrupted by a panel restart; if it was an update, check the website and restore the backup taken before it if needed": "interrumpida por un reinicio del panel; si era una actualización, revisa la web y, si hace falta, restaura la copia hecha antes"
+  "interrupted by a panel restart; if it was an update, check the website and restore the backup taken before it if needed": "interrumpida por un reinicio del panel; si era una actualización, revisa la web y, si hace falta, restaura la copia hecha antes",
+  "the name of the copy must be 1-32 lowercase letters, digits and dashes": "el nombre de la copia debe tener de 1 a 32 letras minúsculas, cifras y guiones",
+  "this website is already a staging copy; push it to the live site or copy the live site again": "esta web ya es una copia de staging; envíala a producción o vuelve a copiar la web en producción",
+  "this website has no primary domain": "esta web no tiene dominio principal",
+  "the application is busy: wait for the current task to finish": "la aplicación está ocupada: espera a que termine la tarea en curso",
+  "choose what to push: the files, the database or both": "elige qué enviar: los archivos, la base de datos o ambos",
+  "this website is not a staging copy": "esta web no es una copia de staging",
+  "the live website no longer has this application": "la web en producción ya no tiene esta aplicación",
+  "the live website belongs to another account": "la web en producción pertenece a otra cuenta",
+  "both websites must be running": "las dos webs deben estar en marcha",
+  "the live website's application is busy: wait for its current task to finish": "la aplicación de la web en producción está ocupada: espera a que termine su tarea en curso",
+  "the application has no database linked in the panel": "la aplicación no tiene ninguna base de datos vinculada en el panel"
 }

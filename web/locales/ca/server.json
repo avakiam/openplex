@@ -264,5 +264,16 @@
   "choose what to update": "tria què vols actualitzar",
   "this application is not known to this version of OpenPlex": "aquesta versió d'OpenPlex no coneix aquesta aplicació",
   "the update check gave no result": "la comprovació d'actualitzacions no va donar cap resultat",
-  "interrupted by a panel restart; if it was an update, check the website and restore the backup taken before it if needed": "interrompuda per un reinici del tauler; si era una actualització, revisa el web i, si cal, restaura la còpia feta abans"
+  "interrupted by a panel restart; if it was an update, check the website and restore the backup taken before it if needed": "interrompuda per un reinici del tauler; si era una actualització, revisa el web i, si cal, restaura la còpia feta abans",
+  "the name of the copy must be 1-32 lowercase letters, digits and dashes": "el nom de la còpia ha de tenir d'1 a 32 lletres minúscules, xifres i guionets",
+  "this website is already a staging copy; push it to the live site or copy the live site again": "aquest web ja és una còpia de staging; envia-la a producció o torna a copiar el web en producció",
+  "this website has no primary domain": "aquest web no té domini principal",
+  "the application is busy: wait for the current task to finish": "l'aplicació està ocupada: espera que acabi la tasca en curs",
+  "choose what to push: the files, the database or both": "tria què vols enviar: els fitxers, la base de dades o tots dos",
+  "this website is not a staging copy": "aquest web no és una còpia de staging",
+  "the live website no longer has this application": "el web en producció ja no té aquesta aplicació",
+  "the live website belongs to another account": "el web en producció pertany a un altre compte",
+  "both websites must be running": "els dos webs han d'estar en marxa",
+  "the live website's application is busy: wait for its current task to finish": "l'aplicació del web en producció està ocupada: espera que acabi la seva tasca en curs",
+  "the application has no database linked in the panel": "l'aplicació no té cap base de dades vinculada al tauler"
 }

@@ -59,7 +59,10 @@ func TestSupportsPHP(t *testing.T) {
 
 func TestScripts(t *testing.T) {
 	for _, a := range Catalog {
-		for name, get := range map[string]func() (string, error){"install": a.Script, "check": a.CheckScript, "update": a.UpdateScript} {
+		if a.ConfigFile == "" {
+			t.Errorf("%s: no configuration file", a.ID)
+		}
+		for name, get := range map[string]func() (string, error){"install": a.Script, "check": a.CheckScript, "update": a.UpdateScript, "stage": a.StageScript} {
 			s, err := get()
 			if err != nil {
 				t.Fatalf("%s %s: %v", a.ID, name, err)
@@ -71,7 +74,7 @@ func TestScripts(t *testing.T) {
 			if !strings.HasPrefix(s, "# Runs as the website's user") || !strings.Contains(s, want) {
 				t.Errorf("%s %s: script incomplete", a.ID, name)
 			}
-			if name == "update" != strings.Contains(s, "\nsite_check\n") {
+			if (name == "update" || name == "stage") != strings.Contains(s, "\nsite_check\n") {
 				t.Errorf("%s %s: the website check is misplaced", a.ID, name)
 			}
 			if name == "install" != strings.Contains(s, "the document root is not empty") {
@@ -101,6 +104,13 @@ func TestParseUpdates(t *testing.T) {
 		if _, err := ParseUpdates(bad); err == nil {
 			t.Errorf("%q: no error", bad)
 		}
+	}
+	stage := strings.Join(StageEnv(StageLive, "/b", "b.example", "/a", "a.example", Database{Password: "secret"}), " ")
+	if stage != "OPX_MODE=live OPX_DOCROOT=/b OPX_HOST=b.example OPX_FROM_DOCROOT=/a OPX_FROM_HOST=a.example" {
+		t.Fatalf("stage env %q", stage)
+	}
+	if s := strings.Join(StageEnv(StageStaging, "/b", "b", "/a", "a", Database{Password: "secret"}), " "); !strings.Contains(s, "OPX_DB_PASSWORD=secret") {
+		t.Fatalf("staging env %q", s)
 	}
 	env := strings.Join(UpdateEnv("/sites/a/public", "a.example", true, false), " ")
 	if env != "OPX_DOCROOT=/sites/a/public OPX_HOST=a.example OPX_CORE=1 OPX_EXTENSIONS=0" {

@@ -285,7 +285,17 @@ has been verified on the Linux test server. One commit per milestone.
       unknown Composer plugins disabled, symfony/runtime allowed), then an HTTP check of the site from inside its
       container (5xx = failed update pointing at the backup). One task per site; restarts end running tasks.
       Joomla extensions stay in Joomla's administration. Owner-only like installs
-- [ ] Manage installed applications: clone to a staging subdomain and push back, security hardening checks
+- [x] Staging copies (migration v20, `site_apps.staging_of`): "Create a staging copy" makes `<label>.<site>` (a
+      subdomain with the live site's runtime, limits, env and PHP settings), a new MariaDB database, copies the
+      database (`mariadb-dump | mariadb` in the engine container, DEFINERs dropped) and the files (rsync in a
+      throwaway container: no network, only the two document roots, links kept, setuid dropped, chowned to the
+      copy), then a per-CMS stage script points the configuration at the new database (wp-config, Joomla
+      configuration.php incl. tmp/log paths, a block appended to Drupal's settings.php), rewrites WordPress
+      addresses (`wp search-replace //live //staging`, guid skipped) and sets noindex (WordPress blog_public
+      kept in `opx_live_blog_public`, Joomla robots). "Push" (files and/or database) backs up the live site
+      first (trigger `staging_push`), rsyncs keeping the live configuration file, copies the database, rewrites
+      back, rebuilds Drupal caches and checks the live site answers. Tasks `copying`/`pushing` lock both sites
+- [ ] Manage installed applications: security hardening checks
 - [ ] Git deploy: clone a repository into a website (deploy key), pull on a webhook or by hand, optional
       build command
 
@@ -471,3 +481,10 @@ has been verified on the Linux test server. One commit per milestone.
   plugin and by the new post-update site check; a WordPress site broken on purpose (web-only fatal mu-plugin)
   made the update fail with the backup hint. Refusals: Joomla extensions-only, nothing chosen, a second task
   while one runs. Card, dialog and progress states checked in the browser (Spanish).
+- 2026-11-12 — Staging copies (0.22.90): on the LAN, copies of fresh WordPress 7.1.4, Joomla 6.2.0 and Drupal 11.4.12
+  sites answered 200 with their own database (WordPress siteurl rewritten, blog_public 0; Joomla robots noindex and
+  tmp_path moved); a database change and a file made on each copy were pushed (files + database): the live sites
+  answered 200 with the change and the file, kept their own configuration and database, WordPress got its address
+  and blog_public back; files owned by the live site's user; a backup preceded each push. Refusals: copy of a copy,
+  push from a live site, nothing chosen, bad name, existing name. Cards and dialogs checked in the browser. Deleting
+  a live site removes its staging subdomains but (as for any website) not their databases.

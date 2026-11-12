@@ -1,12 +1,14 @@
 "use client";
-import { ArrowUpCircle, Check, CircleCheck, Copy, ExternalLink, LayoutTemplate, RefreshCw, RotateCcw, TriangleAlert } from "lucide-react";
+import { ArrowUpCircle, Check, CircleCheck, Copy, CopyPlus, ExternalLink, LayoutTemplate, RefreshCw, RotateCcw, TriangleAlert, Upload } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button, Card, CardBody, CardHeader, Dialog, DialogContent, ErrorBox, Field, Input, Select, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { keys, useAction, useApps, useSiteApp } from "@/lib/hooks";
+import { keys, useAction, useApps, useDomain, useSiteApp } from "@/lib/hooks";
 import { tk, tServer, useT } from "@/lib/i18n";
 import type { AppInfo, AppUpdates, Domain, SiteApp } from "@/lib/types";
 import { ago } from "@/lib/utils";
@@ -159,7 +161,11 @@ export function SiteAppCard({ d, canInstall }: { d: Domain; canInstall: boolean 
         {app?.status === "installing" && (
           <div className="flex items-start gap-2">
             <Spinner className="mt-0.5 size-4" />
-            <p>{t("Installing {app}… This usually takes one or two minutes.", { app: app.name })}</p>
+            <p>
+              {app.staging_of_name
+                ? t("Copying the files and the database of {site}… This can take several minutes.", { site: app.staging_of_name })
+                : t("Installing {app}… This usually takes one or two minutes.", { app: app.name })}
+            </p>
           </div>
         )}
         {app?.status === "installed" && <Installed app={app} canManage={canInstall} />}
@@ -168,11 +174,13 @@ export function SiteAppCard({ d, canInstall }: { d: Domain; canInstall: boolean 
             <div className="flex items-start gap-2 text-destructive">
               <TriangleAlert className="mt-0.5 size-4 shrink-0" />
               <div>
-                <p className="font-medium">{t("{app} could not be installed.", { app: app.name })}</p>
+                <p className="font-medium">
+                  {app.staging_of_name ? t("The staging copy could not be made.") : t("{app} could not be installed.", { app: app.name })}
+                </p>
                 <p className="break-words text-xs">{tServer(app.status_message)}</p>
               </div>
             </div>
-            {canInstall && (
+            {canInstall && !app.staging_of_name && (
               <Button variant="outline" onClick={() => setOpen(true)}>
                 <RotateCcw /> {t("Try again")}
               </Button>
@@ -208,7 +216,176 @@ function Installed({ app, canManage }: { app: SiteApp; canManage: boolean }) {
         </a>
       </Button>
       <AppUpdatesSection app={app} canManage={canManage} />
+      <StagingSection app={app} canManage={canManage} />
     </>
+  );
+}
+
+/** Staging: copies of this website, or (on a copy) pushing it to the live site. */
+function StagingSection({ app, canManage }: { app: SiteApp; canManage: boolean }) {
+  const { t } = useT();
+  const [creating, setCreating] = useState(false);
+  const [pushing, setPushing] = useState(false);
+  const live = app.staging_of_name;
+  if (!live && !canManage && app.staging_copies.length === 0) return null;
+  return (
+    <div className="grid gap-2 border-t pt-3">
+      <p className="font-medium">{t("Staging")}</p>
+      {app.task === "copying" && (
+        <p className="flex items-start gap-2">
+          <Spinner className="mt-0.5 size-4 shrink-0" /> {t("Making a staging copy… This can take several minutes.")}
+        </p>
+      )}
+      {app.task === "pushing" && (
+        <p className="flex items-start gap-2">
+          <Spinner className="mt-0.5 size-4 shrink-0" />{" "}
+          {live ? t("Pushing this copy to {site}…", { site: live }) : t("A staging copy is being pushed to this website…")}
+        </p>
+      )}
+      {live ? (
+        <>
+          <p className="text-xs text-muted-foreground">
+            {t("This website is a staging copy of {site}. Try changes here, then push them to the live website.", { site: live })}{" "}
+            {app.staging_of != null && (
+              <Link className="text-primary hover:underline" href={`/domains/view/?id=${app.staging_of}`}>
+                {t("Open {domain}", { domain: live })}
+              </Link>
+            )}
+          </p>
+          {canManage && !app.task && (
+            <Button variant="outline" onClick={() => setPushing(true)}>
+              <Upload /> {t("Push to {site}", { site: live })}
+            </Button>
+          )}
+        </>
+      ) : (
+        <>
+          {app.staging_copies.length > 0 ? (
+            <ul className="grid gap-1 text-xs">
+              {app.staging_copies.map((c) => (
+                <li key={c.id}>
+                  <Link className="text-primary hover:underline" href={`/domains/view/?id=${c.id}`}>
+                    {c.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-muted-foreground">{t("A staging copy is a separate copy of this website on a subdomain, to try updates and changes before they reach visitors.")}</p>
+          )}
+          {canManage && !app.task && (
+            <Button variant="outline" onClick={() => setCreating(true)}>
+              <CopyPlus /> {t("Create a staging copy")}
+            </Button>
+          )}
+        </>
+      )}
+      {creating && <CreateStagingDialog app={app} onClose={() => setCreating(false)} />}
+      {pushing && live && <PushStagingDialog app={app} live={live} onClose={() => setPushing(false)} />}
+    </div>
+  );
+}
+
+function CreateStagingDialog({ app, onClose }: { app: SiteApp; onClose: () => void }) {
+  const { t } = useT();
+  const router = useRouter();
+  const { data: site } = useDomain(app.domain_id);
+  const [label, setLabel] = useState("staging");
+  const create = useAction(() => api.post<Domain>(`/domains/${app.domain_id}/app/staging`, { label }), {
+    success: t("Making the staging copy"),
+    invalidate: [keys.siteApp(app.domain_id), keys.domains, keys.databases],
+    onSuccess: (d) => {
+      onClose();
+      router.push(`/domains/view/?id=${d.id}`);
+    },
+  });
+  const name = site ? `${label || "staging"}.${site.name}` : "";
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        title={t("Create a staging copy")}
+        description={t("The files and the database are copied to a new website on a subdomain, with its own database. The live website is not changed.")}
+      >
+        <form
+          className="grid gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            create.mutate(undefined);
+          }}
+        >
+          <Field label={t("Name")} hint={name}>
+            <Input required maxLength={32} pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" value={label} onChange={(e) => setLabel(e.target.value.toLowerCase())} />
+          </Field>
+          <ul className="grid list-disc gap-1 pl-5 text-xs text-muted-foreground">
+            <li>{t("The name must point to this server (as the live website does) for the copy to be reachable and get its HTTPS certificate.")}</li>
+            <li>{t("The copy asks search engines not to index it (WordPress and Joomla).")}</li>
+            <li>{t("It counts as a website and a database of the account.")}</li>
+          </ul>
+          <ErrorBox error={create.error} />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              {t("Cancel")}
+            </Button>
+            <Button type="submit" loading={create.isPending}>
+              {t("Create the copy")}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PushStagingDialog({ app, live, onClose }: { app: SiteApp; live: string; onClose: () => void }) {
+  const { t } = useT();
+  const [files, setFiles] = useState(true);
+  const [database, setDatabase] = useState(true);
+  const push = useAction(() => api.post(`/domains/${app.domain_id}/app/push`, { files, database }), {
+    success: t("Pushing to {site}", { site: live }),
+    invalidate: [keys.siteApp(app.domain_id), ...(app.staging_of != null ? [keys.siteApp(app.staging_of)] : [])],
+    onSuccess: onClose,
+  });
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        title={t("Push to {site}", { site: live })}
+        description={t("The live website is replaced with this copy. A backup of the live website is taken first; if it fails, nothing is changed.")}
+      >
+        <form
+          className="grid gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            push.mutate(undefined);
+          }}
+        >
+          <div className="grid gap-2 text-sm">
+            <label className="flex items-start gap-2">
+              <input type="checkbox" className="mt-1" checked={files} onChange={(e) => setFiles(e.target.checked)} />
+              <span>
+                {t("Files")}
+                <span className="block text-xs text-muted-foreground">{t("Code, plugins, themes and uploads. The live configuration file is kept.")}</span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2">
+              <input type="checkbox" className="mt-1" checked={database} onChange={(e) => setDatabase(e.target.checked)} />
+              <span>
+                {t("Database")}
+                <span className="block text-xs text-muted-foreground">{t("Content and settings. What changed on the live website since the copy was made (comments, orders, users…) is lost.")}</span>
+              </span>
+            </label>
+          </div>
+          <ErrorBox error={push.error} />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              {t("Cancel")}
+            </Button>
+            <Button type="submit" variant="destructive" loading={push.isPending} disabled={!files && !database}>
+              {t("Push")}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

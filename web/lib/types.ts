@@ -237,7 +237,7 @@ export interface BackupSettings {
 export interface BackupRun {
   id: number;
   kind: "backup" | "restore";
-  trigger: "manual" | "scheduled" | "app_update";
+  trigger: "manual" | "scheduled" | "app_update" | "staging_push";
   scope: string;
   status: "running" | "success" | "error";
   message: string;
@@ -651,9 +651,12 @@ export interface SiteApp {
   updated_at: string;
   updates: AppUpdates | null;
   checked_at: string | null;
-  task: "" | "checking" | "updating";
+  task: "" | "checking" | "updating" | "copying" | "pushing";
   task_error: string;
   last_update_at: string | null;
+  staging_of: number | null;
+  staging_of_name?: string;
+  staging_copies: { id: number; name: string }[];
 }
 
 export interface SFTPStatus {

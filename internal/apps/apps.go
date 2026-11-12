@@ -33,16 +33,19 @@ type App struct {
 	DBPrefix    string   `json:"-"`          // short name used in its database name
 	// ManualExtensions: its extensions are updated only from its own administration.
 	ManualExtensions bool `json:"manual_extensions"`
+	// ConfigFile holds the database settings (relative to the document root);
+	// a staging copy has its own, never pushed to the live site.
+	ConfigFile string `json:"-"`
 }
 
 // Catalog lists the applications in display order.
 var Catalog = []App{
 	{ID: "wordpress", Name: "WordPress", Description: "Websites and blogs; the most used content management system.",
-		MinPHP: "7.4", AdminPath: "/wp-admin/", Languages: []string{"en", "es", "ca"}, DBPrefix: "wp"},
+		MinPHP: "7.4", AdminPath: "/wp-admin/", Languages: []string{"en", "es", "ca"}, DBPrefix: "wp", ConfigFile: "wp-config.php"},
 	{ID: "joomla", Name: "Joomla", Description: "Content management with users, access levels and multilingual sites built in.",
-		MinPHP: "8.3", AdminPath: "/administrator/", Languages: []string{"en"}, DBPrefix: "joomla", ManualExtensions: true},
+		MinPHP: "8.3", AdminPath: "/administrator/", Languages: []string{"en"}, DBPrefix: "joomla", ManualExtensions: true, ConfigFile: "configuration.php"},
 	{ID: "drupal", Name: "Drupal", Description: "Structured content and complex websites, with a flexible content model.",
-		MinPHP: "8.3", AdminPath: "/user/login", Languages: []string{"en", "es", "ca"}, DBPrefix: "drupal"},
+		MinPHP: "8.3", AdminPath: "/user/login", Languages: []string{"en", "es", "ca"}, DBPrefix: "drupal", ConfigFile: "sites/default/settings.php"},
 }
 
 // Get returns the application with id.
@@ -118,6 +121,27 @@ func (a App) CheckScript() (string, error) { return compose("lib", a.ID+"-check"
 // to update: OPX_CORE=1 the application itself, OPX_EXTENSIONS=1 its
 // plugins, themes or modules.
 func (a App) UpdateScript() (string, error) { return compose("lib", a.ID+"-update") }
+
+// StageScript returns the shell script adapting a copied site (see StageEnv).
+func (a App) StageScript() (string, error) { return compose("lib", a.ID+"-stage") }
+
+// Stage modes.
+const (
+	StageStaging = "staging" // the live site was copied to a staging site
+	StageLive    = "live"    // a staging site was pushed to the live site
+)
+
+// StageEnv is the environment of the stage script run on the site that
+// received the copy: host and docroot are its own, fromHost and fromDocroot
+// those of the site copied; d is its database (staging mode only).
+func StageEnv(mode, docroot, host, fromDocroot, fromHost string, d Database) []string {
+	env := []string{"OPX_MODE=" + mode, "OPX_DOCROOT=" + docroot, "OPX_HOST=" + host,
+		"OPX_FROM_DOCROOT=" + fromDocroot, "OPX_FROM_HOST=" + fromHost}
+	if mode == StageStaging {
+		env = append(env, "OPX_DB_HOST="+d.Host, "OPX_DB_NAME="+d.Name, "OPX_DB_USER="+d.User, "OPX_DB_PASSWORD="+d.Password)
+	}
+	return env
+}
 
 func compose(parts ...string) (string, error) {
 	var b strings.Builder

@@ -29,6 +29,15 @@ type siteAppView struct {
 	Name         string `json:"name"`
 	AdminURL     string `json:"admin_url"`
 	DatabaseName string `json:"database_name,omitempty"`
+	// StagingOfName is the live website of a staging copy.
+	StagingOfName string `json:"staging_of_name,omitempty"`
+	// StagingCopies are the staging copies of this website.
+	StagingCopies []siteRef `json:"staging_copies"`
+}
+
+type siteRef struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 func (s *Server) handleListApps(w http.ResponseWriter, r *http.Request) {
@@ -62,6 +71,19 @@ func (s *Server) handleGetSiteApp(w http.ResponseWriter, r *http.Request) {
 	if a.DatabaseID != nil {
 		if dbr, err := s.db.GetDatabase(r.Context(), *a.DatabaseID); err == nil {
 			v.DatabaseName = dbr.Name
+		}
+	}
+	if a.StagingOf != nil {
+		if l, err := s.db.GetDomain(r.Context(), *a.StagingOf); err == nil {
+			v.StagingOfName = l.Name
+		}
+	}
+	v.StagingCopies = []siteRef{}
+	if ids, err := s.db.StagingCopies(r.Context(), d.ID); err == nil {
+		for _, id := range ids {
+			if c, err := s.db.GetDomain(r.Context(), id); err == nil {
+				v.StagingCopies = append(v.StagingCopies, siteRef{ID: c.ID, Name: c.Name})
+			}
 		}
 	}
 	writeJSON(w, http.StatusOK, v)

@@ -84,6 +84,48 @@ Notas:
   y actualizar, igual que al instalar. También puedes seguir actualizando desde
   la administración de la aplicación.
 
+### Copias de staging
+
+Una copia de staging es una copia aparte de una web, en un subdominio, para
+probar actualizaciones, plugins o cambios antes de que los vean los
+visitantes.
+
+**Crear una copia de staging** (en la tarjeta **Aplicación**) crea la web
+`staging.<tu web>` (u otro nombre que elijas) con el mismo entorno, versión y
+configuración de PHP, una base de datos nueva, y una copia de los archivos y
+de la base de datos de la web en producción. Después la copia se adapta: su
+configuración apunta a su propia base de datos, se reescriben las direcciones
+de WordPress, y WordPress y Joomla piden a los buscadores que no la indexen.
+La web en producción no se modifica.
+
+El nombre de staging debe apuntar al servidor, como la web en producción (ya
+lo hace si el panel gestiona tu DNS), para que la copia sea accesible y
+obtenga su certificado HTTPS. Cuenta como una web y una base de datos de la
+cuenta.
+
+En la copia, **Enviar a `<web en producción>`** la vuelve a copiar sobre la
+web en producción. Elige:
+
+- **Archivos**: código, plugins, temas y archivos subidos. Se conserva el
+  archivo de configuración de producción (`wp-config.php`,
+  `configuration.php` o `sites/default/settings.php`), así que la web en
+  producción sigue usando su propia base de datos.
+- **Base de datos**: contenido y ajustes. Lo que haya cambiado en la web en
+  producción desde que se hizo la copia (comentarios, pedidos, usuarios
+  nuevos…) se pierde.
+
+Antes de enviar, OpenPlex hace una copia de seguridad de la web en producción
+y de su base de datos (marcada *antes de enviar un staging* en **Copias de
+seguridad**); si falla, no se cambia nada. Después, WordPress recupera sus
+direcciones y su ajuste para buscadores, se reconstruyen las cachés de Drupal
+y OpenPlex comprueba que la web en producción sigue respondiendo; si no,
+restaura esa copia.
+
+Para tener una copia nueva, borra la web de staging y crea otra copia. Su
+base de datos se queda hasta que la borres en **Bases de datos** (borrar la
+web en producción también borra sus subdominios, incluidas las copias de
+staging).
+
 ## Configuración de PHP
 
 En una web PHP, **Configuración → Configuración de PHP** cambia estos valores.
