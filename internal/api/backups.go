@@ -32,6 +32,8 @@ type settingsView struct {
 	*db.BackupSettings
 	Location    string `json:"location"`
 	S3SecretSet bool   `json:"s3_secret_set"`
+	// Offsite says whether the repository would survive losing the data's disk or server.
+	Offsite backup.Offsite `json:"offsite"`
 }
 
 func (s *Server) handleGetBackupSettings(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +45,7 @@ func (s *Server) handleGetBackupSettings(w http.ResponseWriter, r *http.Request)
 		s.fail(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, settingsView{BackupSettings: st, Location: s.backups.Location(st), S3SecretSet: st.S3SecretEnc != ""})
+	writeJSON(w, http.StatusOK, settingsView{BackupSettings: st, Location: s.backups.Location(st), S3SecretSet: st.S3SecretEnc != "", Offsite: s.backups.Offsite(r.Context(), st)})
 }
 
 func (s *Server) handlePutBackupSettings(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +97,7 @@ func (s *Server) handlePutBackupSettings(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	s.audit(r, "backup.settings_updated", s.backups.Location(st), "")
-	writeJSON(w, http.StatusOK, settingsView{BackupSettings: st, Location: s.backups.Location(st), S3SecretSet: st.S3SecretEnc != ""})
+	writeJSON(w, http.StatusOK, settingsView{BackupSettings: st, Location: s.backups.Location(st), S3SecretSet: st.S3SecretEnc != "", Offsite: s.backups.Offsite(r.Context(), st)})
 }
 
 func (s *Server) handleTestBackupRepo(w http.ResponseWriter, r *http.Request) {

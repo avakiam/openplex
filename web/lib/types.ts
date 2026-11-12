@@ -254,6 +254,8 @@ export interface BackupSettings {
   keep_monthly: number;
   last_scheduled_at: string | null;
   location: string;
+  /** Whether the repository would survive losing the data's disk or the server. */
+  offsite: { level: "remote" | "other_disk" | "same_disk" | "same_server" | "unknown"; detail: string };
 }
 
 export interface BackupRun {

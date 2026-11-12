@@ -158,5 +158,10 @@
   "Checked every five minutes. Over the limit, the database becomes read-only for its applications until data is deleted or the limit is raised.": "Se comprueba cada cinco minutos. Por encima del límite, la base de datos pasa a solo lectura para sus aplicaciones hasta que se borren datos o se suba el límite.",
   "Limit (MB)": "Límite (MB)",
   "0 = the account's limit ({limit} for each database).": "0 = el límite de la cuenta ({limit} por base de datos).",
-  "0 = the account's limit (none at the moment).": "0 = el límite de la cuenta (ahora mismo ninguno)."
+  "0 = the account's limit (none at the moment).": "0 = el límite de la cuenta (ahora mismo ninguno).",
+  "The backups are on the same disk as the data they protect ({detail}): if that disk fails, the websites and their backups are lost together.": "Las copias están en el mismo disco que los datos que protegen ({detail}): si ese disco falla, se pierden a la vez las webs y sus copias.",
+  "The S3 storage ({detail}) runs on this server: if the server is lost, the backups go with it.": "El almacenamiento S3 ({detail}) funciona en este servidor: si se pierde el servidor, las copias se pierden con él.",
+  "Keep them on S3-compatible storage elsewhere, a network share, or at least another disk.": "Guárdalas en un almacenamiento compatible con S3 en otro sitio, en una carpeta de red o, como mínimo, en otro disco.",
+  "The backups are on another disk of this server ({detail}): they survive a failure of the data disk, but not losing the whole server. A copy elsewhere (S3-compatible storage, another machine) covers that too.": "Las copias están en otro disco de este servidor ({detail}): sobreviven a un fallo del disco de datos, pero no a perder el servidor entero. Una copia en otro sitio (almacenamiento compatible con S3, otra máquina) cubre también eso.",
+  "The backups are stored outside this server ({detail}).": "Las copias se guardan fuera de este servidor ({detail})."
 }

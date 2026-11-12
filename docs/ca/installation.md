@@ -161,6 +161,15 @@ S3, una programació i quantes còpies cal conservar. **Desa la clau de
 recuperació que hi apareix en un lloc segur i fora del servidor**: sense ella
 no es poden llegir les còpies.
 
+La pàgina també indica com de segur és el repositori. Avisa quan les còpies
+són al mateix disc que les dades (la carpeta per defecte,
+`/var/lib/openplex/backups`, sempre ho és) o en un emmagatzematge S3 servit
+per aquest mateix servidor: una sola fallada s'enduria alhora els webs i les
+seves còpies. Un segon disc del servidor és millor (sobreviu a una fallada de
+disc, no a perdre el servidor); un emmagatzematge compatible amb S3 en un altre
+lloc, o una carpeta de xarxa (NFS, SMB, sshfs) muntada a la carpeta de còpies,
+les manté fora del servidor.
+
 Per reconstruir un servidor que ja no existeix:
 
 1. Instal·la OpenPlex al servidor nou amb les mateixes opcions.

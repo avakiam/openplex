@@ -161,6 +161,15 @@ bucket S3, una programación y cuántas copias conservar. **Guarda la clave de
 recuperación que aparece ahí en un lugar seguro y fuera del servidor**: sin
 ella no se pueden leer las copias.
 
+La página también indica lo seguro que es el repositorio. Avisa cuando las
+copias están en el mismo disco que los datos (la carpeta por defecto,
+`/var/lib/openplex/backups`, siempre lo está) o en un almacenamiento S3 servido
+por este mismo servidor: un solo fallo se llevaría a la vez las webs y sus
+copias. Un segundo disco del servidor es mejor (sobrevive a un fallo de disco,
+no a perder el servidor); un almacenamiento compatible con S3 en otro sitio, o
+una carpeta de red (NFS, SMB, sshfs) montada en la carpeta de copias, las
+mantiene fuera del servidor.
+
 Para reconstruir un servidor que ya no existe:
 
 1. Instala OpenPlex en el servidor nuevo con las mismas opciones.

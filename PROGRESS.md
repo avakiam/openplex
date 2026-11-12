@@ -193,7 +193,9 @@ has been verified on the Linux test server. One commit per milestone.
       firewall off (rules were for the old host), moves DNS records to this host's public addresses; on start the
       daemon restores every website, database, mail domain and the webmail DB from the same backup run
 - [x] Database reconcile re-creates missing databases/users on a fresh engine (idempotent)
-- [ ] Off-site copy check: warn when the repository is on the same disk as the data
+- [x] Off-site copy check: the Backups page says whether the repository is on the data's disk (followed through
+      partitions, LVM, RAID, dm-crypt, btrfs; ZFS by pool), on another disk, on a network filesystem, or on S3 that
+      resolves to this server, and warns for the first and the last
 
 ## M12 — Telemetry
 - [x] Host CPU / RAM / disk / network sampling
@@ -546,3 +548,6 @@ has been verified on the Linux test server. One commit per milestone.
   10 MB ("cannot execute INSERT in a read-only transaction", reads fine) and writable again when it was raised to
   100 MB; the database's own 10 MB limit kept precedence over the account's 100. Size bars, the read-only badge
   and the limit dialog checked in the browser (Spanish).
+- 2026-11-12 — Off-site copy check (0.27.90): unit-tested on a fake /proc + /sys (partitions, LVM, md RAID, btrfs on
+  LVM, ZFS, NFS, sshfs with a space in its mount point, S3 on loopback / own address / elsewhere); on the LAN the
+  default repository was reported on the same disk as the data (sda, from /dev/sda2).

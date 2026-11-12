@@ -1,5 +1,5 @@
 "use client";
-import { Archive, Check, Copy, Eye, HardDrive, KeyRound, Loader2, Plug, Server } from "lucide-react";
+import { Archive, Check, Copy, Eye, HardDrive, Info, KeyRound, Loader2, Plug, Server, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -28,6 +28,45 @@ import type { BackupSettings } from "@/lib/types";
 import { ago, bytes, dateTime } from "@/lib/utils";
 
 type Form = BackupSettings & { s3_secret: string };
+
+/** Says whether the saved repository would survive losing the data's disk or the server. */
+function OffsiteNotice({ o }: { o: BackupSettings["offsite"] }) {
+  const { t } = useT();
+  switch (o.level) {
+    case "same_disk":
+    case "same_server":
+      return (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+          <p>
+            {o.level === "same_disk"
+              ? t("The backups are on the same disk as the data they protect ({detail}): if that disk fails, the websites and their backups are lost together.", { detail: o.detail })
+              : t("The S3 storage ({detail}) runs on this server: if the server is lost, the backups go with it.", { detail: o.detail })}{" "}
+            {t("Keep them on S3-compatible storage elsewhere, a network share, or at least another disk.")}
+          </p>
+        </div>
+      );
+    case "other_disk":
+      return (
+        <div className="flex items-start gap-2 rounded-md border bg-muted/50 p-3 text-sm text-muted-foreground">
+          <Info className="mt-0.5 size-4 shrink-0" />
+          <p>
+            {t(
+              "The backups are on another disk of this server ({detail}): they survive a failure of the data disk, but not losing the whole server. A copy elsewhere (S3-compatible storage, another machine) covers that too.",
+              { detail: o.detail },
+            )}
+          </p>
+        </div>
+      );
+    case "remote":
+      return (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <ShieldCheck className="size-4 shrink-0 text-success" /> {t("The backups are stored outside this server ({detail}).", { detail: o.detail })}
+        </p>
+      );
+  }
+  return null;
+}
 
 function SettingsCard() {
   const { t } = useT();
@@ -72,6 +111,7 @@ function SettingsCard() {
           save.mutate(undefined);
         }}
       >
+        {data && <OffsiteNotice o={data.offsite} />}
         <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t("Destination")}>
           {([
             ["local", HardDrive, t("This server"), t("A local directory or a mounted disk")],

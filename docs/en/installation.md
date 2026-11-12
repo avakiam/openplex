@@ -156,6 +156,14 @@ Set up backups under **Backups**: a local folder or an S3 bucket, a schedule,
 and how many copies to keep. **Keep the recovery key shown there somewhere
 safe and off the server**: without it the backups can't be read.
 
+The page also says how safe the repository is. It warns when the backups are
+on the same disk as the data (the default folder, `/var/lib/openplex/backups`,
+always is), or on S3 storage served by this same server: one failure would
+take the websites and their backups together. A second disk of the server is
+better (it survives a disk failure, not losing the server); S3-compatible
+storage elsewhere, or a network share (NFS, SMB, sshfs) mounted on the backup
+folder, keeps the backups off the server altogether.
+
 To rebuild a server that is gone:
 
 1. Install OpenPlex on the new server with the same options.
