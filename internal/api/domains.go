@@ -359,15 +359,24 @@ func (s *Server) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	if d == nil {
 		return
 	}
-	purge := r.URL.Query().Get("purge") == "true"
+	if err := s.deleteDomain(r, d, r.URL.Query().Get("purge") == "true"); err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
+}
+
+// deleteDomain deletes a website (with its subdomains and aliases) or a
+// subdomain or alias; its containers and, with purge, its files go in the
+// background.
+func (s *Server) deleteDomain(r *http.Request, d *db.Domain, purge bool) error {
 	ctx := r.Context()
 	var children []*db.Domain
 	if d.Kind != db.KindAlias {
 		var err error
 		children, err = s.db.ListDomains(ctx, db.DomainFilter{ParentID: &d.ID, Kind: db.KindSubdomain})
 		if err != nil {
-			s.fail(w, r, err)
-			return
+			return err
 		}
 	}
 	var mailNames []string // stored mail to remove once the rows are gone
@@ -380,8 +389,7 @@ func (s *Server) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if err := s.db.DeleteDomain(ctx, d.ID); err != nil {
-		s.fail(w, r, err)
-		return
+		return err
 	}
 	s.audit(r, "domain.deleted", d.Name, fmt.Sprintf("purge=%v", purge))
 	s.emit("domain.deleted", map[string]any{"domain_id": d.ID, "name": d.Name, "kind": d.Kind, "owner_id": d.OwnerID})
@@ -411,7 +419,7 @@ func (s *Server) handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 			return s.orch.ApplyEdge(ctx)
 		})
 	}
-	w.WriteHeader(http.StatusAccepted)
+	return nil
 }
 
 func (s *Server) handleDomainAction(w http.ResponseWriter, r *http.Request) {

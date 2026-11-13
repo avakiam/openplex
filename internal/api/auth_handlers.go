@@ -129,7 +129,7 @@ func (s *Server) handleLoginLink(w http.ResponseWriter, r *http.Request) {
 		invalid()
 		return
 	}
-	uid, err := s.db.UseLoginLink(r.Context(), auth.HashToken(in.Token))
+	uid, purpose, err := s.db.UseLoginLink(r.Context(), auth.HashToken(in.Token))
 	if errors.Is(err, db.ErrNotFound) {
 		invalid()
 		return
@@ -140,7 +140,10 @@ func (s *Server) handleLoginLink(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.db.PruneLoginLinks(r.Context(), time.Now().Add(-30*24*time.Hour))
 	u, err := s.db.GetUser(r.Context(), uid)
-	if err != nil || u.Disabled || u.TOTPEnabled {
+	// A handover link doesn't get past two-factor authentication. A single
+	// sign-on link comes from whoever manages the account (a billing system
+	// with its API key), which could turn two-factor off anyway.
+	if err != nil || u.Disabled || (u.TOTPEnabled && purpose != db.LinkSSO) {
 		invalid()
 		return
 	}
@@ -150,8 +153,11 @@ func (s *Server) handleLoginLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r = r.WithContext(withPrincipal(r.Context(), u))
-	s.audit(r, "auth.login_link", u.Username, "")
-	writeJSON(w, http.StatusOK, resp)
+	s.audit(r, "auth.login_link", u.Username, purpose)
+	writeJSON(w, http.StatusOK, struct {
+		*tokenResponse
+		Purpose string `json:"purpose"`
+	}{resp, purpose})
 }
 
 func presentedRefresh(r *http.Request, body string) string {

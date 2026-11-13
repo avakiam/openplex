@@ -57,8 +57,26 @@ are refused (`400`). A limit of `0` means *no limit*.
 
 A typical new customer: `POST /users` (with quotas), `POST /domains` with its
 `owner_id`, `POST /domains/{id}/mail` and `POST /domains/{id}/mail/mailboxes`,
-`POST /databases` with its `owner_id`; suspending it is `PATCH /users/{id}`
-`{"disabled": true}`.
+`POST /databases` with its `owner_id`. Afterwards:
+
+- **Suspending** it (unpaid invoice): `POST /users/{id}/suspend`. The
+  account can't sign in nor use its API keys, and its websites — a
+  reseller's, its customers' too — go offline (status `disabled`; visitors
+  get an unavailable page). `POST /users/{id}/unsuspend` gives each website
+  back the status it had. (`PATCH /users/{id}` `{"disabled": true}` only
+  stops signing in.)
+- **Signing it in** from the billing system's client area:
+  `POST /users/{id}/login-link` `{"expires_in_seconds"}` (optional: 300 by
+  default, at most 86400) answers `201` with `url` (when the panel has a
+  domain), `path` (`/login/?link=…`, to put after the panel's address) and
+  `expires_at`. The link works once; add `&next=/domains/` to land on a
+  given page. It signs in even accounts with two-factor authentication
+  (whoever may create it could turn that off), and it doesn't let the
+  account set a password without the current one.
+- **Terminating** it: `DELETE /users/{id}?purge=true` deletes its websites
+  (files, mail, DNS) and databases first, then the account; `409` if it
+  still has customers. Without `purge`, an account that owns anything is
+  refused (`409`).
 
 ### Accounts
 
@@ -226,8 +244,11 @@ Admins manage every account, resellers their own customers.
 | `POST /users` | Create an account |
 | `GET /users/{id}` | One account |
 | `PATCH /users/{id}` | Change it (role, limits, disabled, …) |
-| `DELETE /users/{id}` | Delete it |
+| `DELETE /users/{id}` | Delete it (`?purge=true`: with its websites and databases) |
 | `POST /users/{id}/password` | Set its password |
+| `POST /users/{id}/suspend` | Suspend it: no sign-in, its websites offline |
+| `POST /users/{id}/unsuspend` | Undo a suspension |
+| `POST /users/{id}/login-link` | A one-time sign-in link for it (single sign-on) |
 | `POST /users/{id}/2fa/reset` | Turn off its two-factor authentication |
 | `GET /users/{id}/access` | Websites and databases shared with it |
 | `PUT /users/{id}/access` | Share one more with it |

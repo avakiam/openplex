@@ -272,6 +272,10 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] One-time sign-in link: `openplexd login-link [--user] [--ttl ≤168h]` (waits on first boot for the admin account),
       `POST /auth/link` (hashed, single use, no 2FA accounts, fail2ban-visible), dashboard `/login/?link=` →
       account page, where the password can be set without the current one for 30 minutes
+- [x] Billing-system lifecycle: `POST /users/{id}/login-link` (single sign-on link, purpose `sso`: 2FA accounts too,
+      no password change without the current one, `next` page), `POST /users/{id}/suspend|unsuspend` (account and
+      websites — a reseller's customers' too — offline as `disabled`, each restored to the status it had),
+      `DELETE /users/{id}?purge=true` (websites and databases first; `409` with customers)
 - [x] Provider update channel: `install.sh --update-url` → `OPENPLEX_UPDATE_URL` (a file in GitHub's release format;
       signatures still checked against the release keys)
 - [x] Published API reference `docs/{en,es,ca}/api.md`; `TestAPIReferenceListsEveryRoute` walks the router and

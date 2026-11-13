@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -188,6 +189,69 @@ func (db *DB) SetDomainStatus(ctx context.Context, id int64, status, message, co
 	_, err := db.sql.ExecContext(ctx, `UPDATE domains SET status=?, status_message=?, container_id=?, updated_at=? WHERE id=?`,
 		status, message, containerID, now(), id)
 	return err
+}
+
+// SuspendDomains takes the websites (and subdomains) the accounts own
+// offline: status disabled, remembering the status they had. It returns the
+// ones it changed.
+func (db *DB) SuspendDomains(ctx context.Context, ownerIDs []int64) ([]*Domain, error) {
+	return db.switchSuspension(ctx, ownerIDs, true)
+}
+
+// ResumeDomains gives the accounts' suspended websites back the status they
+// had, and returns them with it.
+func (db *DB) ResumeDomains(ctx context.Context, ownerIDs []int64) ([]*Domain, error) {
+	return db.switchSuspension(ctx, ownerIDs, false)
+}
+
+func (db *DB) switchSuspension(ctx context.Context, ownerIDs []int64, suspend bool) ([]*Domain, error) {
+	if len(ownerIDs) == 0 {
+		return nil, nil
+	}
+	in := strings.TrimSuffix(strings.Repeat("?,", len(ownerIDs)), ",")
+	args := make([]any, 0, len(ownerIDs)+1)
+	for _, id := range ownerIDs {
+		args = append(args, id)
+	}
+	var out []*Domain
+	err := db.tx(ctx, func(tx *sql.Tx) error {
+		q := `SELECT ` + domainCols + ` FROM domains WHERE owner_id IN (` + in + `) AND kind != ? AND `
+		if suspend {
+			q += `status != 'disabled'`
+		} else {
+			q += `status = 'disabled' AND suspended_status != ''`
+		}
+		rows, err := tx.QueryContext(ctx, q, append(args, KindAlias)...)
+		if err != nil {
+			return err
+		}
+		for rows.Next() {
+			d, err := scanDomain(rows)
+			if err != nil {
+				rows.Close()
+				return err
+			}
+			out = append(out, d)
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		for _, d := range out {
+			if suspend {
+				_, err = tx.ExecContext(ctx, `UPDATE domains SET suspended_status = status, status = ?, status_message = ?, updated_at = ? WHERE id = ?`,
+					StatusDisabled, "suspended by the provider", now(), d.ID)
+			} else {
+				err = tx.QueryRowContext(ctx, `UPDATE domains SET status = suspended_status, suspended_status = '', status_message = '', updated_at = ? WHERE id = ? RETURNING status`,
+					now(), d.ID).Scan(&d.Status)
+			}
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return out, err
 }
 
 // SetDomainHealth records a status observed from the website's container. It

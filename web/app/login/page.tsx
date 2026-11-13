@@ -62,13 +62,18 @@ function LoginForm() {
     linkTried.current = true;
     setBusy(true);
     loginWithLink(link)
-      .then(() => {
+      .then(({ purpose }) => {
+        // Single sign-on only signs in; a handover asks for a password of the new owner's own.
+        if (purpose === "sso") {
+          router.replace(next);
+          return;
+        }
         toast.success(t("Signed in with a one-time link. Set a password of your own for this account now."));
         router.replace("/account/?from=link");
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setBusy(false));
-  }, [link, router, t]);
+  }, [link, router, t, next]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

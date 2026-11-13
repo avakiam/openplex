@@ -16,7 +16,7 @@ func TestLoginLink(t *testing.T) {
 	u := h.mkUser("customer", db.RoleCustomer, nil)
 	link := func(uid int64, ttl time.Duration) string {
 		tok := auth.NewRefreshToken()
-		if err := h.db.CreateLoginLink(ctx, uid, auth.HashToken(tok), time.Now().Add(ttl)); err != nil {
+		if err := h.db.CreateLoginLink(ctx, uid, auth.HashToken(tok), time.Now().Add(ttl), db.LinkHandover); err != nil {
 			t.Fatal(err)
 		}
 		return tok

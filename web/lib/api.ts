@@ -129,7 +129,9 @@ export async function loginWithLink(token: string) {
     body: JSON.stringify({ token }),
   });
   if (!res.ok) throw await parseError(res);
-  return adopt(await res.json()).user;
+  const body = await res.json();
+  // "handover" (openplexd login-link) or "sso" (a billing system's client area)
+  return { user: adopt(body).user, purpose: body.purpose as "handover" | "sso" };
 }
 
 export async function logout() {

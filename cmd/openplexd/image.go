@@ -143,7 +143,7 @@ func loginLink(args []string) error {
 		return fmt.Errorf("user %q uses two-factor authentication: links don't sign such accounts in (openplexd reset-password turns it off)", u.Username)
 	}
 	token := auth.NewRefreshToken()
-	if err := store.CreateLoginLink(ctx, u.ID, auth.HashToken(token), time.Now().Add(*ttl)); err != nil {
+	if err := store.CreateLoginLink(ctx, u.ID, auth.HashToken(token), time.Now().Add(*ttl), db.LinkHandover); err != nil {
 		return err
 	}
 	_ = store.Audit(ctx, db.AuditEntry{Action: "auth.login_link_created", Target: u.Username, Detail: "valid " + ttl.String() + " (openplexd login-link)"})

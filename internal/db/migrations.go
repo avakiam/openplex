@@ -490,6 +490,11 @@ UPDATE alert_settings SET events = events || ',database_full' WHERE ',' || event
 	used_at     TIMESTAMP,
 	created_at  TIMESTAMP NOT NULL
 );`,
+	// 25: what a sign-in link is for: handing an account over (it may then set a password without the
+	// current one) or single sign-on from a billing system (it only signs in)
+	`ALTER TABLE login_links ADD COLUMN purpose TEXT NOT NULL DEFAULT 'handover';`,
+	// 26: suspended websites (status disabled) remember the status to go back to
+	`ALTER TABLE domains ADD COLUMN suspended_status TEXT NOT NULL DEFAULT '';`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

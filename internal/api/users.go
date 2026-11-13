@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -225,6 +227,8 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, u)
 }
 
+// DELETE /users/{id}: an account that owns nothing. With ?purge=true its
+// websites (with their files, mail and DNS) and databases go first.
 func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	u := s.loadManagedUser(w, r)
 	if u == nil {
@@ -234,12 +238,186 @@ func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 		badRequest(w, "you cannot delete your own account")
 		return
 	}
-	if err := s.db.DeleteUser(r.Context(), u.ID); err != nil {
+	ctx := r.Context()
+	purge := r.URL.Query().Get("purge") == "true"
+	if purge {
+		customers, err := s.db.ListUsers(ctx, db.UserFilter{ParentID: &u.ID})
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		if len(customers) > 0 {
+			writeErr(w, http.StatusConflict, "has_customers", "this account has customers: delete them first")
+			return
+		}
+		if err := s.purgeUser(r, u); err != nil {
+			s.fail(w, r, err)
+			return
+		}
+	}
+	if err := s.db.DeleteUser(ctx, u.ID); err != nil {
+		if errors.Is(err, db.ErrConflict) {
+			writeErr(w, http.StatusConflict, "in_use", "this account still owns websites, databases or customers (?purge=true deletes its websites and databases)")
+			return
+		}
 		s.fail(w, r, err)
 		return
 	}
-	s.audit(r, "user.deleted", u.Username, "")
+	s.audit(r, "user.deleted", u.Username, fmt.Sprintf("purge=%v", purge))
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// purgeUser deletes the databases and websites u owns.
+func (s *Server) purgeUser(r *http.Request, u *db.User) error {
+	ctx := r.Context()
+	dbs, err := s.db.ListDatabases(ctx, []int64{u.ID})
+	if err != nil {
+		return err
+	}
+	if len(dbs) > 0 && s.orch == nil {
+		return errors.New("deleting databases needs Docker, which is unavailable")
+	}
+	for _, d := range dbs {
+		if err := s.orch.DropDatabase(ctx, d); err != nil {
+			return fmt.Errorf("delete database %s: %w", d.Name, err)
+		}
+		if err := s.db.DeleteDatabase(ctx, d.ID); err != nil {
+			return err
+		}
+		s.audit(r, "database.deleted", d.Name, d.Engine)
+		if d.RemoteAllow != "" {
+			s.syncRemote(ctx)
+		}
+	}
+	// Websites first (their subdomains and aliases go with them), then any
+	// subdomain or alias it owns under someone else's website.
+	for _, kind := range []string{db.KindPrimary, ""} {
+		ds, err := s.db.ListDomains(ctx, db.DomainFilter{OwnerIDs: []int64{u.ID}, Kind: kind})
+		if err != nil {
+			return err
+		}
+		for _, d := range ds {
+			if _, err := s.db.GetDomain(ctx, d.ID); errors.Is(err, db.ErrNotFound) {
+				continue // went with its website
+			}
+			if err := s.deleteDomain(r, d, true); err != nil {
+				return fmt.Errorf("delete %s: %w", d.Name, err)
+			}
+		}
+	}
+	return nil
+}
+
+// POST /users/{id}/suspend: the account can't sign in (nor use its API
+// keys) and its websites — for a reseller, its customers' too — go offline.
+func (s *Server) handleSuspendUser(w http.ResponseWriter, r *http.Request) {
+	s.setSuspended(w, r, true)
+}
+
+// POST /users/{id}/unsuspend: the account and its websites are back as they
+// were before the suspension.
+func (s *Server) handleUnsuspendUser(w http.ResponseWriter, r *http.Request) {
+	s.setSuspended(w, r, false)
+}
+
+func (s *Server) setSuspended(w http.ResponseWriter, r *http.Request, on bool) {
+	u := s.loadManagedUser(w, r)
+	if u == nil {
+		return
+	}
+	if u.ID == actor(r).ID {
+		badRequest(w, "you cannot suspend your own account")
+		return
+	}
+	ctx := r.Context()
+	owners := []int64{u.ID}
+	if u.Role == db.RoleReseller {
+		customers, err := s.db.ListUsers(ctx, db.UserFilter{ParentID: &u.ID})
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		for _, c := range customers {
+			owners = append(owners, c.ID)
+		}
+	}
+	u.Disabled = on
+	if err := s.db.UpdateUser(ctx, u); err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	var changed []*db.Domain
+	var err error
+	if on {
+		_ = s.db.RevokeUserRefreshTokens(ctx, u.ID)
+		changed, err = s.db.SuspendDomains(ctx, owners)
+	} else {
+		changed, err = s.db.ResumeDomains(ctx, owners)
+	}
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	action := map[bool]string{true: "user.suspended", false: "user.unsuspended"}[on]
+	s.audit(r, action, u.Username, fmt.Sprintf("%d websites", len(changed)))
+	if s.orch != nil && len(changed) > 0 {
+		s.background(func(ctx context.Context) error {
+			var errs []error
+			for _, d := range changed {
+				switch {
+				case on:
+					errs = append(errs, s.orch.HaltSite(ctx, d.ID))
+				case d.Status != db.StatusStopped:
+					d.Status = db.StatusRunning
+					errs = append(errs, s.orch.DeploySite(ctx, d))
+				}
+			}
+			errs = append(errs, s.orch.ApplyEdge(ctx))
+			return errors.Join(errs...)
+		})
+	}
+	writeJSON(w, http.StatusOK, u)
+}
+
+// POST /users/{id}/login-link {"expires_in_seconds"}: a one-time link that
+// signs the account in, for a billing system's "log in to the panel" button.
+// It lasts 5 minutes by default (at most a day).
+func (s *Server) handleCreateLoginLink(w http.ResponseWriter, r *http.Request) {
+	u := s.loadManagedUser(w, r)
+	if u == nil {
+		return
+	}
+	var in struct {
+		ExpiresInSeconds int `json:"expires_in_seconds"`
+	}
+	if r.ContentLength != 0 && !decode(w, r, &in) {
+		return
+	}
+	ttl := 5 * time.Minute
+	switch {
+	case in.ExpiresInSeconds < 0 || in.ExpiresInSeconds > 24*3600:
+		badRequest(w, "expires_in_seconds must be between 1 and 86400")
+		return
+	case in.ExpiresInSeconds > 0:
+		ttl = time.Duration(in.ExpiresInSeconds) * time.Second
+	}
+	if u.Disabled {
+		writeErr(w, http.StatusConflict, "disabled", "the account is disabled")
+		return
+	}
+	token := auth.NewRefreshToken()
+	expires := time.Now().Add(ttl).UTC().Truncate(time.Second)
+	if err := s.db.CreateLoginLink(r.Context(), u.ID, auth.HashToken(token), expires, db.LinkSSO); err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	s.audit(r, "auth.login_link_created", u.Username, "single sign-on, valid "+ttl.String())
+	path := "/login/?link=" + token
+	out := map[string]any{"path": path, "expires_at": expires}
+	if s.cfg.PanelDomain != "" {
+		out["url"] = "https://" + s.cfg.PanelDomain + path
+	}
+	writeJSON(w, http.StatusCreated, out)
 }
 
 func (s *Server) handleSetUserPassword(w http.ResponseWriter, r *http.Request) {
