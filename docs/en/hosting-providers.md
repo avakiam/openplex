@@ -47,6 +47,16 @@ authenticated with API keys (created on the **API keys** page). A billing or
 provisioning system can create users with quotas, websites, databases and
 mailboxes. The [API reference](api.md) lists every endpoint.
 
+### WHMCS
+
+The [OpenPlex module for WHMCS](https://github.com/avakiam/openplex-whmcs) creates the account (with the
+product's limits and a website for the order's domain) when an order is
+paid, suspends it when an invoice is overdue — its websites go offline —,
+unsuspends it, terminates it with its websites and databases, changes its
+package and password, and adds a **Log in to OpenPlex** button to the client
+area. Download it from the module's releases page; its README explains the
+setup.
+
 ### A template with OpenPlex ready (image mode)
 
 To create servers from your own image instead of installing on each one,
@@ -108,7 +118,7 @@ chooses among the official releases; it can't change them.
 
 ## Planned for providers
 
-- **Billing integrations** (for example a WHMCS module).
+- **Other billing systems** (Blesta, HostBill…).
 - **Official extensions**, free and paid, and an open extension interface
   for your own.
 

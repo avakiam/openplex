@@ -47,6 +47,16 @@ claves de API (se crean en la página **Claves API**). Un sistema de facturació
 o aprovisionamiento puede crear usuarios con cuotas, webs, bases de datos y
 buzones. La [referencia de la API](api.md) recoge todos los endpoints.
 
+### WHMCS
+
+El [módulo de OpenPlex para WHMCS](https://github.com/avakiam/openplex-whmcs) crea la cuenta (con los
+límites del producto y una web para el dominio del pedido) cuando se paga
+el pedido, la suspende cuando una factura vence —sus webs quedan fuera de
+línea—, la reactiva, la da de baja con sus webs y bases de datos, cambia su
+plan y su contraseña, y añade al área de cliente un botón **Log in to
+OpenPlex**. Se descarga de la página de versiones del módulo; su README
+explica la configuración (en inglés).
+
 ### Una plantilla con OpenPlex listo (modo imagen)
 
 Para crear servidores a partir de tu propia imagen en vez de instalar en cada
@@ -111,7 +121,7 @@ elige entre las versiones oficiales; no puede cambiarlas.
 
 ## Previsto para proveedores
 
-- **Integraciones de facturación** (por ejemplo, un módulo de WHMCS).
+- **Otros sistemas de facturación** (Blesta, HostBill…).
 - **Extensiones oficiales**, gratuitas y de pago, y una interfaz de
   extensiones abierta para las tuyas.
 

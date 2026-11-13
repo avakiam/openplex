@@ -47,6 +47,16 @@ claus d'API (es creen a la pàgina **Claus API**). Un sistema de facturació o
 d'aprovisionament pot crear usuaris amb quotes, webs, bases de dades i
 bústies. La [referència de l'API](api.md) recull tots els endpoints.
 
+### WHMCS
+
+El [mòdul d'OpenPlex per a WHMCS](https://github.com/avakiam/openplex-whmcs) crea el compte (amb els
+límits del producte i una web per al domini de la comanda) quan es paga la
+comanda, el suspèn quan una factura venç —les seves webs queden fora de
+línia—, el reactiva, el dona de baixa amb les seves webs i bases de dades,
+canvia el seu pla i la seva contrasenya, i afegeix a l'àrea de client un botó
+**Log in to OpenPlex**. Es descarrega de la pàgina de versions del mòdul; el
+seu README n'explica la configuració (en anglès).
+
 ### Una plantilla amb OpenPlex a punt (mode imatge)
 
 Per crear servidors a partir de la teva pròpia imatge en lloc d'instal·lar a
@@ -113,7 +123,7 @@ fitxer tria entre les versions oficials; no les pot canviar.
 
 ## Previst per a proveïdors
 
-- **Integracions de facturació** (per exemple, un mòdul de WHMCS).
+- **Altres sistemes de facturació** (Blesta, HostBill…).
 - **Extensions oficials**, gratuïtes i de pagament, i una interfície
   d'extensions oberta per a les teves.
 

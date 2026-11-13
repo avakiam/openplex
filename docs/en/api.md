@@ -55,7 +55,8 @@ What a billing or provisioning system sends and gets back. In `PATCH`
 requests every field is optional: only the ones sent change. Unknown fields
 are refused (`400`). A limit of `0` means *no limit*.
 
-A typical new customer: `POST /users` (with quotas), `POST /domains` with its
+Using WHMCS? The [OpenPlex module for WHMCS](https://github.com/avakiam/openplex-whmcs) does all of
+this for you. A typical new customer: `POST /users` (with quotas), `POST /domains` with its
 `owner_id`, `POST /domains/{id}/mail` and `POST /domains/{id}/mail/mailboxes`,
 `POST /databases` with its `owner_id`. Afterwards:
 
