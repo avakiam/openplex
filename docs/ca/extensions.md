@@ -102,6 +102,9 @@ instal·la-la. "Hola" apareix al menú i cada web té una pestanya "Hola DNS".
 | `users:read` | `GET /api/v1/users`, `GET /api/v1/users/{id}` |
 | `system:read` | `GET /api/v1/system/info`, `GET /api/v1/system/stats` |
 | `edge:write` | `GET` i `PUT /api/v1/extension/edge` (mira a sota) |
+| `files:read` | `GET /api/v1/domains/{id}/files`, `…/files/content`, `…/files/download`; i els fitxers de tots els webs muntats en només lectura a `/sites/<domini>/` |
+| `files:write` | `PUT /api/v1/domains/{id}/files/content`; `POST …/files/upload`, `…/mkdir`, `…/rename`, `…/delete`, `…/chmod` |
+| `alerts:send` | `POST /api/v1/extension/alert` (mira a sota) |
 
 Sempre permeses: `GET /api/v1/extension`, `GET /api/v1/auth/me`,
 `GET /api/v1/system/health`. Tota la resta respon `403`. Necessites una
@@ -242,11 +245,25 @@ pàgines:
 - Serveix el teu CSS i els teus scripts des del teu contenidor; segueix el
   `theme`.
 
+## Avisos (`alerts:send`)
+
+`POST /api/v1/extension/alert` amb `{"key", "subject", "body"}` envia un
+correu als destinataris d'avisos del servidor (pàgina **Alertes**), en text
+pla, amb una línia que diu quina extensió l'envia. S'envia una vegada per
+`key` (tria'n una per troballa, p. ex. `"site-12:<sha256>"`), només si els
+avisos estan activats i com a màxim 20 per hora. La resposta és
+`{"sent": true|false}`.
+
 ## Emmagatzematge i límits
 
 - `/data`: persistent i teu; es conserva entre reinicis i actualitzacions i
   s'esborra en treure l'extensió.
 - `/tmp`: 64 MB, es buida en reiniciar. Tota la resta és de només lectura.
+- `/sites`: amb `files:read`, la carpeta de cada web (`/sites/<domini>/`, amb
+  `public/` i `logs/`), en només lectura. El contenidor rep també el grup
+  root, només per poder entrar a aquesta carpeta; els fitxers que un web ha
+  fet privats (mode `600`) continuen sense poder-se llegir. Els fitxers es
+  canvien amb l'API (`files:write`).
 - Entorn: `PORT`, `OPENPLEX_SOCKET`, `OPENPLEX_DATA`,
   `OPENPLEX_EXTENSION`, `OPENPLEX_EXTENSION_VERSION`.
 - El contenidor s'executa amb un uid sense privilegis que tria OpenPlex (no

@@ -25,6 +25,7 @@ type ExtensionSpec struct {
 	UID       int
 	DataDir   string // mounted at /data
 	SocketDir string // mounted at /run/openplex (holds panel.sock)
+	SitesDir  string // files:read: the websites' files, mounted read-only at /sites ("" = not mounted)
 	Env       []string
 }
 
@@ -60,7 +61,7 @@ func (o *Orchestrator) EnsureExtension(ctx context.Context, s ExtensionSpec) err
 	}
 	// The image ID is part of the spec: a package rebuilt under the same tag
 	// replaces the container too.
-	h := siteSpec{Image: s.Image + "@" + img.ID, Env: env, MemoryMB: s.MemoryMB, CPUs: s.CPUs, UID: s.UID, Mount: s.DataDir + "|" + s.SocketDir,
+	h := siteSpec{Image: s.Image + "@" + img.ID, Env: env, MemoryMB: s.MemoryMB, CPUs: s.CPUs, UID: s.UID, Mount: s.DataDir + "|" + s.SocketDir + "|" + s.SitesDir,
 		Networks: []string{net}}.hash()
 	name := ExtensionContainerName(s.ID)
 	existing, err := o.findContainer(ctx, name)
@@ -96,6 +97,12 @@ func (o *Orchestrator) EnsureExtension(ctx context.Context, s ExtensionSpec) err
 		CapDrop:     []string{"ALL"},
 		SecurityOpt: []string{"no-new-privileges:true"},
 		LogConfig:   container.LogConfig{Type: "json-file", Config: map[string]string{"max-size": "5m", "max-file": "2"}},
+	}
+	if s.SitesDir != "" {
+		// Read-only, and the root group only to get through the sites
+		// directory (0750 root:root): no capability is added.
+		hc.Binds = append(hc.Binds, s.SitesDir+":/sites:ro")
+		hc.GroupAdd = []string{"0"}
 	}
 	nc := &network.NetworkingConfig{EndpointsConfig: map[string]*network.EndpointSettings{net: {}}}
 	created, err := o.cli.ContainerCreate(ctx, cc, hc, nc, nil, name)

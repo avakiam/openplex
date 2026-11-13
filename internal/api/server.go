@@ -53,6 +53,7 @@ type Server struct {
 	version  string
 
 	loginLimiter    *limiter
+	extAlertLimiter *limiter
 	webhookLimiter  *limiter // wrong Git webhook tokens, per IP
 	tickets         ticketStore
 	captchaPasses   ticketStore // captcha solved, password right: the 2FA step may skip it
@@ -92,23 +93,24 @@ type Options struct {
 func New(o Options) *Server {
 	return &Server{
 		cfg: o.Config, db: o.DB, orch: o.Orchestrator, mon: o.Monitor, log: o.Logger, ui: o.UI, version: o.Version,
-		signer:         auth.NewSigner(o.Config.Secret, o.Config.AccessTTL),
-		box:            o.Box,
-		backups:        o.Backups,
-		cron:           o.Cron,
-		firewall:       o.Firewall,
-		dns:            o.DNS,
-		mail:           o.Mail,
-		ext:            o.Extensions,
-		updates:        o.Updates,
-		sftp:           o.SFTP,
-		remote:         o.RemoteDB,
-		dbLimits:       make(chan struct{}, 1),
-		alerts:         o.Alerts,
-		loginLimiter:   newLimiter(10, 5*time.Minute),
-		webhookLimiter: newLimiter(20, 10*time.Minute),
-		captcha:        captcha.NewVerifier(),
-		baseCtx:        o.BaseContext,
+		signer:          auth.NewSigner(o.Config.Secret, o.Config.AccessTTL),
+		box:             o.Box,
+		backups:         o.Backups,
+		cron:            o.Cron,
+		firewall:        o.Firewall,
+		dns:             o.DNS,
+		mail:            o.Mail,
+		ext:             o.Extensions,
+		updates:         o.Updates,
+		sftp:            o.SFTP,
+		remote:          o.RemoteDB,
+		dbLimits:        make(chan struct{}, 1),
+		alerts:          o.Alerts,
+		loginLimiter:    newLimiter(10, 5*time.Minute),
+		extAlertLimiter: newLimiter(20, time.Hour),
+		webhookLimiter:  newLimiter(20, 10*time.Minute),
+		captcha:         captcha.NewVerifier(),
+		baseCtx:         o.BaseContext,
 	}
 }
 

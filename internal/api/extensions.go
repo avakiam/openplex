@@ -452,6 +452,9 @@ var extensionScopes = []struct {
 	{"GET", regexp.MustCompile(`^/api/v1/users/?$`), "users:read"},
 	{"GET", regexp.MustCompile(`^/api/v1/users/\d+$`), "users:read"},
 	{"GET", regexp.MustCompile(`^/api/v1/system/(info|stats)$`), "system:read"},
+	{"GET", regexp.MustCompile(`^/api/v1/domains/\d+/files(/content|/download)?$`), "files:read"},
+	{"PUT", regexp.MustCompile(`^/api/v1/domains/\d+/files/content$`), "files:write"},
+	{"POST", regexp.MustCompile(`^/api/v1/domains/\d+/files/(upload|mkdir|rename|delete|chmod)$`), "files:write"},
 }
 
 // extensionScope returns the permission r needs, and whether r is allowed
@@ -494,6 +497,14 @@ func (s *Server) ExtensionAPI(id string) http.Handler {
 			s.handleExtensionEdge(w, r.WithContext(context.WithValue(ctx, principalKey, p)), id)
 			return
 		}
+		if r.URL.Path == "/api/v1/extension/alert" {
+			if !slices.Contains(man.Permissions, "alerts:send") {
+				writeErr(w, http.StatusForbidden, "forbidden", "this extension was not given the alerts:send permission")
+				return
+			}
+			s.handleExtensionAlert(w, r, e.ID, man.Name.In("en"))
+			return
+		}
 		if r.URL.Path == "/api/v1/extension" && r.Method == http.MethodGet {
 			writeJSON(w, http.StatusOK, map[string]any{
 				"id": e.ID, "version": e.Version, "settings": s.ext.Settings(e), "license_key": s.ext.License(e),
@@ -525,6 +536,52 @@ func (s *Server) ExtensionAPI(id string) http.Handler {
 		p := &Principal{User: u, Extension: id}
 		s.root().ServeHTTP(w, r.WithContext(context.WithValue(ctx, principalKey, p)))
 	})
+}
+
+// ---------- alerts (alerts:send) ----------
+
+// POST /api/v1/extension/alert {key, subject, body}: an e-mail to the alert
+// recipients, sent once per key (the extension chooses it, e.g. one per
+// finding) and at most a few an hour.
+func (s *Server) handleExtensionAlert(w http.ResponseWriter, r *http.Request, id, name string) {
+	if r.Method != http.MethodPost {
+		writeErr(w, http.StatusMethodNotAllowed, "method_not_allowed", "use POST")
+		return
+	}
+	var in struct {
+		Key     string `json:"key"`
+		Subject string `json:"subject"`
+		Body    string `json:"body"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	in.Key, in.Subject = strings.TrimSpace(in.Key), strings.TrimSpace(in.Subject)
+	switch {
+	case in.Key == "" || len(in.Key) > 200:
+		badRequest(w, "key is required (at most 200 characters)")
+		return
+	case in.Subject == "" || len(in.Subject) > 200 || strings.ContainsAny(in.Subject, "\r\n"):
+		badRequest(w, "subject is required: one line, at most 200 characters")
+		return
+	case len(in.Body) > 20000:
+		badRequest(w, "body is at most 20000 characters")
+		return
+	}
+	if s.alerts == nil {
+		writeErr(w, http.StatusServiceUnavailable, "unavailable", "alerts are not available")
+		return
+	}
+	if !s.extAlertLimiter.allow("ext:" + id) {
+		writeErr(w, http.StatusTooManyRequests, "rate_limited", "too many alerts from this extension, try again later")
+		return
+	}
+	sent, err := s.alerts.Extension(r.Context(), id, name, in.Key, in.Subject, in.Body)
+	if err != nil {
+		writeErrFrom(w, http.StatusBadGateway, "send_failed", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"sent": sent})
 }
 
 // ---------- edge policy (edge:write) ----------

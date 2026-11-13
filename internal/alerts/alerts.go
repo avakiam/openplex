@@ -178,6 +178,33 @@ func (m *Manager) event(ctx context.Context, s *db.AlertSettings, key, kind, sub
 	return m.o.DB.PutAlert(ctx, a)
 }
 
+// Extension sends an extension's alert once per key, when alerts are on.
+// It reports whether an e-mail went out (false: off, no recipients, or
+// already sent for that key).
+func (m *Manager) Extension(ctx context.Context, id, name, key, subject, body string) (bool, error) {
+	s, err := m.o.DB.GetAlertSettings(ctx)
+	if err != nil || !s.Enabled || len(s.Recipients) == 0 {
+		return false, err
+	}
+	key = "ext:" + id + ":" + key
+	if _, err := m.o.DB.GetAlert(ctx, key); err == nil {
+		return false, nil
+	} else if !errors.Is(err, db.ErrNotFound) {
+		return false, err
+	}
+	body = strings.TrimSpace(body) + "\n\n" + text(s.Language, "extension", map[string]string{"name": name})
+	now := time.Now().UTC()
+	a := &db.Alert{Key: key, Kind: KindExtension, Subject: subject, State: db.AlertSent, FirstAt: now, LastSentAt: &now}
+	sendErr := m.send(ctx, s, subject, body)
+	if sendErr != nil {
+		a.SendError = sendErr.Error()
+	}
+	if err := m.o.DB.PutAlert(ctx, a); err != nil {
+		return false, err
+	}
+	return sendErr == nil, sendErr
+}
+
 // firing reports an ongoing problem: sent when it starts, then once a day.
 func (m *Manager) firing(ctx context.Context, s *db.AlertSettings, key, kind, subject, body string) error {
 	now := time.Now().UTC()

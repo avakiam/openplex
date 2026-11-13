@@ -115,6 +115,14 @@ var Permissions = map[string]Text{
 	"databases:read": {"en": "See databases (not their passwords)", "es": "Ver bases de datos (no sus contraseñas)", "ca": "Veure bases de dades (no les contrasenyes)"},
 	"users:read":     {"en": "See user accounts", "es": "Ver cuentas de usuario", "ca": "Veure comptes d'usuari"},
 	"system:read":    {"en": "See server information and usage", "es": "Ver información y uso del servidor", "ca": "Veure informació i ús del servidor"},
+	"files:read": {"en": "Read every website's files", "es": "Leer los archivos de todas las webs",
+		"ca": "Llegir els fitxers de tots els webs"},
+	"files:write": {"en": "Change websites' files: upload, move, delete and change permissions",
+		"es": "Cambiar archivos de las webs: subir, mover, borrar y cambiar permisos",
+		"ca": "Canviar fitxers dels webs: pujar, moure, esborrar i canviar permisos"},
+	"alerts:send": {"en": "Send e-mail alerts to the server's alert recipients",
+		"es": "Enviar avisos por correo a los destinatarios de avisos del servidor",
+		"ca": "Enviar avisos per correu als destinataris d'avisos del servidor"},
 }
 
 // Events an extension may subscribe to.

@@ -33,6 +33,10 @@ const (
 	KindUpdateFailed    = "update_failed"
 )
 
+// KindExtension is an alert an extension sent (alerts:send); it isn't one
+// of the kinds the administrator picks, it follows whether alerts are on.
+const KindExtension = "extension"
+
 // Kinds lists every alert kind.
 var Kinds = []string{KindBackupFailed, KindSiteDown, KindDiskFull, KindDatabaseFull, KindCertExpiring, KindUpdateAvailable, KindUpdateFailed}
 

@@ -335,6 +335,9 @@ func (m *Manager) run(ctx context.Context, id string) error {
 	if a := man.Backend.Archives[runtime.GOARCH]; a != "" {
 		spec.Archive = filepath.Join(m.pkgDir(id), filepath.FromSlash(a))
 	}
+	if slices.Contains(man.Permissions, "files:read") {
+		spec.SitesDir = m.cfg.SitesDir()
+	}
 	return m.rt.EnsureExtension(ctx, spec)
 }
 

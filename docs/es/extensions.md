@@ -101,6 +101,9 @@ instálala. "Hola" aparece en el menú y cada web tiene una pestaña "Hola DNS".
 | `users:read` | `GET /api/v1/users`, `GET /api/v1/users/{id}` |
 | `system:read` | `GET /api/v1/system/info`, `GET /api/v1/system/stats` |
 | `edge:write` | `GET` y `PUT /api/v1/extension/edge` (mira abajo) |
+| `files:read` | `GET /api/v1/domains/{id}/files`, `…/files/content`, `…/files/download`; y los archivos de todas las webs montados en solo lectura en `/sites/<dominio>/` |
+| `files:write` | `PUT /api/v1/domains/{id}/files/content`; `POST …/files/upload`, `…/mkdir`, `…/rename`, `…/delete`, `…/chmod` |
+| `alerts:send` | `POST /api/v1/extension/alert` (mira abajo) |
 
 Siempre permitidas: `GET /api/v1/extension`, `GET /api/v1/auth/me`,
 `GET /api/v1/system/health`. Todo lo demás responde `403`. ¿Necesitas otra
@@ -239,11 +242,25 @@ las páginas:
 - Respeta `X-OpenPlex-Read-Only` en las pestañas de web.
 - Sirve tu CSS y tus scripts desde tu contenedor; sigue el `theme`.
 
+## Avisos (`alerts:send`)
+
+`POST /api/v1/extension/alert` con `{"key", "subject", "body"}` envía un
+correo a los destinatarios de avisos del servidor (página **Alertas**), en
+texto plano, con una línea que dice qué extensión lo envía. Se envía una vez
+por `key` (elige una por hallazgo, p. ej. `"site-12:<sha256>"`), solo si los
+avisos están activados y como mucho 20 por hora. La respuesta es
+`{"sent": true|false}`.
+
 ## Almacenamiento y límites
 
 - `/data`: persistente y tuyo; se conserva entre reinicios y
   actualizaciones y se borra al quitar la extensión.
 - `/tmp`: 64 MB, se vacía al reiniciar. Todo lo demás es de solo lectura.
+- `/sites`: con `files:read`, la carpeta de cada web (`/sites/<dominio>/`,
+  con `public/` y `logs/`), en solo lectura. El contenedor recibe además el
+  grupo root, solo para poder entrar en esa carpeta; los archivos que una web
+  hizo privados (modo `600`) siguen sin poder leerse. Los archivos se cambian
+  con la API (`files:write`).
 - Entorno: `PORT`, `OPENPLEX_SOCKET`, `OPENPLEX_DATA`,
   `OPENPLEX_EXTENSION`, `OPENPLEX_EXTENSION_VERSION`.
 - El contenedor se ejecuta con un uid sin privilegios que elige OpenPlex (no

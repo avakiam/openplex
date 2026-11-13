@@ -100,6 +100,9 @@ Then, in the panel: **Extensions → Upload extension**, review it, install.
 | `users:read` | `GET /api/v1/users`, `GET /api/v1/users/{id}` |
 | `system:read` | `GET /api/v1/system/info`, `GET /api/v1/system/stats` |
 | `edge:write` | `GET` and `PUT /api/v1/extension/edge` (see below) |
+| `files:read` | `GET /api/v1/domains/{id}/files`, `…/files/content`, `…/files/download`; and every website's files mounted read-only at `/sites/<domain>/` |
+| `files:write` | `PUT /api/v1/domains/{id}/files/content`; `POST …/files/upload`, `…/mkdir`, `…/rename`, `…/delete`, `…/chmod` |
+| `alerts:send` | `POST /api/v1/extension/alert` (see below) |
 
 Always allowed: `GET /api/v1/extension`, `GET /api/v1/auth/me`,
 `GET /api/v1/system/health`. Everything else answers `403`. Need something
@@ -233,11 +236,23 @@ The page URL also gets `?lang=…&theme=light|dark`. Rules for pages:
 - Respect `X-OpenPlex-Read-Only` on website tabs.
 - Load your own CSS and scripts from your container; follow `theme`.
 
+## Alerts (`alerts:send`)
+
+`POST /api/v1/extension/alert` with `{"key", "subject", "body"}` e-mails the
+server's alert recipients (**Alerts** page), in plain text, with a line
+saying which extension sent it. It is sent once per `key` (choose one per
+finding, e.g. `"site-12:<sha256>"`), only while alerts are on, and at most 20
+an hour. The answer is `{"sent": true|false}`.
+
 ## Storage and limits
 
 - `/data` — persistent, yours; kept across restarts and upgrades, deleted
   when the extension is removed.
 - `/tmp` — 64 MB, cleared on restart. Everything else is read-only.
+- `/sites` — with `files:read`: every website's folder (`/sites/<domain>/`,
+  with `public/` and `logs/`), read-only. The container also gets the root
+  group, only to get into that folder; files a website made private (mode
+  `600`) stay unreadable. Change files through the API (`files:write`).
 - Environment: `PORT`, `OPENPLEX_SOCKET`, `OPENPLEX_DATA`,
   `OPENPLEX_EXTENSION`, `OPENPLEX_EXTENSION_VERSION`.
 - The container runs as an unprivileged uid chosen by OpenPlex (don't rely
