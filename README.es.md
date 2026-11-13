@@ -13,9 +13,9 @@ comando en un servidor Ubuntu o Debian limpio y te ofrece, a ti, a tu equipo y
 a tus clientes, un panel moderno para webs, bases de datos, correo, DNS,
 copias de seguridad y seguridad.
 
-> **Estado: versión previa.** OpenPlex está en pleno desarrollo y aún no ha
-> tenido su primera versión pública. Puede haber cambios incompatibles hasta
-> la 1.0.
+> **Estado: antes de la 1.0.** OpenPlex está en pleno desarrollo; se publican
+> versiones con regularidad y los servidores se actualizan desde el panel.
+> Puede haber cambios incompatibles hasta la 1.0. Web: [openplex.dev](https://openplex.dev/es/).
 
 ## Por qué OpenPlex
 
@@ -54,7 +54,7 @@ copias de seguridad y seguridad.
 
 ## Instalación
 
-Cuando se publique la primera versión:
+En un servidor recién instalado:
 
 ```bash
 curl -fsSL https://github.com/avakiam/openplex/releases/latest/download/install.sh | sudo bash -s -- \

@@ -13,9 +13,9 @@ ordre en un servidor Ubuntu o Debian net i us ofereix, a tu, al teu equip i
 als teus clients, un tauler modern per a webs, bases de dades, correu, DNS,
 còpies de seguretat i seguretat.
 
-> **Estat: versió prèvia.** OpenPlex està en ple desenvolupament i encara no
-> ha tingut la seva primera versió pública. Hi pot haver canvis incompatibles
-> fins a la 1.0.
+> **Estat: abans de la 1.0.** OpenPlex està en ple desenvolupament; es
+> publiquen versions regularment i els servidors s'actualitzen des del tauler.
+> Hi pot haver canvis incompatibles fins a la 1.0. Web: [openplex.dev](https://openplex.dev/ca/).
 
 ## Per què OpenPlex
 
@@ -54,7 +54,7 @@ còpies de seguretat i seguretat.
 
 ## Instal·lació
 
-Quan es publiqui la primera versió:
+En un servidor acabat d'instal·lar:
 
 ```bash
 curl -fsSL https://github.com/avakiam/openplex/releases/latest/download/install.sh | sudo bash -s -- \

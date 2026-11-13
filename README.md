@@ -12,8 +12,9 @@ and cPanel built on containers. It installs on a fresh Ubuntu or Debian
 server with one command and gives you, your team and your customers a modern
 dashboard for websites, databases, mail, DNS, backups and security.
 
-> **Status: pre-release.** OpenPlex is under active development and has not
-> had its first public release yet. Expect breaking changes until 1.0.
+> **Status: before 1.0.** OpenPlex is under active development; releases are
+> published regularly and servers update themselves from the dashboard.
+> Expect breaking changes until 1.0. Website: [openplex.dev](https://openplex.dev).
 
 ## Why OpenPlex
 
@@ -52,7 +53,7 @@ dashboard for websites, databases, mail, DNS, backups and security.
 
 ## Install
 
-Once the first release is published:
+On a fresh server:
 
 ```bash
 curl -fsSL https://github.com/avakiam/openplex/releases/latest/download/install.sh | sudo bash -s -- \
