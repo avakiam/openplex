@@ -119,11 +119,18 @@ direcciones de descarga pueden apuntar a tu propio espejo. Las firmas se
 siguen comprobando con las claves de versión de OpenPlex, así que tu fichero
 elige entre las versiones oficiales; no puede cambiarlas.
 
+### Extensiones
+
+Los paneles instalan extensiones del [marketplace](https://marketplace.openplex.dev)
+(**Extensiones → Marketplace**), gratuitas o con clave de licencia, y se
+actualizan desde su tarjeta. Las extensiones van firmadas; consulta
+[Extensiones](extensions.md) para escribir las tuyas.
+
 ## Previsto para proveedores
 
 - **Otros sistemas de facturación** (Blesta, HostBill…).
-- **Extensiones oficiales**, gratuitas y de pago, y una interfaz de
-  extensiones abierta para las tuyas.
+- **Más extensiones oficiales**, y empresas que publiquen las suyas en el
+  marketplace.
 
 ¿Te interesa ofrecer OpenPlex? Abre un issue en el
 [repositorio principal](https://github.com/avakiam/openplex).

@@ -116,11 +116,18 @@ works, and its download addresses can point to your own mirror. The
 signatures are still checked against OpenPlex's release keys, so your file
 chooses among the official releases; it can't change them.
 
+### Extensions
+
+Panels install extensions from the [marketplace](https://marketplace.openplex.dev)
+(**Extensions → Marketplace**), free or with a licence key, and they update
+from their card. Extensions are signed; see [Extensions](extensions.md) to
+write your own.
+
 ## Planned for providers
 
 - **Other billing systems** (Blesta, HostBill…).
-- **Official extensions**, free and paid, and an open extension interface
-  for your own.
+- **More official extensions**, and companies publishing theirs in the
+  marketplace.
 
 Interested in offering OpenPlex? Open an issue in the
 [main repository](https://github.com/avakiam/openplex).

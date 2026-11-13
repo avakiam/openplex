@@ -121,11 +121,18 @@ seves adreces de baixada poden apuntar al teu propi mirall. Les signatures es
 continuen comprovant amb les claus de versió d'OpenPlex, així que el teu
 fitxer tria entre les versions oficials; no les pot canviar.
 
+### Extensions
+
+Els taulers instal·len extensions del [marketplace](https://marketplace.openplex.dev)
+(**Extensions → Marketplace**), gratuïtes o amb clau de llicència, i
+s'actualitzen des de la seva targeta. Les extensions van signades; consulta
+[Extensions](extensions.md) per escriure les teves.
+
 ## Previst per a proveïdors
 
 - **Altres sistemes de facturació** (Blesta, HostBill…).
-- **Extensions oficials**, gratuïtes i de pagament, i una interfície
-  d'extensions oberta per a les teves.
+- **Més extensions oficials**, i empreses que publiquin les seves al
+  marketplace.
 
 T'interessa oferir OpenPlex? Obre un issue al
 [repositori principal](https://github.com/avakiam/openplex).
