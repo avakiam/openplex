@@ -260,6 +260,11 @@ OpenPlex project's key as *verified by OpenPlex*; any other package — unsigned
 or signed with your own key — can still be uploaded by an administrator, who
 is warned that OpenPlex hasn't checked it. Upgrades must keep the same `id`.
 
+**Icon.** Put an `icon.svg`, `icon.png` or `icon.webp` next to
+`openplex-extension.json` (square, at least 128×128 pixels, at most 256 KB):
+it goes into the package, signed with the rest, and the marketplace shows it
+on its pages and in the panel.
+
 ## The marketplace
 
 Official extensions, free and paid, are installed from **Extensions →

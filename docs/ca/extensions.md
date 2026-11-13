@@ -272,6 +272,11 @@ signar o signat amb la teva pròpia clau) també el pot pujar un
 administrador, a qui s'avisa que OpenPlex no l'ha revisat. Les
 actualitzacions han de mantenir el mateix `id`.
 
+**Icona.** Posa un `icon.svg`, `icon.png` o `icon.webp` al costat
+d'`openplex-extension.json` (quadrada, d'almenys 128×128 píxels i com a màxim
+256 KB): va dins del paquet, signada amb la resta, i el marketplace la mostra
+a les seves pàgines i al tauler.
+
 ## El marketplace
 
 Les extensions oficials, gratuïtes i de pagament, s'instal·len des

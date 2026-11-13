@@ -269,6 +269,11 @@ paquetes firmados con la clave del proyecto OpenPlex; cualquier otro paquete
 administrador, al que se avisa de que OpenPlex no lo ha revisado. Las
 actualizaciones deben mantener el mismo `id`.
 
+**Icono.** Pon un `icon.svg`, `icon.png` o `icon.webp` junto a
+`openplex-extension.json` (cuadrado, de al menos 128×128 píxeles y como
+máximo 256 KB): va dentro del paquete, firmado con el resto, y el marketplace
+lo muestra en sus páginas y en el panel.
+
 ## El marketplace
 
 Las extensiones oficiales, gratuitas y de pago, se instalan desde
