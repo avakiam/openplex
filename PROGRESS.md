@@ -240,6 +240,8 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] Dashboard: Extensions (installed, marketplace, upload → review → install, settings, licence),
       menu entries and website tabs; audit log entries
 - [x] Developer guide `docs/{en,es,ca}/extensions.md` + `examples/extension-hello` (0BSD)
+- [x] `files:read` (websites mounted read-only at `/sites`, file API reads), `files:write` (file manager API) and
+      `alerts:send` (`POST /api/v1/extension/alert`, once per key, 20/h) — first used by OpenPlex Guard
 - [x] Edge policies (`edge:write`, v0.17.0): extensions declare trusted proxies and per-host network restrictions
       on their socket; validated, merged across enabled extensions, re-validated when rendering the Caddyfile
 - [x] IPv6 on the edge network (v0.17.1), so the edge sees IPv6 visitors' addresses (logs, PHP, Fail2Ban,
@@ -620,3 +622,10 @@ has been verified on the Linux test server. One commit per milestone.
   Two servers booted from the frozen template each started OpenPlex on their own (health ok, edge up, reconcile with
   no errors) with a different `secret.key` and initial admin password. Not checked there: the panel domain taken
   from the host name (no ACME without public DNS).
+- 2026-11-13 — OpenPlex Guard 1.0.1 (paid malware scanner, `avakiam/openplex-guard-extension`) on the LAN (0.32.0-dev),
+  hidden in the marketplace with a temporary licence: the download was refused without a key (402) and allowed with
+  it; the signed package installed and the licence validated. A test website with harmless samples: an LMD
+  signature, the uploads and `.htaccess` rules hit, the clean file did not, and a 0640 file Guard can't read on its
+  mount was scanned through the file API. Quarantine from the website tab removed it, restore from the admin page put
+  it back with mode 0640 and marked it safe, "mark as safe" stuck, and the rescan stayed quiet about both. Test
+  website, extension and licence removed afterwards.
