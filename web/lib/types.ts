@@ -573,7 +573,7 @@ export interface Extension {
   settings: Record<string, string>;
   secrets_set: string[] | null;
   has_license: boolean;
-  /** data: URL of the icon the package carries */
+  /** the package's icon (data: URL), or the marketplace's */
   icon?: string;
 }
 

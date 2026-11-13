@@ -103,6 +103,12 @@ func (m *Manager) Download(ctx context.Context, id, license string) (*Pending, e
 	if entry == nil {
 		return nil, fmt.Errorf("the marketplace has no extension %q", id)
 	}
+	// Updating a paid extension: the licence it was installed with.
+	if strings.TrimSpace(license) == "" {
+		if e, err := m.db.GetExtension(ctx, id); err == nil {
+			license = m.License(e)
+		}
+	}
 	if entry.Price != nil && strings.TrimSpace(license) == "" {
 		return nil, errors.New("this extension is paid: enter the licence key you received when buying it")
 	}

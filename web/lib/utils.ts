@@ -54,3 +54,14 @@ export function ago(iso: string | null | undefined) {
 export function dateTime(iso: string) {
   return new Date(iso).toLocaleString(getLocale());
 }
+
+/** Whether version a ("1.2.10") is newer than b; pre-release suffixes are ignored. */
+export function isNewer(a: string, b: string) {
+  const parts = (v: string) => v.replace(/^v/, "").split(/[-+]/)[0].split(".").map((n) => parseInt(n, 10) || 0);
+  const x = parts(a);
+  const y = parts(b);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0);
+  }
+  return false;
+}

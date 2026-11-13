@@ -37,7 +37,7 @@ type extensionView struct {
 	Settings   map[string]string    `json:"settings"`
 	SecretsSet []string             `json:"secrets_set"`
 	HasLicense bool                 `json:"has_license"`
-	Icon       string               `json:"icon,omitempty"` // data: URL
+	Icon       string               `json:"icon,omitempty"` // data: URL of the package's, or the marketplace's https URL
 }
 
 func (s *Server) extensionView(e *db.Extension) extensionView {
@@ -240,7 +240,7 @@ func (s *Server) extensionError(w http.ResponseWriter, r *http.Request, err erro
 type extensionUI struct {
 	ID       string             `json:"id"`
 	Name     extensions.Text    `json:"name"`
-	Icon     string             `json:"icon,omitempty"` // data: URL
+	Icon     string             `json:"icon,omitempty"` // data: URL of the package's, or the marketplace's https URL
 	Pages    []extensionUIEntry `json:"pages"`
 	SiteTabs []extensionUIEntry `json:"site_tabs"`
 }

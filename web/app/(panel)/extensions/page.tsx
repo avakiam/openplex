@@ -1,5 +1,5 @@
 "use client";
-import { BadgeCheck, ExternalLink, KeyRound, Puzzle, Settings2, ShieldAlert, ShoppingBag, Trash2, TriangleAlert, Upload } from "lucide-react";
+import { ArrowUpCircle, BadgeCheck, ExternalLink, KeyRound, Puzzle, Settings2, ShieldAlert, ShoppingBag, Trash2, TriangleAlert, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
@@ -28,6 +28,7 @@ import { api } from "@/lib/api";
 import { keys, useAction, useExtensions, useMarketplace } from "@/lib/hooks";
 import { tk, useT } from "@/lib/i18n";
 import { type CatalogEntry, type Extension, type ExtensionStatus, extText, type PendingExtension } from "@/lib/types";
+import { isNewer } from "@/lib/utils";
 
 const permissionLabels: Record<string, string> = {
   "domains:read": tk("See websites and domains"),
@@ -280,7 +281,19 @@ function LicenseDialog({ ext, onClose }: { ext: Extension | null; onClose: () =>
   );
 }
 
-function InstalledCard({ e, onSettings, onLicense }: { e: Extension; onSettings: () => void; onLicense: () => void }) {
+function InstalledCard({
+  e,
+  latest,
+  onSettings,
+  onLicense,
+  onReceived,
+}: {
+  e: Extension;
+  latest?: CatalogEntry;
+  onSettings: () => void;
+  onLicense: () => void;
+  onReceived: (p: PendingExtension) => void;
+}) {
   const { t, locale } = useT();
   const [confirm, setConfirm] = useState(false);
   const toggle = useAction((on: boolean) => api.patch(`/extensions/${e.id}`, { enabled: on }), { invalidate: [keys.extensions, keys.extensionsUI] });
@@ -289,13 +302,19 @@ function InstalledCard({ e, onSettings, onLicense }: { e: Extension; onSettings:
     invalidate: [keys.extensions, keys.extensionsUI],
     onSuccess: () => setConfirm(false),
   });
+  // Updates from the marketplace; a paid one uses the licence it was installed with.
+  const update = useAction(() => api.post<PendingExtension>("/extensions/marketplace/download", { id: e.id, license_key: "" }), {
+    onSuccess: onReceived,
+  });
   const m = e.manifest;
+  const icon = e.icon || latest?.icon;
+  const newer = latest && isNewer(latest.version, e.version) ? latest.version : "";
   return (
     <Card>
       <CardBody className="grid gap-3">
         <div className="flex flex-wrap items-start gap-3">
-          {e.icon ? (
-            <img src={e.icon} alt="" className="size-10 shrink-0 rounded-md object-contain" />
+          {icon ? (
+            <img src={icon} alt="" className="size-10 shrink-0 rounded-md object-contain" />
           ) : (
             <Puzzle className="mt-0.5 size-5 text-muted-foreground" />
           )}
@@ -311,9 +330,15 @@ function InstalledCard({ e, onSettings, onLicense }: { e: Extension; onSettings:
         <div className="flex flex-wrap gap-2">
           <Badge tone={statusTone[e.status]}>{t(statusLabels[e.status])}</Badge>
           <Verified signer={e.signer} />
+          {newer && <Badge tone="info">{t("Update available")}</Badge>}
         </div>
         {e.status === "error" && e.status_message && <p className="text-sm text-destructive">{e.status_message}</p>}
         <div className="flex flex-wrap gap-2">
+          {newer && (
+            <Button size="sm" loading={update.isPending} onClick={() => update.mutate(undefined)}>
+              <ArrowUpCircle /> {t("Update to {version}", { version: newer })}
+            </Button>
+          )}
           {e.enabled &&
             (m.pages ?? []).map((p) => (
               <Button key={p.id} size="sm" variant="outline" asChild>
@@ -353,6 +378,8 @@ function InstalledCard({ e, onSettings, onLicense }: { e: Extension; onSettings:
 function Installed({ onReceived }: { onReceived: (p: PendingExtension) => void }) {
   const { t } = useT();
   const { data, isLoading, error } = useExtensions();
+  // The catalogue gives icons to packages without one, and updates; unreachable, it is simply left out.
+  const catalog = useMarketplace(!!data?.length).data ?? [];
   const [settings, setSettings] = useState<Extension | null>(null);
   const [license, setLicense] = useState<Extension | null>(null);
   if (isLoading) return <Spinner />;
@@ -369,7 +396,14 @@ function Installed({ onReceived }: { onReceived: (p: PendingExtension) => void }
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {data.map((e) => (
-            <InstalledCard key={e.id} e={e} onSettings={() => setSettings(e)} onLicense={() => setLicense(e)} />
+            <InstalledCard
+              key={e.id}
+              e={e}
+              latest={catalog.find((c) => c.id === e.id)}
+              onSettings={() => setSettings(e)}
+              onLicense={() => setLicense(e)}
+              onReceived={onReceived}
+            />
           ))}
         </div>
       )}

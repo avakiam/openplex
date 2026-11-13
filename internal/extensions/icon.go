@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // MaxIconSize is the largest icon an extension's package may carry.
@@ -46,6 +47,20 @@ func isImage(name string, b []byte) bool {
 	return false
 }
 
-// Icon is an installed extension's icon as a data: URL ("" without one).
+// Icon is an installed extension's icon: its package's, as a data: URL,
+// else the marketplace's (https) from the catalogue last read, whatever its
+// age — pages showing it never wait for the marketplace. "" without one.
 // Pages show it in an <img>, where an SVG can't run anything.
-func (m *Manager) Icon(id string) string { return iconData(m.pkgDir(id)) }
+func (m *Manager) Icon(id string) string {
+	if d := iconData(m.pkgDir(id)); d != "" {
+		return d
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, c := range m.catalog {
+		if c.ID == id && strings.HasPrefix(c.Icon, "https://") {
+			return c.Icon
+		}
+	}
+	return ""
+}
