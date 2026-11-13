@@ -271,7 +271,9 @@ publish the image in a registry and leave `archives` out.
 
 **Signing.** Create a key once (`openplexd ext keygen -id yourcompany-2026 -o key.json`)
 and pack with `-key key.json`. OpenPlex marks packages signed with the
-OpenPlex project's key as *verified by OpenPlex*; any other package — unsigned
+OpenPlex project's key as *verified by OpenPlex* and those the OpenPlex
+marketplace reviewed and signed (third-party extensions, OpenPlex ≥ 0.33.0) as
+*reviewed by the OpenPlex marketplace*; any other package — unsigned
 or signed with your own key — can still be uploaded by an administrator, who
 is warned that OpenPlex hasn't checked it. Upgrades must keep the same `id`.
 
@@ -282,9 +284,18 @@ on its pages and in the panel.
 
 ## The marketplace
 
-Official extensions, free and paid, are installed from **Extensions →
+Extensions, free and paid, are installed from **Extensions →
 Marketplace**. Paid extensions ask for the licence key received when buying
 them; OpenPlex stores it and gives it to the extension (`license_key`), which
-may check it with its vendor. To publish an extension on the OpenPlex
-marketplace, contact us through an issue in the
-[main repository](https://github.com/avakiam/openplex).
+may check it with its vendor.
+
+**Selling your extension.** Developers can give away or sell their own
+extensions on the marketplace: sign up at
+[marketplace.openplex.dev/developers](https://marketplace.openplex.dev/developers),
+claim an ID prefix (your extensions are `<prefix>.<name>`) and upload each
+version as an `.opx`. Every version is reviewed and then signed by the
+marketplace, so panels show it as *reviewed by the OpenPlex marketplace*
+(OpenPlex 0.33.0 or later installs it). Paid extensions pay you 80% of the
+price without VAT through Stripe, 14 days after each sale; the marketplace
+sells the licences, handles VAT and the licence keys (check them with
+`POST https://marketplace.openplex.dev/api/v1/licenses/verify`).

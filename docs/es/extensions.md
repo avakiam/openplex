@@ -281,7 +281,9 @@ pongas `archives`.
 **Firma.** Crea una clave una vez
 (`openplexd ext keygen -id tuempresa-2026 -o clave.json`) y empaqueta con
 `-key clave.json`. OpenPlex marca como *verificados por OpenPlex* los
-paquetes firmados con la clave del proyecto OpenPlex; cualquier otro paquete
+paquetes firmados con la clave del proyecto OpenPlex, y como *revisados por el
+marketplace de OpenPlex* los que el marketplace ha revisado y firmado
+(extensiones de terceros, OpenPlex ≥ 0.33.0); cualquier otro paquete
 (sin firmar o firmado con tu propia clave) también lo puede subir un
 administrador, al que se avisa de que OpenPlex no lo ha revisado. Las
 actualizaciones deben mantener el mismo `id`.
@@ -293,9 +295,19 @@ lo muestra en sus páginas y en el panel.
 
 ## El marketplace
 
-Las extensiones oficiales, gratuitas y de pago, se instalan desde
+Las extensiones, gratuitas y de pago, se instalan desde
 **Extensiones → Marketplace**. Las de pago piden la clave de licencia
 recibida al comprarlas; OpenPlex la guarda y se la da a la extensión
-(`license_key`), que puede comprobarla con su proveedor. Para publicar una
-extensión en el marketplace de OpenPlex, contacta con nosotros con un issue
-en el [repositorio principal](https://github.com/avakiam/openplex).
+(`license_key`), que puede comprobarla con su proveedor.
+
+**Vender tu extensión.** Los desarrolladores pueden regalar o vender sus
+propias extensiones en el marketplace: regístrate en
+[marketplace.openplex.dev/developers](https://marketplace.openplex.dev/developers),
+reserva un prefijo de ID (tus extensiones son `<prefijo>.<nombre>`) y sube
+cada versión como `.opx`. Cada versión se revisa y luego la firma el
+marketplace, así que los paneles la muestran como *revisada por el
+marketplace de OpenPlex* (la instala OpenPlex 0.33.0 o posterior). Las de pago
+te pagan el 80% del precio sin IVA a través de Stripe, 14 días después de
+cada venta; el marketplace vende las licencias y se ocupa del IVA y de las
+claves (compruébalas con
+`POST https://marketplace.openplex.dev/api/v1/licenses/verify`).

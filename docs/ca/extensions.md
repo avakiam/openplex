@@ -284,7 +284,9 @@ posis `archives`.
 **Signatura.** Crea una clau una vegada
 (`openplexd ext keygen -id laempresa-2026 -o clau.json`) i empaqueta amb
 `-key clau.json`. OpenPlex marca com a *verificats per OpenPlex* els paquets
-signats amb la clau del projecte OpenPlex; qualsevol altre paquet (sense
+signats amb la clau del projecte OpenPlex, i com a *revisats pel marketplace
+d'OpenPlex* els que el marketplace ha revisat i signat (extensions de tercers,
+OpenPlex ≥ 0.33.0); qualsevol altre paquet (sense
 signar o signat amb la teva pròpia clau) també el pot pujar un
 administrador, a qui s'avisa que OpenPlex no l'ha revisat. Les
 actualitzacions han de mantenir el mateix `id`.
@@ -296,9 +298,19 @@ a les seves pàgines i al tauler.
 
 ## El marketplace
 
-Les extensions oficials, gratuïtes i de pagament, s'instal·len des
+Les extensions, gratuïtes i de pagament, s'instal·len des
 d'**Extensions → Marketplace**. Les de pagament demanen la clau de llicència
 rebuda en comprar-les; OpenPlex la desa i la dona a l'extensió
-(`license_key`), que la pot comprovar amb el seu proveïdor. Per publicar una
-extensió al marketplace d'OpenPlex, contacta amb nosaltres amb un issue al
-[repositori principal](https://github.com/avakiam/openplex).
+(`license_key`), que la pot comprovar amb el seu proveïdor.
+
+**Vendre la teva extensió.** Els desenvolupadors poden regalar o vendre les
+seves pròpies extensions al marketplace: registra't a
+[marketplace.openplex.dev/developers](https://marketplace.openplex.dev/developers),
+reserva un prefix d'ID (les teves extensions són `<prefix>.<nom>`) i puja
+cada versió com a `.opx`. Cada versió es revisa i després la signa el
+marketplace, de manera que els panells la mostren com a *revisada pel
+marketplace d'OpenPlex* (la instal·la OpenPlex 0.33.0 o posterior). Les de
+pagament et paguen el 80% del preu sense IVA a través de Stripe, 14 dies
+després de cada venda; el marketplace ven les llicències i s'ocupa de l'IVA i
+de les claus (comprova-les amb
+`POST https://marketplace.openplex.dev/api/v1/licenses/verify`).

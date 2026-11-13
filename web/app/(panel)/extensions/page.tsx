@@ -1,5 +1,5 @@
 "use client";
-import { ArrowUpCircle, BadgeCheck, ExternalLink, KeyRound, Puzzle, Settings2, ShieldAlert, ShoppingBag, Trash2, TriangleAlert, Upload } from "lucide-react";
+import { ArrowUpCircle, BadgeCheck, ExternalLink, KeyRound, Puzzle, Settings2, ShieldAlert, ShieldCheck, ShoppingBag, Trash2, TriangleAlert, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
@@ -70,6 +70,12 @@ function Permissions({ list }: { list?: string[] | null }) {
 
 function Verified({ signer }: { signer: string }) {
   const { t } = useT();
+  if (signer.startsWith("marketplace-"))
+    return (
+      <Badge tone="info">
+        <ShieldCheck className="size-3" /> {t("Reviewed by the OpenPlex marketplace")}
+      </Badge>
+    );
   return signer ? (
     <Badge tone="success">
       <BadgeCheck className="size-3" /> {t("Verified by OpenPlex")}

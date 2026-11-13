@@ -5,10 +5,13 @@ import (
 	"encoding/base64"
 )
 
-// trustedKeys are the public keys whose signatures mark a package as made
-// by the OpenPlex project (Avakiam). The private keys are kept offline.
+// trustedKeys are the public keys OpenPlex trusts: avakiam-* marks a package
+// made by the OpenPlex project (Avakiam; the private keys are kept offline),
+// marketplace-* one reviewed and signed by the OpenPlex marketplace (made by
+// a third-party developer).
 var trustedKeys = map[string]string{
-	"avakiam-2026": "yyznJhRAeKanRpxzTEzd+IBAkXLzxRyJrxqngB9bXpI=",
+	"avakiam-2026":     "yyznJhRAeKanRpxzTEzd+IBAkXLzxRyJrxqngB9bXpI=",
+	"marketplace-2026": "1cE7NRaT1xC9Fm77w68BsLRUhWTsqYcpOwrVxqgScbk=",
 }
 
 // TrustedKeys returns the decoded trusted keys.

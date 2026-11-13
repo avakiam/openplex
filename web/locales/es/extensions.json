@@ -43,5 +43,6 @@
   "Extensions": "Extensiones",
   "Add features to OpenPlex: official extensions from the marketplace, or your own packages.": "Añade funciones a OpenPlex: extensiones oficiales del marketplace o tus propios paquetes.",
   "Marketplace": "Marketplace",
-  "Extension": "Extensión"
+  "Extension": "Extensión",
+  "Reviewed by the OpenPlex marketplace": "Revisada por el marketplace de OpenPlex"
 }
