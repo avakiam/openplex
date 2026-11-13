@@ -37,12 +37,13 @@ type extensionView struct {
 	Settings   map[string]string    `json:"settings"`
 	SecretsSet []string             `json:"secrets_set"`
 	HasLicense bool                 `json:"has_license"`
+	Icon       string               `json:"icon,omitempty"` // data: URL
 }
 
 func (s *Server) extensionView(e *db.Extension) extensionView {
 	man, _ := s.ext.Manifest(e)
 	v, set := s.ext.PublicSettings(e)
-	return extensionView{Extension: e, Manifest: man, Settings: v, SecretsSet: set, HasLicense: e.LicenseEnc != ""}
+	return extensionView{Extension: e, Manifest: man, Settings: v, SecretsSet: set, HasLicense: e.LicenseEnc != "", Icon: s.ext.Icon(e.ID)}
 }
 
 // GET /extensions
@@ -239,6 +240,7 @@ func (s *Server) extensionError(w http.ResponseWriter, r *http.Request, err erro
 type extensionUI struct {
 	ID       string             `json:"id"`
 	Name     extensions.Text    `json:"name"`
+	Icon     string             `json:"icon,omitempty"` // data: URL
 	Pages    []extensionUIEntry `json:"pages"`
 	SiteTabs []extensionUIEntry `json:"site_tabs"`
 }
@@ -275,6 +277,7 @@ func (s *Server) handleExtensionsUI(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if len(v.Pages)+len(v.SiteTabs) > 0 {
+			v.Icon = s.ext.Icon(e.ID)
 			out = append(out, v)
 		}
 	}

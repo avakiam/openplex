@@ -252,6 +252,9 @@ has been verified on the Linux test server. One commit per milestone.
       `https://marketplace.openplex.dev`, the panel's default `OPENPLEX_MARKETPLACE_URL` — catalogue filtered by panel
       version and architecture, signed packages only, paid downloads with licence keys (Stripe Checkout, refunds revoke
       them), `POST /api/v1/licenses/verify` for extensions
+- [x] Extension icons: a package may carry `icon.svg|png|webp` (≤ 256 KB, signed with the rest); the marketplace
+      serves it for its pages and the panel's catalogue, and the panel shows the installed package's own icon
+      (`icon` data URL in `GET /extensions` and `/extensions/ui`) on its card and menu entries
 
 ## M14 — Installer & packaging
 - [x] `scripts/install.sh`: unattended Ubuntu/Debian install (Docker, user, dirs, binary, systemd, firewall)

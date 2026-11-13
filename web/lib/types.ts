@@ -573,6 +573,8 @@ export interface Extension {
   settings: Record<string, string>;
   secrets_set: string[] | null;
   has_license: boolean;
+  /** data: URL of the icon the package carries */
+  icon?: string;
 }
 
 /** A package received for review before installing. */
@@ -600,6 +602,7 @@ export interface CatalogEntry {
 export interface ExtensionUI {
   id: string;
   name: ExtText;
+  icon?: string;
   pages: { id: string; title: ExtText }[];
   site_tabs: { id: string; title: ExtText; area?: SiteArea }[];
 }

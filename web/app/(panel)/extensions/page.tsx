@@ -294,7 +294,11 @@ function InstalledCard({ e, onSettings, onLicense }: { e: Extension; onSettings:
     <Card>
       <CardBody className="grid gap-3">
         <div className="flex flex-wrap items-start gap-3">
-          <Puzzle className="mt-0.5 size-5 text-muted-foreground" />
+          {e.icon ? (
+            <img src={e.icon} alt="" className="size-10 shrink-0 rounded-md object-contain" />
+          ) : (
+            <Puzzle className="mt-0.5 size-5 text-muted-foreground" />
+          )}
           <div className="min-w-0 flex-1">
             <p className="font-medium">
               {extText(m.name, locale)} <span className="text-sm font-normal text-muted-foreground">{e.version}</span>
@@ -406,7 +410,7 @@ function Marketplace({ onReceived }: { onReceived: (p: PendingExtension) => void
               <CardBody className="grid h-full content-start gap-3">
                 <div className="flex items-start gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {c.icon ? <img src={c.icon} alt="" className="size-10 rounded" /> : <Puzzle className="size-10 text-muted-foreground" />}
+                  {c.icon ? <img src={c.icon} alt="" className="size-10 rounded object-contain" /> : <Puzzle className="size-10 text-muted-foreground" />}
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{extText(c.name, locale)}</p>
                     <p className="text-sm text-muted-foreground">{t("By {publisher}", { publisher: c.publisher.name })}</p>
