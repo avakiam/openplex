@@ -242,6 +242,8 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] Developer guide `docs/{en,es,ca}/extensions.md` + `examples/extension-hello` (0BSD)
 - [x] `files:read` (websites mounted read-only at `/sites`, file API reads), `files:write` (file manager API) and
       `alerts:send` (`POST /api/v1/extension/alert`, once per key, 20/h) — first used by OpenPlex Guard
+- [x] Third-party extensions: the marketplace reviews each version and signs it with `marketplace-2026`, which
+      OpenPlex trusts as "reviewed by the OpenPlex marketplace" (not official); developers sell under their own prefix
 - [x] Edge policies (`edge:write`, v0.17.0): extensions declare trusted proxies and per-host network restrictions
       on their socket; validated, merged across enabled extensions, re-validated when rendering the Caddyfile
 - [x] IPv6 on the edge network (v0.17.1), so the edge sees IPv6 visitors' addresses (logs, PHP, Fail2Ban,
