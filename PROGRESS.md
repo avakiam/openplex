@@ -607,3 +607,10 @@ has been verified on the Linux test server. One commit per milestone.
 - 2026-11-12 — Password change signs out (0.30.0) on the LAN, in the dashboard with a temporary account: after
   changing the password it stays on the sign-in page with "password changed, sign in again" (before, it went back to
   the dashboard), a protected page then asks to sign in, the old password is refused (401) and the new one works.
+- 2026-11-13 — Billing-system lifecycle (0.30.90) on the LAN, through the WHMCS module (`avakiam/openplex-whmcs`, its
+  `tests/lifecycle.php` with a temporary admin key): the account was created with the product's limits and language
+  and a website for the order's domain; suspending disabled the account and took the website to `disabled` (no
+  sign-in, no single sign-on), unsuspending put it back to `running`; new limits and password applied; the customer
+  and admin single sign-on links signed in once with purpose `sso`; a taken username got three digits; terminating
+  deleted the website and the account (no container or folder left). In the browser an `sso` link with
+  `&next=/domains/` landed on the websites page in Spanish, not on the password page.
