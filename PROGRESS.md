@@ -614,3 +614,9 @@ has been verified on the Linux test server. One commit per milestone.
   and admin single sign-on links signed in once with purpose `sso`; a taken username got three digits; terminating
   deleted the website and the account (no container or folder left). In the browser an `sso` link with
   `&next=/domains/` landed on the websites page in Spanish, not on the password page.
+- 2026-11-13 — Image mode end to end (0.31.0) on a clean Ubuntu 24.04 machine (a privileged systemd container with its
+  own Docker on the LAN, no KVM there): the released `install.sh --version v0.31.0 --image --no-mail` installed
+  everything and built/pulled every image in 5.5 min, left `openplexd` enabled but stopped and the data dir empty.
+  Two servers booted from the frozen template each started OpenPlex on their own (health ok, edge up, reconcile with
+  no errors) with a different `secret.key` and initial admin password. Not checked there: the panel domain taken
+  from the host name (no ACME without public DNS).
