@@ -89,6 +89,10 @@ certificates. The panel answers at the server's host name
 cloud-init puts in `/etc/hosts`), so give servers a full name such as
 `vps-1234.provider.example` with its DNS record.
 
+On DigitalOcean, [`deploy/digitalocean`](https://github.com/avakiam/openplex/tree/main/deploy/digitalocean)
+builds this template with Packer, with a first-login assistant that sets the
+panel's domain.
+
 ### Handing the server over
 
 `openplexd login-link` prints a one-time sign-in link for the admin account,

@@ -1,0 +1,15 @@
+#!/bin/sh
+# OpenPlex 1-Click Droplet: where the panel is.
+domain=$(sed -n 's/^OPENPLEX_PANEL_DOMAIN=//p' /etc/openplex/openplex.env 2>/dev/null)
+echo
+echo "********************************************************************************"
+echo "OpenPlex control panel"
+if [ -n "$domain" ] && [ "$domain" != auto ]; then
+  echo "  Panel:        https://$domain"
+  echo "  Sign-in link: openplexd login-link"
+else
+  echo "  The panel has no domain yet: run openplex-setup"
+fi
+echo "  Status:       systemctl status openplexd   (logs: journalctl -u openplexd)"
+echo "  Docs:         https://openplex.dev"
+echo "********************************************************************************"

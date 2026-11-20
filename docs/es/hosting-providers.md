@@ -91,6 +91,10 @@ completo que tiene el sistema, o el que cloud-init pone en `/etc/hosts`), así
 que da a los servidores un nombre completo como `vps-1234.provider.example`
 con su registro DNS.
 
+En DigitalOcean, [`deploy/digitalocean`](https://github.com/avakiam/openplex/tree/main/deploy/digitalocean)
+construye esta plantilla con Packer, con un asistente que en el primer acceso
+configura el dominio del panel.
+
 ### Entregar el servidor
 
 `openplexd login-link` muestra un enlace de acceso de un solo uso para la

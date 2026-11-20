@@ -635,3 +635,8 @@ has been verified on the Linux test server. One commit per milestone.
   package limits, add/suspend/unsuspend/cancel/change package, password changes, single sign-on for customers and
   admins, English and Spanish. Its lifecycle test passes against a simulation of the API; a real Blesta test waits for
   a development licence. Linked from the hosting-provider docs and the API reference.
+- 2026-11-20 — DigitalOcean Marketplace 1-Click (`deploy/digitalocean`): Packer template (Ubuntu 24.04, image
+  mode, DigitalOcean's clean-up and image check pinned by SHA-256), a first-login assistant `openplex-setup` (panel
+  domain checked against the Droplet's IP, optional ACME e-mail, sign-in link; SSH tunnel without a domain), MOTD,
+  listing texts. Template validated (Packer 1.16.2, plugin 1.4.2), scripts shellcheck-clean, the assistant tested in
+  a container with stubs; no image built yet (needs a DigitalOcean token).
