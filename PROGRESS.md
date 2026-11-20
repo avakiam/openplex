@@ -662,3 +662,6 @@ has been verified on the Linux test server. One commit per milestone.
   draws no single sign-on button in the client area, so customers had none), found while taking the Marketplace
   screenshots in the real WHMCS; the end-to-end test checks it (31 checks pass). Marketplace listing texts, icon and
   screenshots in `avakiam/openplex-whmcs` `marketplace/`.
+- 2026-11-20 — Released v0.33.1 (signed with avakiam-release-2026): shell commands read /etc/openplex/openplex.env,
+  so `openplexd login-link` (and the DigitalOcean/Vultr first-login assistant) prints the panel's domain; the
+  marketplace deploy files. Checked with a fresh install: signature verified, 0.33.1 running, link with the domain.
