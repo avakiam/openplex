@@ -654,3 +654,7 @@ has been verified on the Linux test server. One commit per milestone.
   `deploy/common/files`. Listing texts, variables and instructions. ShellCheck-clean; the full script passed in an
   Ubuntu 24.04 systemd container against a simulated metadata service. Linode Quick Deploy App submitted as
   akamai-compute-marketplace/marketplace-apps#512.
+- 2026-11-20 — WHMCS module tested in a real WHMCS 9.1.1 (development licence) against OpenPlex 0.33.0, all in
+  Docker on one machine (`avakiam/openplex-whmcs` `tests/whmcs`): connection test, create (account, limits,
+  language, website), suspend and unsuspend (sign-in blocked, website disabled and back), change package and
+  password, single sign-on for customers and admins, terminate. All 29 checks pass; the module log holds no secrets.
