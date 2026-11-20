@@ -686,3 +686,10 @@ has been verified on the Linux test server. One commit per milestone.
   mailcactus.com (new 7-day token limited to that zone and the VPS address); upgraded there from 1.1.1, token kept.
   The marketplace now enlarges screenshots on the extension's page (CSS :target lightbox with previous/next and
   close, no script) instead of opening them in another tab.
+- 2026-11-20 — Image Optimizer 1.0.0 published (paid, 15 EUR, official, category other; private repo
+  `avakiam/openplex-image-optimizer-extension`): optimizes the JPEG/PNG/GIF images in each website's public/ folder
+  (jpegoptim, oxipng, pngquant, gifsicle; balanced / high quality / lossless), resizes oversized photos, applies EXIF
+  orientation and keeps originals for a one-click restore; nightly, weekly or by hand, with an admin page and an
+  Images tab per website. Tested on the test VPS (OpenPlex 0.33.0) with a fake licence server: 7.0 MB → 1.0 MB,
+  owner and mode kept, restore byte-exact; a 12 MP photo was OOM-killed at 512 MB until the resize streamed rows
+  and Go's heap followed the cgroup limit. 3 screenshots; removed from the VPS afterwards.
