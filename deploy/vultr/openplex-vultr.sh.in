@@ -1,0 +1,96 @@
+#!/bin/bash
+# OpenPlex for the Vultr Marketplace: the Vendor Data script that Vultr runs
+# on a fresh Ubuntu 24.04 server when a customer deploys the app.
+#
+# It reads the app variables (panel_domain, acme_email), updates the system,
+# installs the latest signed OpenPlex release with install.sh, and sets up the
+# first-login assistant (openplex-setup) and the message of the day.
+# Log: /var/log/openplex-vultr.log
+#
+# Generated from deploy/vultr/openplex-vultr.sh.in by deploy/vultr/build.sh:
+# edit the template, not the generated file.
+set -Eeuo pipefail
+
+LOG=/var/log/openplex-vultr.log
+touch "$LOG" && chmod 600 "$LOG"
+exec > >(tee -a "$LOG") 2>&1
+
+META=${OPENPLEX_VULTR_METADATA:-http://169.254.169.254}
+RELEASES=https://github.com/avakiam/openplex/releases
+export DEBIAN_FRONTEND=noninteractive
+
+log() { printf '[openplex-vultr] %s\n' "$*"; }
+
+# get_var NAME: an app variable from Vultr's metadata service (empty if unset).
+get_var() {
+  curl -fsS --max-time 5 -H "METADATA-TOKEN: vultr" "$META/v1/internal/app-$1" 2>/dev/null || true
+}
+
+# SSH stays off while OpenPlex installs (Vultr's guidance for provisioning
+# scripts) and comes back when the script ends, whether it worked or not.
+ssh_units=()
+for unit in ssh.socket ssh.service; do
+  if systemctl is-active -q "$unit"; then ssh_units+=("$unit"); fi
+done
+restore_ssh() {
+  for unit in "${ssh_units[@]}"; do systemctl start "$unit" || true; done
+}
+trap restore_ssh EXIT
+if ((${#ssh_units[@]})); then
+  systemctl stop "${ssh_units[@]}" || true
+fi
+
+domain=$(get_var panel_domain | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+email=$(get_var acme_email | tr -d '[:space:]')
+if [[ -n "$domain" && ! "$domain" =~ ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$ ]]; then
+  log "ignoring the panel domain \"$domain\": not a valid host name (set it later with openplex-setup)"
+  domain=""
+fi
+if [[ -n "$email" && ! "$email" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[a-zA-Z]{2,}$ ]]; then
+  log "ignoring the e-mail address \"$email\": not valid"
+  email=""
+fi
+
+log "Updating the system"
+apt_get() { apt-get -o DPkg::Lock::Timeout=600 -qqy "$@"; }
+apt_get update
+apt_get -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold full-upgrade
+apt_get install curl ca-certificates
+
+# OpenPlex manages the host firewall itself (nftables table inet openplex, with
+# SSH always open); an active ufw would keep it off.
+if command -v ufw >/dev/null && ufw status | grep -q '^Status: active'; then
+  log "Turning ufw off: the OpenPlex firewall takes over"
+  ufw --force disable
+fi
+
+log "Installing OpenPlex"
+installer=$(mktemp)
+curl -fsSL "$RELEASES/latest/download/install.sh" -o "$installer"
+args=()
+[[ -n "$domain" ]] && args+=(--panel-domain "$domain")
+[[ -n "$email" ]] && args+=(--acme-email "$email")
+# The installer prints the initial admin password: keep it out of the log.
+bash "$installer" "${args[@]}" 2>&1 | sed -u '/Password:/d'
+rm -f "$installer"
+
+log "Setting up the first-login assistant"
+install -d -m 0755 /usr/local/bin /etc/update-motd.d
+cat >/usr/local/bin/openplex-setup <<'OPENPLEX_SETUP_EOF'
+@@FILE ../common/files/usr/local/bin/openplex-setup@@
+OPENPLEX_SETUP_EOF
+cat >/etc/update-motd.d/99-openplex <<'OPENPLEX_MOTD_EOF'
+@@FILE ../common/files/etc/update-motd.d/99-openplex@@
+OPENPLEX_MOTD_EOF
+chmod 0755 /usr/local/bin/openplex-setup /etc/update-motd.d/99-openplex
+grep -q openplex-setup /root/.bashrc || cat >>/root/.bashrc <<'EOF'
+
+# OpenPlex: set the panel's domain and get a sign-in link on the first login.
+if [ -t 0 ] && [ -x /usr/local/bin/openplex-setup ] && [ ! -e /root/.openplex-setup-done ]; then
+  /usr/local/bin/openplex-setup
+fi
+EOF
+
+apt_get autoremove
+apt_get clean
+log "OpenPlex is installed${domain:+: https://$domain}"

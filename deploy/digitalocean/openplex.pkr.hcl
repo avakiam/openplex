@@ -69,7 +69,7 @@ build {
   }
 
   provisioner "file" {
-    source      = "${path.root}/files/"
+    source      = "${path.root}/../common/files/"
     destination = "/"
   }
 

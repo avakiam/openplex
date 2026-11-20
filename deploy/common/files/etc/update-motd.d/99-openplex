@@ -1,5 +1,5 @@
 #!/bin/sh
-# OpenPlex 1-Click Droplet: where the panel is.
+# OpenPlex marketplace images: where the panel is.
 domain=$(sed -n 's/^OPENPLEX_PANEL_DOMAIN=//p' /etc/openplex/openplex.env 2>/dev/null)
 echo
 echo "********************************************************************************"

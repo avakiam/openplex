@@ -97,6 +97,10 @@ On Akamai (Linode), [`deploy/linode`](https://github.com/avakiam/openplex/tree/m
 is the Quick Deploy App: a StackScript and an Ansible playbook that install
 OpenPlex on a new Linode with the panel at the customer's domain.
 
+On Vultr, [`deploy/vultr`](https://github.com/avakiam/openplex/tree/main/deploy/vultr)
+is a Vendor Data app: a script that installs the latest release on each new
+server, with the panel domain and e-mail the customer enters.
+
 ### Handing the server over
 
 `openplexd login-link` prints a one-time sign-in link for the admin account,

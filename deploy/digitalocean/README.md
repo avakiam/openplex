@@ -58,5 +58,5 @@ Fail2Ban), which only opens SSH, HTTP/HTTPS, DNS, mail and SFTP.
 | `scripts/10-openplex.sh` | updates the system and runs `install.sh --image` (with a temporary swap file) |
 | `scripts/20-first-login.sh` | runs `openplex-setup` on root's first login; resets the machine ID |
 | `scripts/90-digitalocean-checks.sh` | DigitalOcean's clean-up and image check |
-| `files/usr/local/bin/openplex-setup` | the first-login assistant |
-| `files/etc/update-motd.d/99-openplex` | the message of the day |
+| `../common/files/usr/local/bin/openplex-setup` | the first-login assistant (shared with Vultr) |
+| `../common/files/etc/update-motd.d/99-openplex` | the message of the day (shared with Vultr) |
