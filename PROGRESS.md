@@ -640,3 +640,10 @@ has been verified on the Linux test server. One commit per milestone.
   domain checked against the Droplet's IP, optional ACME e-mail, sign-in link; SSH tunnel without a domain), MOTD,
   listing texts. Template validated (Packer 1.16.2, plugin 1.4.2), scripts shellcheck-clean, the assistant tested in
   a container with stubs; no image built yet (needs a DigitalOcean token).
+- 2026-11-20 — Akamai (Linode) Quick Deploy App (`deploy/linode`, in the format of Akamai's marketplace-apps): a
+  StackScript and an Ansible playbook that create the sudo user, update the system and install the pinned release
+  with `install.sh` (installer checked against the release's SHA256SUMS, its password line kept out of the logs),
+  credentials file and MOTD; README, techdocs DOCUMENTATION, listing texts and brand assets. yamllint, ansible-lint
+  (production profile) and the full playbook pass in an Ubuntu 24.04 systemd container. Commands run from a shell
+  (`openplexd login-link`, `reset-password`…) now read `/etc/openplex/openplex.env`, so the sign-in link carries
+  the panel's domain.

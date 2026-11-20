@@ -93,6 +93,10 @@ On DigitalOcean, [`deploy/digitalocean`](https://github.com/avakiam/openplex/tre
 builds this template with Packer, with a first-login assistant that sets the
 panel's domain.
 
+On Akamai (Linode), [`deploy/linode`](https://github.com/avakiam/openplex/tree/main/deploy/linode)
+is the Quick Deploy App: a StackScript and an Ansible playbook that install
+OpenPlex on a new Linode with the panel at the customer's domain.
+
 ### Handing the server over
 
 `openplexd login-link` prints a one-time sign-in link for the admin account,

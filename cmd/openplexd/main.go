@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -41,6 +42,13 @@ var version = "dev"
 func main() {
 	args := os.Args[1:]
 	var err error
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		// A command run from a shell: take the service's settings.
+		if err := config.ApplyEnvFile(config.EnvFile); err != nil {
+			fmt.Fprintln(os.Stderr, "openplexd:", err)
+			os.Exit(1)
+		}
+	}
 	switch {
 	case len(args) > 0 && args[0] == "version":
 		fmt.Println(version)
