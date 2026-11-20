@@ -678,3 +678,7 @@ has been verified on the Linux test server. One commit per milestone.
   Marketplace. Checked by updating a 0.33.0 panel from its Updates page (signed release installed) and opening
   Site Health's gallery. The Release workflow now takes the notes from the annotated tag (actions/checkout dropped
   the tag message, so v0.33.1 and v0.34.0 showed the last commit's message; both corrected on GitHub).
+- 2026-11-20 — Guard 1.0.2 published: three screenshots taken on the OpenPlex test VPS (a real scan finding the
+  EICAR test file, the website tab, the quarantine) and "1 file to review" in the singular; upgraded there from
+  1.0.1 and checked, then removed with the test file (internal licence revoked). Cloudflare's screenshots wait for
+  a valid API token: the one on the test VPS no longer works.
