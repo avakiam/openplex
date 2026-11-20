@@ -669,3 +669,8 @@ has been verified on the Linux test server. One commit per milestone.
   each, ordered by file name). The marketplace keeps them per version, serves them and shows them on the extension's
   page; its catalogue lists their URLs, and Extensions → Marketplace shows the first as the card's cover with a
   gallery (https URLs only, at most 6). Docs: extensions.md (en/es/ca).
+- 2026-11-20 — Site Health 1.0.0 published (free, official, category monitoring; private repo
+  `avakiam/openplex-site-health-extension`): audits each website's home page for performance, SEO, accessibility
+  and security (38 checks, no browser: Go HTTP + HTML parsing), on a schedule or by hand, with advice, history and
+  score-drop alerts; refuses private/internal addresses unless allowed. Tested on OpenPlex 0.33.0 against public
+  websites; the marketplace (redeployed with screenshot support) shows its 3 screenshots.
