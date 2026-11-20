@@ -57,6 +57,14 @@ package and password, and adds a **Log in to OpenPlex** button to the client
 area. Download it from the module's releases page; its README explains the
 setup.
 
+### Blesta
+
+The [OpenPlex module for Blesta](https://github.com/avakiam/openplex-blesta)
+does the same in Blesta: it creates the account with the package's limits and
+a website for the service's domain, suspends, unsuspends and cancels it,
+changes its package and password, and adds a **Log in to OpenPlex** button to
+the client area and to the admin's service page. Its README explains the setup.
+
 ### A template with OpenPlex ready (image mode)
 
 To create servers from your own image instead of installing on each one,
@@ -125,7 +133,7 @@ write your own.
 
 ## Planned for providers
 
-- **Other billing systems** (Blesta, HostBill…).
+- **Other billing systems** (HostBill…).
 - **More official extensions**, and companies publishing theirs in the
   marketplace.
 

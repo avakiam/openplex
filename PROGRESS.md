@@ -631,3 +631,7 @@ has been verified on the Linux test server. One commit per milestone.
   mount was scanned through the file API. Quarantine from the website tab removed it, restore from the admin page put
   it back with mode 0640 and marked it safe, "mark as safe" stuck, and the rescan stayed quiet about both. Test
   website, extension and licence removed afterwards.
+- 2026-11-20 — Blesta provisioning module (`avakiam/openplex-blesta`, MIT): servers checked by their API key,
+  package limits, add/suspend/unsuspend/cancel/change package, password changes, single sign-on for customers and
+  admins, English and Spanish. Its lifecycle test passes against a simulation of the API; a real Blesta test waits for
+  a development licence. Linked from the hosting-provider docs and the API reference.

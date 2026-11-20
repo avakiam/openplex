@@ -57,6 +57,15 @@ plan y su contraseña, y añade al área de cliente un botón **Log in to
 OpenPlex**. Se descarga de la página de versiones del módulo; su README
 explica la configuración (en inglés).
 
+### Blesta
+
+El [módulo de OpenPlex para Blesta](https://github.com/avakiam/openplex-blesta)
+hace lo mismo en Blesta: crea la cuenta con los límites del paquete y una web
+para el dominio del servicio, la suspende, la reactiva y la cancela, cambia su
+paquete y su contraseña, y añade un botón **Entrar en OpenPlex** al área de
+cliente y a la ficha del servicio del administrador. Está en inglés y en
+español; su README explica la configuración (en inglés).
+
 ### Una plantilla con OpenPlex listo (modo imagen)
 
 Para crear servidores a partir de tu propia imagen en vez de instalar en cada
@@ -128,7 +137,7 @@ actualizan desde su tarjeta. Las extensiones van firmadas; consulta
 
 ## Previsto para proveedores
 
-- **Otros sistemas de facturación** (Blesta, HostBill…).
+- **Otros sistemas de facturación** (HostBill…).
 - **Más extensiones oficiales**, y empresas que publiquen las suyas en el
   marketplace.
 

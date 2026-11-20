@@ -57,6 +57,15 @@ canvia el seu pla i la seva contrasenya, i afegeix a l'àrea de client un botó
 **Log in to OpenPlex**. Es descarrega de la pàgina de versions del mòdul; el
 seu README n'explica la configuració (en anglès).
 
+### Blesta
+
+El [mòdul d'OpenPlex per a Blesta](https://github.com/avakiam/openplex-blesta)
+fa el mateix a Blesta: crea el compte amb els límits del paquet i una web per
+al domini del servei, el suspèn, el reactiva i el cancel·la, canvia el seu
+paquet i la seva contrasenya, i afegeix un botó **Log in to OpenPlex** a l'àrea
+de client i a la fitxa del servei de l'administrador. El seu README n'explica
+la configuració (en anglès).
+
 ### Una plantilla amb OpenPlex a punt (mode imatge)
 
 Per crear servidors a partir de la teva pròpia imatge en lloc d'instal·lar a
@@ -130,7 +139,7 @@ s'actualitzen des de la seva targeta. Les extensions van signades; consulta
 
 ## Previst per a proveïdors
 
-- **Altres sistemes de facturació** (Blesta, HostBill…).
+- **Altres sistemes de facturació** (HostBill…).
 - **Més extensions oficials**, i empreses que publiquin les seves al
   marketplace.
 
