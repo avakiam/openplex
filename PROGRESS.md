@@ -658,3 +658,7 @@ has been verified on the Linux test server. One commit per milestone.
   Docker on one machine (`avakiam/openplex-whmcs` `tests/whmcs`): connection test, create (account, limits,
   language, website), suspend and unsuspend (sign-in blocked, website disabled and back), change package and
   password, single sign-on for customers and admins, terminate. All 29 checks pass; the module log holds no secrets.
+- 2026-11-20 — WHMCS module 1.0.1 released: a "Log in to OpenPlex" button on the customer's service page (WHMCS
+  draws no single sign-on button in the client area, so customers had none), found while taking the Marketplace
+  screenshots in the real WHMCS; the end-to-end test checks it (31 checks pass). Marketplace listing texts, icon and
+  screenshots in `avakiam/openplex-whmcs` `marketplace/`.
