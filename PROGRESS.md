@@ -674,3 +674,7 @@ has been verified on the Linux test server. One commit per milestone.
   and security (38 checks, no browser: Go HTTP + HTML parsing), on a schedule or by hand, with advice, history and
   score-drop alerts; refuses private/internal addresses unless allowed. Tested on OpenPlex 0.33.0 against public
   websites; the marketplace (redeployed with screenshot support) shows its 3 screenshots.
+- 2026-11-20 — Released v0.34.0 (signed with avakiam-release-2026): marketplace screenshots in Extensions →
+  Marketplace. Checked by updating a 0.33.0 panel from its Updates page (signed release installed) and opening
+  Site Health's gallery. The Release workflow now takes the notes from the annotated tag (actions/checkout dropped
+  the tag message, so v0.33.1 and v0.34.0 showed the last commit's message; both corrected on GitHub).
