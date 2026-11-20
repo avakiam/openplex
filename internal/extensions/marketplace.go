@@ -22,7 +22,8 @@ type CatalogEntry struct {
 	Description Text      `json:"description"`
 	Publisher   Publisher `json:"publisher"`
 	Homepage    string    `json:"homepage,omitempty"`
-	Icon        string    `json:"icon,omitempty"` // https URL
+	Icon        string    `json:"icon,omitempty"`        // https URL
+	Screenshots []string  `json:"screenshots,omitempty"` // https URLs, in order
 	Permissions []string  `json:"permissions,omitempty"`
 	Price       *Price    `json:"price,omitempty"` // nil = free
 	BuyURL      string    `json:"buy_url,omitempty"`
@@ -35,7 +36,10 @@ type Price struct {
 	Currency string `json:"currency"` // "EUR"
 }
 
-const catalogTTL = 10 * time.Minute
+const (
+	catalogTTL     = 10 * time.Minute
+	maxScreenshots = 6 // shown per extension
+)
 
 // ErrMarketplace: the marketplace could not be reached or answered badly.
 var ErrMarketplace = errors.New("the extension marketplace is unavailable right now")
@@ -78,6 +82,13 @@ func (m *Manager) Catalog(ctx context.Context) ([]CatalogEntry, error) {
 	list := out.Extensions[:0]
 	for _, e := range out.Extensions {
 		if idRe.MatchString(e.ID) && strings.HasPrefix(e.Download, "https://") {
+			shots := e.Screenshots[:0]
+			for _, s := range e.Screenshots {
+				if strings.HasPrefix(s, "https://") && len(shots) < maxScreenshots {
+					shots = append(shots, s)
+				}
+			}
+			e.Screenshots = shots
 			list = append(list, e)
 		}
 	}

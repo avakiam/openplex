@@ -44,5 +44,9 @@
   "Add features to OpenPlex: official extensions from the marketplace, or your own packages.": "Afegeix funcions a OpenPlex: extensions oficials del marketplace o els teus propis paquets.",
   "Marketplace": "Marketplace",
   "Extension": "Extensió",
-  "Reviewed by the OpenPlex marketplace": "Revisada pel marketplace d'OpenPlex"
+  "Reviewed by the OpenPlex marketplace": "Revisada pel marketplace d'OpenPlex",
+  "Screenshots of {name}": "Captures de {name}",
+  "Screenshot {n} of {total}": "Captura {n} de {total}",
+  "Previous": "Anterior",
+  "Next": "Següent"
 }

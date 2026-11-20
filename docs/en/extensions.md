@@ -282,6 +282,12 @@ is warned that OpenPlex hasn't checked it. Upgrades must keep the same `id`.
 it goes into the package, signed with the rest, and the marketplace shows it
 on its pages and in the panel.
 
+**Screenshots.** Put up to 6 PNG, JPEG or WebP images in a `screenshots/`
+folder next to `openplex-extension.json` (at most 2 MB each; 1600×1000 pixels
+works well). They are shown in the order of their file names
+(`01-overview.png`, `02-website.png`…) on the extension's marketplace page and
+in Extensions → Marketplace.
+
 ## The marketplace
 
 Extensions, free and paid, are installed from **Extensions →

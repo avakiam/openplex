@@ -51,6 +51,8 @@ func TestDownloadUpdateUsesStoredLicence(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{"extensions": []CatalogEntry{{
 				ID: "avakiam.test", Version: "1.2.3", Name: Text{"en": "Test"}, Publisher: Publisher{Name: "Avakiam"},
 				Price: &Price{Amount: "9.00", Currency: "EUR"}, Download: srv.URL + "/download/avakiam.test/1.2.3.opx",
+				Screenshots: []string{"javascript:alert(1)", "https://m.test/s/1.png", "https://m.test/s/2.png", "https://m.test/s/3.png",
+					"https://m.test/s/4.png", "https://m.test/s/5.png", "https://m.test/s/6.png", "https://m.test/s/7.png"},
 			}}})
 		case "/download/avakiam.test/1.2.3.opx":
 			if r.Header.Get("X-License-Key") != key {
@@ -73,6 +75,15 @@ func TestDownloadUpdateUsesStoredLicence(t *testing.T) {
 		slog.New(slog.NewTextHandler(io.Discard, nil)))
 	m.client = srv.Client()
 	m.trusted = map[string]ed25519.PublicKey{"test-key": pub}
+
+	// Only https screenshots, at most six.
+	cat, err := m.Catalog(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := cat[0].Screenshots; len(s) != 6 || s[0] != "https://m.test/s/1.png" || s[5] != "https://m.test/s/6.png" {
+		t.Errorf("screenshots: %v", s)
+	}
 
 	// Not installed: a paid extension needs the key.
 	if _, err := m.Download(ctx, "avakiam.test", ""); err == nil || !strings.Contains(err.Error(), "paid") {

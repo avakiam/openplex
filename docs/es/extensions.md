@@ -293,6 +293,12 @@ actualizaciones deben mantener el mismo `id`.
 máximo 256 KB): va dentro del paquete, firmado con el resto, y el marketplace
 lo muestra en sus páginas y en el panel.
 
+**Capturas.** Pon hasta 6 imágenes PNG, JPEG o WebP en una carpeta
+`screenshots/` junto a `openplex-extension.json` (como máximo 2 MB cada una;
+1600×1000 píxeles va bien). Se muestran en el orden de sus nombres de archivo
+(`01-resumen.png`, `02-web.png`…) en la página de la extensión en el
+marketplace y en Extensiones → Marketplace.
+
 ## El marketplace
 
 Las extensiones, gratuitas y de pago, se instalan desde

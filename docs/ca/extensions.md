@@ -296,6 +296,12 @@ d'`openplex-extension.json` (quadrada, d'almenys 128×128 píxels i com a màxim
 256 KB): va dins del paquet, signada amb la resta, i el marketplace la mostra
 a les seves pàgines i al tauler.
 
+**Captures.** Posa fins a 6 imatges PNG, JPEG o WebP en una carpeta
+`screenshots/` al costat d'`openplex-extension.json` (com a màxim 2 MB
+cadascuna; 1600×1000 píxels va bé). Es mostren en l'ordre dels seus noms de
+fitxer (`01-resum.png`, `02-web.png`…) a la pàgina de l'extensió al
+marketplace i a Extensions → Marketplace.
+
 ## El marketplace
 
 Les extensions, gratuïtes i de pagament, s'instal·len des

@@ -665,3 +665,7 @@ has been verified on the Linux test server. One commit per milestone.
 - 2026-11-20 — Released v0.33.1 (signed with avakiam-release-2026): shell commands read /etc/openplex/openplex.env,
   so `openplexd login-link` (and the DigitalOcean/Vultr first-login assistant) prints the panel's domain; the
   marketplace deploy files. Checked with a fresh install: signature verified, 0.33.1 running, link with the domain.
+- 2026-11-20 — Extension screenshots: a package may carry up to 6 PNG/JPEG/WebP images in `screenshots/` (≤ 2 MB
+  each, ordered by file name). The marketplace keeps them per version, serves them and shows them on the extension's
+  page; its catalogue lists their URLs, and Extensions → Marketplace shows the first as the card's cover with a
+  gallery (https URLs only, at most 6). Docs: extensions.md (en/es/ca).

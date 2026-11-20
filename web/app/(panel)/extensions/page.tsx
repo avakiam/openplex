@@ -1,5 +1,5 @@
 "use client";
-import { ArrowUpCircle, BadgeCheck, ExternalLink, KeyRound, Puzzle, Settings2, ShieldAlert, ShieldCheck, ShoppingBag, Trash2, TriangleAlert, Upload } from "lucide-react";
+import { ArrowUpCircle, BadgeCheck, ChevronLeft, ChevronRight, ExternalLink, Images, KeyRound, Puzzle, Settings2, ShieldAlert, ShieldCheck, ShoppingBag, Trash2, TriangleAlert, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
@@ -424,6 +424,7 @@ function Marketplace({ onReceived }: { onReceived: (p: PendingExtension) => void
   const { data, isLoading, error } = useMarketplace(true);
   const installed = useExtensions().data ?? [];
   const [buying, setBuying] = useState<CatalogEntry | null>(null);
+  const [gallery, setGallery] = useState<{ entry: CatalogEntry; index: number } | null>(null);
   const [license, setLicense] = useState("");
   const download = useAction((a: { id: string; license_key: string }) => api.post<PendingExtension>("/extensions/marketplace/download", a), {
     onSuccess: (p) => {
@@ -446,7 +447,23 @@ function Marketplace({ onReceived }: { onReceived: (p: PendingExtension) => void
         {data.map((c) => {
           const have = installed.find((e) => e.id === c.id);
           return (
-            <Card key={c.id}>
+            <Card key={c.id} className="overflow-hidden">
+              {!!c.screenshots?.length && (
+                <button
+                  type="button"
+                  className="relative block w-full border-b bg-muted"
+                  onClick={() => setGallery({ entry: c, index: 0 })}
+                  aria-label={t("Screenshots of {name}", { name: extText(c.name, locale) })}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={c.screenshots[0]} alt="" loading="lazy" className="aspect-[16/10] w-full object-cover object-top" />
+                  {c.screenshots.length > 1 && (
+                    <span className="absolute right-2 bottom-2 inline-flex items-center gap-1 rounded-md bg-background/90 px-2 py-0.5 text-xs font-medium">
+                      <Images className="size-3.5" /> {c.screenshots.length}
+                    </span>
+                  )}
+                </button>
+              )}
               <CardBody className="grid h-full content-start gap-3">
                 <div className="flex items-start gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -513,7 +530,73 @@ function Marketplace({ onReceived }: { onReceived: (p: PendingExtension) => void
           )}
         </DialogContent>
       </Dialog>
+      <Gallery state={gallery} onChange={setGallery} />
     </>
+  );
+}
+
+// Gallery shows an extension's screenshots, one at a time.
+function Gallery({
+  state,
+  onChange,
+}: {
+  state: { entry: CatalogEntry; index: number } | null;
+  onChange: (s: { entry: CatalogEntry; index: number } | null) => void;
+}) {
+  const { t, locale } = useT();
+  const shots = state?.entry.screenshots ?? [];
+  const i = state?.index ?? 0;
+  const go = (d: number) => state && onChange({ ...state, index: (i + d + shots.length) % shots.length });
+  return (
+    <Dialog open={!!state} onOpenChange={(o) => !o && onChange(null)}>
+      <DialogContent
+        className="max-w-5xl"
+        title={state ? extText(state.entry.name, locale) : ""}
+        description={shots.length > 1 ? t("Screenshot {n} of {total}", { n: i + 1, total: shots.length }) : undefined}
+      >
+        {state && shots[i] && (
+          <div
+            className="grid gap-3"
+            onKeyDown={(e) => {
+              if (e.key === "ArrowLeft") go(-1);
+              if (e.key === "ArrowRight") go(1);
+            }}
+          >
+            <div className="relative flex items-center justify-center rounded-md border bg-muted">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={shots[i]} alt={t("Screenshot {n} of {total}", { n: i + 1, total: shots.length })} className="max-h-[70vh] w-auto rounded-md object-contain" />
+              {shots.length > 1 && (
+                <>
+                  <Button variant="outline" size="icon" className="absolute left-2" onClick={() => go(-1)} aria-label={t("Previous")}>
+                    <ChevronLeft />
+                  </Button>
+                  <Button variant="outline" size="icon" className="absolute right-2" onClick={() => go(1)} aria-label={t("Next")}>
+                    <ChevronRight />
+                  </Button>
+                </>
+              )}
+            </div>
+            {shots.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {shots.map((s, n) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => onChange({ ...state, index: n })}
+                    aria-label={t("Screenshot {n} of {total}", { n: n + 1, total: shots.length })}
+                    aria-current={n === i}
+                    className={`shrink-0 overflow-hidden rounded border-2 ${n === i ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={s} alt="" loading="lazy" className="h-16 w-26 object-cover object-top" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 

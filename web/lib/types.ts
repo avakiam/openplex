@@ -594,6 +594,7 @@ export interface CatalogEntry {
   publisher: { name: string; url?: string };
   homepage?: string;
   icon?: string;
+  screenshots?: string[] | null;
   permissions?: string[] | null;
   price?: { amount: string; currency: string } | null;
   buy_url?: string;
