@@ -682,3 +682,7 @@ has been verified on the Linux test server. One commit per milestone.
   EICAR test file, the website tab, the quarantine) and "1 file to review" in the singular; upgraded there from
   1.0.1 and checked, then removed with the test file (internal licence revoked). Cloudflare's screenshots wait for
   a valid API token: the one on the test VPS no longer works.
+- 2026-11-20 — Cloudflare 1.1.2 published with two screenshots taken on the test VPS against the real zone
+  mailcactus.com (new 7-day token limited to that zone and the VPS address); upgraded there from 1.1.1, token kept.
+  The marketplace now enlarges screenshots on the extension's page (CSS :target lightbox with previous/next and
+  close, no script) instead of opening them in another tab.
