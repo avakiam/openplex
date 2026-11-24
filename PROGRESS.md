@@ -699,3 +699,6 @@ has been verified on the Linux test server. One commit per milestone.
   admin and client pages; the module log holds no API key, password or sign-in link. Fixed: deleting a server or
   server group did nothing in Blesta 6 (inline jQuery ran before Blesta 6 loads it). `tests/lifecycle-blesta.php`
   keeps that test. Next: the Blesta Marketplace listing, from Avakiam's Blesta account.
+- 2026-11-24 — OpenPlex for Blesta listed on the Blesta Marketplace (free, Modules, author "OpenPlex"):
+  https://marketplace.blesta.com/extension/464 — version 1.0.1 downloading the GitHub release, five screenshots
+  from a real Blesta 6.0.5. The listing's texts live in `openplex-blesta/marketplace/LISTING.md`.
