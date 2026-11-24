@@ -693,3 +693,9 @@ has been verified on the Linux test server. One commit per milestone.
   Images tab per website. Tested on the test VPS (OpenPlex 0.33.0) with a fake licence server: 7.0 MB → 1.0 MB,
   owner and mode kept, restore byte-exact; a 12 MP photo was OOM-killed at 512 MB until the resize streamed rows
   and Go's heap followed the cgroup limit. 3 screenshots; removed from the VPS afterwards.
+- 2026-11-24 — OpenPlex for Blesta 1.0.1 released (`avakiam/openplex-blesta`): tested end to end in a real
+  Blesta 6.0.5 (development licence, local Docker) against OpenPlex 0.34.0 through Blesta's own models — add,
+  suspend, unsuspend, change package, change password, single sign-on from the client area, cancel — and in its
+  admin and client pages; the module log holds no API key, password or sign-in link. Fixed: deleting a server or
+  server group did nothing in Blesta 6 (inline jQuery ran before Blesta 6 loads it). `tests/lifecycle-blesta.php`
+  keeps that test. Next: the Blesta Marketplace listing, from Avakiam's Blesta account.
