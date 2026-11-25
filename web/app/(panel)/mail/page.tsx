@@ -42,7 +42,8 @@ function SettingsCard({ st }: { st: MailStatus }) {
             <span className="block font-medium">{t("Webmail (Roundcube)")}</span>
             <span className="text-sm text-muted-foreground">
               {t("Read and send mail from the browser at the mail host and at webmail.<domain> for domains whose DNS is here.")}{" "}
-              {t("Off: no web login page to attack; mailboxes keep working in e-mail apps (IMAP and SMTP).")}
+              {t("Off: no web login page to attack; mailboxes keep working in e-mail apps (IMAP and SMTP).")}{" "}
+              {t("With it on, each domain can still turn it off in its Mail tab.")}
             </span>
           </span>
         </label>

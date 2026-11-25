@@ -514,6 +514,10 @@ export interface DomainMail {
   hostname: string;
   server_enabled: boolean;
   webmail_url: string;
+  /** the server's webmail is on */
+  server_webmail: boolean;
+  /** this domain's mailboxes may use it */
+  webmail: boolean;
   max_mailboxes: number;
   mailboxes: Mailbox[];
   aliases: MailAlias[];

@@ -9,6 +9,9 @@
  *   master user that only works from the webmail container's network.
  * - Captcha on the login form (Cloudflare Turnstile, hCaptcha or Google
  *   reCAPTCHA v2), verified server-side before the password is checked.
+ * - Webmail per domain: mailboxes of the domains listed in
+ *   openplex_webmail_off cannot sign in, and their open sessions end on
+ *   their next request (their e-mail apps keep working).
  */
 class openplex extends rcube_plugin
 {
@@ -53,7 +56,21 @@ class openplex extends rcube_plugin
         if ($args['task'] == 'login' && isset($_GET['_opx'])) {
             $args['action'] = 'login';
         }
+        $rcmail = rcmail::get_instance();
+        if (!empty($_SESSION['user_id']) && $this->webmail_off((string) $rcmail->get_user_name())) {
+            $rcmail->kill_session();
+            $args['task'] = 'login';
+            $args['action'] = '';
+        }
         return $args;
+    }
+
+    /** whether the mailbox's domain has the webmail turned off in the panel */
+    private function webmail_off($user)
+    {
+        $off = rcmail::get_instance()->config->get('openplex_webmail_off');
+        $at = strrpos($user, '@');
+        return is_array($off) && $at !== false && in_array(strtolower(substr($user, $at + 1)), $off, true);
     }
 
     public function authenticate($args)
@@ -66,6 +83,11 @@ class openplex extends rcube_plugin
                 $args['error'] = $this->text('expired', 'This webmail link has expired. Open the webmail again from the panel.');
                 return $args;
             }
+            if ($this->webmail_off($user)) {
+                $args['abort'] = true;
+                $args['error'] = $this->text('off', 'The webmail is not available for this domain. Use your e-mail app.');
+                return $args;
+            }
             $rcmail->kill_session(); // another mailbox may be signed in
             $this->ticket = true;
             $args['user'] = $user;
@@ -76,6 +98,11 @@ class openplex extends rcube_plugin
         }
         // A password login never inherits a panel login's master session.
         unset($_SESSION['openplex_ticket']);
+        if ($this->webmail_off((string) $args['user'])) {
+            $args['abort'] = true;
+            $args['error'] = $this->text('off', 'The webmail is not available for this domain. Use your e-mail app.');
+            return $args;
+        }
         $captcha = $this->captcha();
         if ($captcha !== null && !$this->verify_captcha($captcha)) {
             $args['abort'] = true;

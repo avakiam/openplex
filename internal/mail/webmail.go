@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"openplex.dev/openplex/internal/captcha"
+	"openplex.dev/openplex/internal/dns"
 )
 
 //go:embed all:webmail
@@ -101,8 +102,9 @@ func phpStr(s string) string {
 }
 
 // webmailConfig renders the PHP file Roundcube includes after its own
-// configuration. Values are re-validated: they end up in PHP source.
-func webmailConfig(k *webmailKeys, mailNet, edgeNet string, c *WebmailCaptcha) ([]byte, error) {
+// configuration. Values are re-validated: they end up in PHP source. off
+// lists the mail domains whose mailboxes may not sign in.
+func webmailConfig(k *webmailKeys, mailNet, edgeNet string, c *WebmailCaptcha, off []string) ([]byte, error) {
 	if !safeNet.MatchString(mailNet) || !safeNet.MatchString(edgeNet) {
 		return nil, fmt.Errorf("invalid network ranges %q, %q", mailNet, edgeNet)
 	}
@@ -120,6 +122,14 @@ func webmailConfig(k *webmailKeys, mailNet, edgeNet string, c *WebmailCaptcha) (
 	fmt.Fprintf(&b, "$config['openplex_sso_key'] = %s;\n", phpStr(k.SSOKey))
 	fmt.Fprintf(&b, "$config['openplex_master'] = %s;\n", phpStr(MasterUser))
 	fmt.Fprintf(&b, "$config['openplex_master_password'] = %s;\n", phpStr(k.MasterPassword))
+	quoted := make([]string, 0, len(off))
+	for _, d := range off {
+		if d = strings.ToLower(d); !dns.ValidHost(d) {
+			return nil, fmt.Errorf("invalid mail domain %q", d)
+		}
+		quoted = append(quoted, phpStr(d))
+	}
+	fmt.Fprintf(&b, "$config['openplex_webmail_off'] = [%s];\n", strings.Join(quoted, ", "))
 	if c != nil {
 		if _, ok := captcha.Providers[c.Provider]; !ok || !captcha.ValidKey(c.SiteKey) || !captcha.ValidKey(c.Secret) {
 			return nil, errors.New("invalid captcha settings")

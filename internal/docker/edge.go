@@ -91,6 +91,9 @@ func (o *Orchestrator) BuildEdgeConfig(ctx context.Context) (ssl.Config, error) 
 				return ssl.Config{}, err
 			}
 			for _, md := range mds {
+				if !md.Webmail {
+					continue
+				}
 				if h := "webmail." + md.Name; names[h] && !taken[h] && h != ms.Hostname && h != o.cfg.PanelDomain {
 					cfg.WebmailHosts = append(cfg.WebmailHosts, h)
 				}

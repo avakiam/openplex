@@ -748,10 +748,25 @@ func TestMail(t *testing.T) {
 		{"delete mailbox", carla, "DELETE", base + "/mailboxes/" + itoa(mb.ID), nil, 204},
 		{"disable", carla, "DELETE", base, nil, 204},
 	}
+	var view struct {
+		Webmail bool `json:"webmail"`
+	}
+	if c := h.do("PATCH", base, dani, map[string]any{"webmail": false}, nil); c != 404 {
+		t.Errorf("foreign webmail switch: %d", c)
+	}
+	if c := h.do("PATCH", base, carla, map[string]any{"webmail": false}, &view); c != 200 || view.Webmail {
+		t.Errorf("webmail off: %d %+v", c, view)
+	}
+	if c := h.do("GET", base, carla, nil, &view); c != 200 || view.Webmail {
+		t.Errorf("webmail still on: %d %+v", c, view)
+	}
 	for _, c := range cases {
 		if got := h.do(c.method, c.path, c.token, c.body, nil); got != c.want {
 			t.Errorf("%s: got %d, want %d", c.name, got, c.want)
 		}
+	}
+	if c := h.do("PATCH", base, carla, map[string]any{"webmail": true}, nil); c != 409 {
+		t.Errorf("webmail switch with mail off: %d", c)
 	}
 }
 

@@ -512,6 +512,8 @@ UPDATE alert_settings SET events = events || ',database_full' WHERE ',' || event
 	updated_at      TIMESTAMP NOT NULL
 );
 CREATE INDEX sftp_accounts_domain ON sftp_accounts(domain_id);`,
+	// 28: webmail per mail domain (with the server's webmail on)
+	`ALTER TABLE mail_domains ADD COLUMN webmail INTEGER NOT NULL DEFAULT 1;`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

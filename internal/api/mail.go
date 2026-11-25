@@ -102,7 +102,7 @@ func (s *Server) handleGetDomainMail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out := map[string]any{"enabled": md != nil, "domain": d.Name, "hostname": st.Hostname, "server_enabled": st.Enabled,
-		"webmail_url":   mail.WebmailURL(st),
+		"webmail_url": mail.DomainWebmailURL(st, md), "server_webmail": st.Enabled && st.Webmail, "webmail": md != nil && md.Webmail,
 		"max_mailboxes": mail.MaxMailboxesPerDomain, "mailboxes": []mailboxView{}, "aliases": []*db.MailAlias{}}
 	if md != nil {
 		mbs, err := s.db.ListMailboxes(r.Context(), md.ID)
@@ -143,6 +143,33 @@ func (s *Server) handleEnableMail(w http.ResponseWriter, r *http.Request) {
 	s.applyEdgeAsync()
 	s.audit(r, "mail.enabled", d.Name, "")
 	writeJSON(w, http.StatusCreated, md)
+}
+
+// handleUpdateDomainMail changes a mail domain's settings: today, whether its
+// mailboxes may use the webmail.
+func (s *Server) handleUpdateDomainMail(w http.ResponseWriter, r *http.Request) {
+	d, md := s.requireMailDomain(w, r)
+	if md == nil {
+		return
+	}
+	var in struct {
+		Webmail *bool `json:"webmail"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if in.Webmail != nil && *in.Webmail != md.Webmail {
+		if err := s.mail.SetDomainWebmail(r.Context(), md, *in.Webmail); err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		action := "mail.webmail_off"
+		if md.Webmail {
+			action = "mail.webmail_on"
+		}
+		s.audit(r, action, d.Name, "")
+	}
+	s.handleGetDomainMail(w, r)
 }
 
 func (s *Server) handleDisableMail(w http.ResponseWriter, r *http.Request) {

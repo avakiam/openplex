@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -235,6 +236,33 @@ func TestManager(t *testing.T) {
 		t.Errorf("accounts file = %s", acc)
 	}
 
+	// Webmail off for this domain only: no sign-in, no webmail.<domain>.
+	if err := m.SetDomainWebmail(ctx, md, false); err != nil {
+		t.Fatal(err)
+	}
+	m.Sync(ctx)
+	conf, _ = os.ReadFile(filepath.Join(dir, "webmail", "config", "openplex.inc.php"))
+	if !strings.Contains(string(conf), "$config['openplex_webmail_off'] = ['example.com'];") || !srv.webmail {
+		t.Errorf("domain webmail off: running=%v config=%s", srv.webmail, conf)
+	}
+	if _, err := m.WebmailLogin(ctx, "info@example.com"); err == nil {
+		t.Error("webmail link for a domain without webmail")
+	}
+	recs, _ = store.ListDNSRecords(ctx, z.ID)
+	if slices.ContainsFunc(recs, func(r db.DNSRecord) bool { return r.Name == "webmail" }) {
+		t.Error("webmail record kept for a domain without webmail")
+	}
+	if err := m.SetDomainWebmail(ctx, md, true); err != nil {
+		t.Fatal(err)
+	}
+	recs, _ = store.ListDNSRecords(ctx, z.ID)
+	if !slices.ContainsFunc(recs, func(r db.DNSRecord) bool { return r.Name == "webmail" && r.Content == "mail.example.com" }) {
+		t.Error("webmail record not back")
+	}
+	if _, err := m.WebmailLogin(ctx, "info@example.com"); err != nil {
+		t.Errorf("webmail link after turning it back on: %v", err)
+	}
+
 	// A Caddy certificate replaces the temporary one.
 	cdir := filepath.Join(dir, "data", "caddy", "certificates", "acme-v02.api.letsencrypt.org-directory", "mail.example.com")
 	_ = os.MkdirAll(cdir, 0o755)
@@ -323,19 +351,23 @@ func TestTicket(t *testing.T) {
 
 func TestWebmailConfig(t *testing.T) {
 	k := &webmailKeys{DESKey: "x'y", SSOKey: "ab", MasterPassword: `p\w`, MasterHash: "h"}
-	c, err := webmailConfig(k, "172.30.0.0/16", "172.31.0.0/16", &WebmailCaptcha{Provider: "turnstile", SiteKey: "0x4AAAAAAAsite", Secret: "0x4AAAAAAAsecret"})
+	c, err := webmailConfig(k, "172.30.0.0/16", "172.31.0.0/16", &WebmailCaptcha{Provider: "turnstile", SiteKey: "0x4AAAAAAAsite", Secret: "0x4AAAAAAAsecret"}, []string{"Shop.example.com", "b.org"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`$config['des_key'] = 'x\'y';`, `$config['openplex_master_password'] = 'p\\w';`, `'provider' => 'turnstile'`} {
+	for _, want := range []string{`$config['des_key'] = 'x\'y';`, `$config['openplex_master_password'] = 'p\\w';`, `'provider' => 'turnstile'`,
+		`$config['openplex_webmail_off'] = ['shop.example.com', 'b.org'];`} {
 		if !strings.Contains(string(c), want) {
 			t.Errorf("config lacks %s:\n%s", want, c)
 		}
 	}
-	if _, err := webmailConfig(k, "172.30.0.0/16'];", "172.31.0.0/16", nil); err == nil {
+	if _, err := webmailConfig(k, "172.30.0.0/16'];", "172.31.0.0/16", nil, nil); err == nil {
 		t.Error("bad network accepted")
 	}
-	if _, err := webmailConfig(k, "172.30.0.0/16", "172.31.0.0/16", &WebmailCaptcha{Provider: "turnstile", SiteKey: "a'b", Secret: "0x4AAAAAAAsecret"}); err == nil {
+	if _, err := webmailConfig(k, "172.30.0.0/16", "172.31.0.0/16", &WebmailCaptcha{Provider: "turnstile", SiteKey: "a'b", Secret: "0x4AAAAAAAsecret"}, nil); err == nil {
 		t.Error("bad site key accepted")
+	}
+	if _, err := webmailConfig(k, "172.30.0.0/16", "172.31.0.0/16", nil, []string{"a.com'];"}); err == nil {
+		t.Error("bad domain name accepted")
 	}
 }

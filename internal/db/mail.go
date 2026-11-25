@@ -21,6 +21,7 @@ type MailDomain struct {
 	Name         string    `json:"name"` // joined from domains
 	DKIMSelector string    `json:"dkim_selector"`
 	DKIMKeyEnc   string    `json:"-"`
+	Webmail      bool      `json:"webmail"` // its mailboxes may use the webmail (when the server's is on)
 	CreatedAt    time.Time `json:"created_at"`
 }
 
@@ -66,11 +67,11 @@ func (db *DB) SaveMailSettings(ctx context.Context, s *MailSettings) error {
 	return err
 }
 
-const mailDomainSelect = `SELECT m.id, m.domain_id, d.name, m.dkim_selector, m.dkim_key_enc, m.created_at FROM mail_domains m JOIN domains d ON d.id = m.domain_id`
+const mailDomainSelect = `SELECT m.id, m.domain_id, d.name, m.dkim_selector, m.dkim_key_enc, m.webmail, m.created_at FROM mail_domains m JOIN domains d ON d.id = m.domain_id`
 
 func scanMailDomain(row interface{ Scan(...any) error }) (*MailDomain, error) {
 	var m MailDomain
-	if err := row.Scan(&m.ID, &m.DomainID, &m.Name, &m.DKIMSelector, &m.DKIMKeyEnc, &m.CreatedAt); err != nil {
+	if err := row.Scan(&m.ID, &m.DomainID, &m.Name, &m.DKIMSelector, &m.DKIMKeyEnc, &m.Webmail, &m.CreatedAt); err != nil {
 		return nil, mapErr(err)
 	}
 	return &m, nil
@@ -79,8 +80,8 @@ func scanMailDomain(row interface{ Scan(...any) error }) (*MailDomain, error) {
 // CreateMailDomain enables mail for a website.
 func (db *DB) CreateMailDomain(ctx context.Context, m *MailDomain) error {
 	m.CreatedAt = now()
-	res, err := db.sql.ExecContext(ctx, `INSERT INTO mail_domains (domain_id, dkim_selector, dkim_key_enc, created_at) VALUES (?,?,?,?)`,
-		m.DomainID, m.DKIMSelector, m.DKIMKeyEnc, m.CreatedAt)
+	res, err := db.sql.ExecContext(ctx, `INSERT INTO mail_domains (domain_id, dkim_selector, dkim_key_enc, webmail, created_at) VALUES (?,?,?,?,?)`,
+		m.DomainID, m.DKIMSelector, m.DKIMKeyEnc, m.Webmail, m.CreatedAt)
 	if err != nil {
 		return mapErr(err)
 	}
@@ -109,6 +110,15 @@ func (db *DB) ListMailDomains(ctx context.Context) ([]*MailDomain, error) {
 		out = append(out, m)
 	}
 	return out, rows.Err()
+}
+
+// SetMailDomainWebmail turns the webmail on or off for a mail domain.
+func (db *DB) SetMailDomainWebmail(ctx context.Context, id int64, on bool) error {
+	res, err := db.sql.ExecContext(ctx, `UPDATE mail_domains SET webmail = ? WHERE id = ?`, on, id)
+	if err != nil {
+		return err
+	}
+	return expectOne(res)
 }
 
 // DeleteMailDomain disables mail for a website (mailboxes and aliases go with it).

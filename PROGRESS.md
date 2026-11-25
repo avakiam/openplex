@@ -105,6 +105,10 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] Roundcube webmail (1.7.6, SQLite in a volume) behind the edge on the mail host and on webmail.<domain> (a CNAME
       added to zones hosted here); reaches Dovecot/Postfix over an internal Docker network; can be turned off (no
       web login page, no Dovecot master user, no webmail.<domain> record for new mail domains; IMAP/SMTP unchanged)
+- [x] Webmail per mail domain (migration v28), as in Plesk: with the server's webmail on, each domain's Mail tab can
+      turn it off; Roundcube's OpenPlex plugin refuses those mailboxes' sign-ins (password and one-click) and ends
+      their open sessions on the next request, the panel gives no webmail link, and webmail.<domain> leaves the
+      zone and the edge; IMAP/SMTP unchanged
 - [x] Mail domains (per website, alias or subdomain), mailboxes (SHA512-CRYPT, 10–128 chars, quota, enable/disable,
       password change), aliases/forwarding (to local or external addresses), usage from Dovecot, 200 each per domain;
       owners manage their own; deleting a mailbox, turning mail off or deleting the website removes the stored mail

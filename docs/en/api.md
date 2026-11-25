@@ -370,6 +370,7 @@ whole website), `read_only`, `enabled`, `expires_at` (RFC 3339, `""` = never). T
 |---|---|
 | `GET /domains/{id}/mail` | The domain's mail: mailboxes, aliases, DNS state |
 | `POST /domains/{id}/mail` | Turn mail on for the domain |
+| `PATCH /domains/{id}/mail` | Change its settings: `webmail` (`false` keeps its mailboxes out of the webmail; e-mail apps keep working) |
 | `DELETE /domains/{id}/mail` | Turn it off |
 | `POST /domains/{id}/mail/mailboxes` | Create a mailbox |
 | `PATCH /domains/{id}/mail/mailboxes/{mid}` | Change it (password, quota, forwarding, …) |

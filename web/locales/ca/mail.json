@@ -77,5 +77,9 @@
   "Open webmail": "Obrir el webmail",
   "Mail backups": "Còpies del correu",
   "Restore points of the messages in this domain's mailboxes, taken with the nightly backup.": "Punts de restauració dels missatges de les bústies d'aquest domini, presos amb la còpia nocturna.",
-  "Messages that are in the backup but missing now are put back. Nothing received since is removed and nothing is duplicated.": "Es recuperen els missatges que són a la còpia i ara falten. No s'esborra res del que s'ha rebut després ni es duplica res."
+  "Messages that are in the backup but missing now are put back. Nothing received since is removed and nothing is duplicated.": "Es recuperen els missatges que són a la còpia i ara falten. No s'esborra res del que s'ha rebut després ni es duplica res.",
+  "With it on, each domain can still turn it off in its Mail tab.": "Amb ell encès, cada domini el pot apagar a la seva pestanya Correu.",
+  "Webmail for this domain": "Webmail per a aquest domini",
+  "Off: this domain's mailboxes cannot sign in to the webmail and webmail.{domain} goes away; e-mail apps keep working.": "Apagat: les bústies d'aquest domini no poden entrar al webmail i webmail.{domain} desapareix; les aplicacions de correu continuen funcionant.",
+  "Webmail setting saved": "Configuració del webmail desada"
 }

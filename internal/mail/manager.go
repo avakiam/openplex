@@ -204,7 +204,11 @@ func (m *Manager) sync(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	conf, err := webmailConfig(keys, mailNet, edgeNet, wc)
+	off, err := m.webmailOff(ctx)
+	if err != nil {
+		return err
+	}
+	conf, err := webmailConfig(keys, mailNet, edgeNet, wc, off)
 	if err != nil {
 		return err
 	}
@@ -228,12 +232,36 @@ func (m *Manager) webmailCaptcha(ctx context.Context) (*WebmailCaptcha, error) {
 	return &WebmailCaptcha{Provider: c.Provider, SiteKey: c.SiteKey, Secret: secret}, nil
 }
 
+// webmailOff lists the mail domains whose mailboxes may not sign in to the webmail.
+func (m *Manager) webmailOff(ctx context.Context) ([]string, error) {
+	doms, err := m.db.ListMailDomains(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var off []string
+	for _, d := range doms {
+		if !d.Webmail {
+			off = append(off, d.Name)
+		}
+	}
+	return off, nil
+}
+
 // WebmailURL is where the webmail is served (the mail host), "" when off.
 func WebmailURL(s *db.MailSettings) string {
 	if !s.Enabled || !s.Webmail || s.Hostname == "" {
 		return ""
 	}
 	return "https://" + s.Hostname + "/"
+}
+
+// DomainWebmailURL is the webmail of a mail domain's mailboxes, "" when the
+// server's webmail or the domain's is off.
+func DomainWebmailURL(s *db.MailSettings, md *db.MailDomain) string {
+	if md == nil || !md.Webmail {
+		return ""
+	}
+	return WebmailURL(s)
 }
 
 // WebmailLogin returns a one-click login link for a mailbox address.
@@ -245,6 +273,14 @@ func (m *Manager) WebmailLogin(ctx context.Context, address string) (string, err
 	base := WebmailURL(s)
 	if base == "" {
 		return "", errors.New("the webmail is off")
+	}
+	_, domain, _ := strings.Cut(address, "@")
+	doms, err := m.db.ListMailDomains(ctx)
+	if err != nil {
+		return "", err
+	}
+	if i := slices.IndexFunc(doms, func(d *db.MailDomain) bool { return strings.EqualFold(d.Name, domain) }); i < 0 || !doms[i].Webmail {
+		return "", errors.New("the webmail is off for this domain")
 	}
 	keys, err := loadKeys(filepath.Join(m.webDir, "keys.json"))
 	if err != nil {
@@ -448,6 +484,9 @@ func (m *Manager) addWebmailRecords(ctx context.Context, host string) error {
 		return err
 	}
 	for _, d := range doms {
+		if !d.Webmail {
+			continue
+		}
 		z, err := m.dns.ZoneFor(ctx, d.Name)
 		if err != nil || z == nil {
 			continue
@@ -471,6 +510,50 @@ func (m *Manager) addWebmailRecords(ctx context.Context, host string) error {
 	return nil
 }
 
+// SetDomainWebmail turns the webmail on or off for a mail domain's mailboxes:
+// Roundcube refuses their sign-ins (open sessions end on their next request),
+// and webmail.<domain> leaves the zone and the edge. IMAP and SMTP are unchanged.
+func (m *Manager) SetDomainWebmail(ctx context.Context, md *db.MailDomain, on bool) error {
+	if err := m.db.SetMailDomainWebmail(ctx, md.ID, on); err != nil {
+		return err
+	}
+	md.Webmail = on
+	s, err := m.db.GetMailSettings(ctx)
+	if err != nil {
+		return err
+	}
+	if on && s.Webmail {
+		if err := m.addWebmailRecords(ctx, s.Hostname); err != nil {
+			m.log.Warn("mail: webmail records", "err", err)
+		}
+	}
+	if !on && m.dns != nil {
+		if z, err := m.dns.ZoneFor(ctx, md.Name); err == nil && z != nil {
+			prefix := strings.TrimSuffix(strings.TrimSuffix(md.Name, z.Name), ".")
+			name := WebmailRecord(prefix, "", md.DomainID).Name
+			recs, err := m.db.ListDNSRecords(ctx, z.ID)
+			if err != nil {
+				return err
+			}
+			for _, r := range recs {
+				if r.Source == Source(md.DomainID) && r.Type == "CNAME" && r.Name == name {
+					if err := m.db.DeleteDNSRecord(ctx, r.ID); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	m.Changed()
+	if m.dns != nil {
+		m.dns.Changed()
+	}
+	if m.edge != nil {
+		m.edge()
+	}
+	return nil
+}
+
 // EnableDomain starts receiving mail for a website: DKIM key + DNS records.
 func (m *Manager) EnableDomain(ctx context.Context, d *db.Domain) (*db.MailDomain, error) {
 	key, err := NewDKIMKey()
@@ -481,7 +564,7 @@ func (m *Manager) EnableDomain(ctx context.Context, d *db.Domain) (*db.MailDomai
 	if err != nil {
 		return nil, err
 	}
-	md := &db.MailDomain{DomainID: d.ID, Name: d.Name, DKIMSelector: DKIMSelector, DKIMKeyEnc: enc}
+	md := &db.MailDomain{DomainID: d.ID, Name: d.Name, DKIMSelector: DKIMSelector, DKIMKeyEnc: enc, Webmail: true}
 	if err := m.db.CreateMailDomain(ctx, md); err != nil {
 		return nil, err
 	}

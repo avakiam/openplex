@@ -220,6 +220,7 @@ func (s *Server) routes() http.Handler {
 				r.Delete("/dns/records/{rid}", s.handleDeleteRecord)
 				r.Get("/mail", s.handleGetDomainMail)
 				r.Post("/mail", s.handleEnableMail)
+				r.Patch("/mail", s.handleUpdateDomainMail)
 				r.Delete("/mail", s.handleDisableMail)
 				r.Post("/mail/mailboxes", s.handleCreateMailbox)
 				r.Patch("/mail/mailboxes/{mid}", s.handleUpdateMailbox)

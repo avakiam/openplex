@@ -196,6 +196,7 @@ export function MailTab({ domain: d }: { domain: Domain }) {
   const enable = useAction(() => api.post(`/domains/${d.id}/mail`), { success: t("Mail enabled"), ...inv });
   const disable = useAction(() => api.del(`/domains/${d.id}/mail`), { success: t("Mail disabled"), ...inv, onSuccess: () => setDisabling(false) });
   const toggle = useAction((b: Mailbox) => api.patch(`/domains/${d.id}/mail/mailboxes/${b.id}`, { enabled: !b.enabled }), inv);
+  const setWebmail = useAction((on: boolean) => api.patch(`/domains/${d.id}/mail`, { webmail: on }), { success: t("Webmail setting saved"), ...inv });
   const removeBox = useAction((b: Mailbox) => api.del(`/domains/${d.id}/mail/mailboxes/${b.id}`), {
     success: t("Mailbox deleted"),
     ...inv,
@@ -396,6 +397,23 @@ export function MailTab({ domain: d }: { domain: Domain }) {
               </>
             )}
           </dl>
+          {data.server_webmail && (
+            <label className="mt-4 flex items-start gap-3 border-t pt-4">
+              <Switch
+                checked={data.webmail}
+                disabled={setWebmail.isPending}
+                onCheckedChange={(v) => setWebmail.mutate(v)}
+                className="mt-0.5"
+                aria-label={t("Webmail for this domain")}
+              />
+              <span>
+                <span className="block text-sm font-medium">{t("Webmail for this domain")}</span>
+                <span className="text-sm text-muted-foreground">
+                  {t("Off: this domain's mailboxes cannot sign in to the webmail and webmail.{domain} goes away; e-mail apps keep working.", { domain: d.name })}
+                </span>
+              </span>
+            </label>
+          )}
         </CardBody>
       </Card>
 
