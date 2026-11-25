@@ -719,3 +719,7 @@ has been verified on the Linux test server. One commit per milestone.
   zone in Cloudflare: the overview shows "Synced with avakiam.com" and the parent's status instead of "Not in
   Cloudflare", and export, import and auto-sync refuse to create a sub-zone for them. Checked in production:
   avakiam.com and openplex.dev synced right after the update.
+- 2026-11-25 — Released v0.35.0 (signed with avakiam-release-2026): SFTP accounts per website, static sites get
+  their configured memory limit (was a fixed 128 MB), no webmail.<domain> record for new mail domains while the
+  webmail is off. CI and the Release workflow green; the published release has both binaries, install.sh,
+  SHA256SUMS and its signature. Not yet installed on panel.avakiam.com.
