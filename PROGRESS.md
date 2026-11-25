@@ -702,3 +702,13 @@ has been verified on the Linux test server. One commit per milestone.
 - 2026-11-24 — OpenPlex for Blesta listed on the Blesta Marketplace (free, Modules, author "OpenPlex"):
   https://marketplace.blesta.com/extension/464 — version 1.0.1 downloading the GitHub release, five screenshots
   from a real Blesta 6.0.5. The listing's texts live in `openplex-blesta/marketplace/LISTING.md`.
+- 2026-11-25 — Cloudflare 1.1.3 published and installed on panel.avakiam.com (OpenPlex 0.34.0), updated from
+  1.1.2 with the token and auto-sync kept. Fixed: the first import, export or auto-sync of a zone already in
+  Cloudflare panicked on a nil proxy map (`Store.Update`), which the panel showed as "The extension did not
+  answer." — the changes were applied but state.json and the activity log were never written, so auto-sync never
+  stayed on; a saved API token waited for the `settings.changed` event, so a lost or late one kept the old token
+  until a restart (pages, actions and auto-sync now read the settings first); websites and aliases under another
+  domain (fundaciotresc.avakiam.com, www.avakiam.com) have a zone of their own in OpenPlex but live in the parent's
+  zone in Cloudflare: the overview shows "Synced with avakiam.com" and the parent's status instead of "Not in
+  Cloudflare", and export, import and auto-sync refuse to create a sub-zone for them. Checked in production:
+  avakiam.com and openplex.dev synced right after the update.
