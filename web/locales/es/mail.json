@@ -81,5 +81,6 @@
   "With it on, each domain can still turn it off in its Mail tab.": "Con él encendido, cada dominio puede apagarlo en su pestaña Correo.",
   "Webmail for this domain": "Webmail para este dominio",
   "Off: this domain's mailboxes cannot sign in to the webmail and webmail.{domain} goes away; e-mail apps keep working.": "Apagado: los buzones de este dominio no pueden entrar en el webmail y webmail.{domain} desaparece; las aplicaciones de correo siguen funcionando.",
-  "Webmail setting saved": "Ajuste del webmail guardado"
+  "Webmail setting saved": "Ajuste del webmail guardado",
+  "The webmail is off for the whole server (Mail page), so no domain has it. Once it is turned on there, it can be turned off here for this domain alone.": "El webmail está desactivado para todo el servidor (página Correo), así que ningún dominio lo tiene. Cuando se active allí, aquí se podrá desactivar solo para este dominio."
 }

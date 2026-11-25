@@ -397,23 +397,23 @@ export function MailTab({ domain: d }: { domain: Domain }) {
               </>
             )}
           </dl>
-          {data.server_webmail && (
-            <label className="mt-4 flex items-start gap-3 border-t pt-4">
-              <Switch
-                checked={data.webmail}
-                disabled={setWebmail.isPending}
-                onCheckedChange={(v) => setWebmail.mutate(v)}
-                className="mt-0.5"
-                aria-label={t("Webmail for this domain")}
-              />
-              <span>
-                <span className="block text-sm font-medium">{t("Webmail for this domain")}</span>
-                <span className="text-sm text-muted-foreground">
-                  {t("Off: this domain's mailboxes cannot sign in to the webmail and webmail.{domain} goes away; e-mail apps keep working.", { domain: d.name })}
-                </span>
+          <label className={`mt-4 flex items-start gap-3 border-t pt-4 ${data.server_webmail ? "" : "opacity-60"}`}>
+            <Switch
+              checked={data.server_webmail && data.webmail}
+              disabled={!data.server_webmail || setWebmail.isPending}
+              onCheckedChange={(v) => setWebmail.mutate(v)}
+              className="mt-0.5"
+              aria-label={t("Webmail for this domain")}
+            />
+            <span>
+              <span className="block text-sm font-medium">{t("Webmail for this domain")}</span>
+              <span className="text-sm text-muted-foreground">
+                {data.server_webmail
+                  ? t("Off: this domain's mailboxes cannot sign in to the webmail and webmail.{domain} goes away; e-mail apps keep working.", { domain: d.name })
+                  : t("The webmail is off for the whole server (Mail page), so no domain has it. Once it is turned on there, it can be turned off here for this domain alone.")}
               </span>
-            </label>
-          )}
+            </span>
+          </label>
         </CardBody>
       </Card>
 

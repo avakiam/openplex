@@ -111,7 +111,8 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] Webmail per mail domain (migration v28), as in Plesk: with the server's webmail on, each domain's Mail tab can
       turn it off; Roundcube's OpenPlex plugin refuses those mailboxes' sign-ins (password and one-click) and ends
       their open sessions on the next request, the panel gives no webmail link, and webmail.<domain> leaves the
-      zone and the edge; IMAP/SMTP unchanged
+      zone and the edge; IMAP/SMTP unchanged. While the server's webmail is off the switch stays visible, greyed
+      out, saying why
 - [x] Mail domains (per website, alias or subdomain), mailboxes (SHA512-CRYPT, 10–128 chars, quota, enable/disable,
       password change), aliases/forwarding (to local or external addresses), usage from Dovecot, 200 each per domain;
       owners manage their own; deleting a mailbox, turning mail off or deleting the website removes the stored mail
@@ -744,3 +745,7 @@ has been verified on the Linux test server. One commit per milestone.
   production: clinicadentaljesusbalbin.avakiam.com gave Cloudflare 525 (no certificate) because an AAAA record
   pointed at the VPS's unrouted IPv6; with the AAAA and the DNS settings' IPv6 removed, an edge reload made Caddy
   retry and Let's Encrypt issued it.
+- 2026-11-25 — Released v0.36.1 (signed with avakiam-release-2026): the IPv6 check also tests that the websites
+  answer on the address (ports 443 and 80); README and docs in en/es/ca cover webmail per server/domain, SFTP
+  accounts per website, certificate status and its alert, and when AAAA records are made. panel.avakiam.com was on
+  0.36.0 at release time: all 8 HTTPS websites showed valid certificates.

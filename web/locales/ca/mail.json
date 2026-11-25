@@ -81,5 +81,6 @@
   "With it on, each domain can still turn it off in its Mail tab.": "Amb ell encès, cada domini el pot apagar a la seva pestanya Correu.",
   "Webmail for this domain": "Webmail per a aquest domini",
   "Off: this domain's mailboxes cannot sign in to the webmail and webmail.{domain} goes away; e-mail apps keep working.": "Apagat: les bústies d'aquest domini no poden entrar al webmail i webmail.{domain} desapareix; les aplicacions de correu continuen funcionant.",
-  "Webmail setting saved": "Configuració del webmail desada"
+  "Webmail setting saved": "Configuració del webmail desada",
+  "The webmail is off for the whole server (Mail page), so no domain has it. Once it is turned on there, it can be turned off here for this domain alone.": "El webmail està desactivat per a tot el servidor (pàgina Correu), així que cap domini no el té. Quan s'activi allà, aquí es podrà desactivar només per a aquest domini."
 }
