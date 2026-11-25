@@ -186,6 +186,7 @@ func (s *Server) routes() http.Handler {
 					r.Post("/actions/"+a, s.handleDomainAction)
 				}
 				r.Get("/stats", s.handleDomainStats)
+				r.Get("/certificate", s.handleGetCertificate)
 				r.Get("/php", s.handleGetPHPSettings)
 				r.Put("/php", s.handlePutPHPSettings)
 				r.Get("/app", s.handleGetSiteApp)
@@ -298,6 +299,7 @@ func (s *Server) routes() http.Handler {
 				r.Get("/fail2ban", s.handleGetFail2Ban)
 				r.Get("/dns", s.handleGetDNS)
 				r.Put("/dns/settings", s.handlePutDNSSettings)
+				r.Post("/dns/check-ipv6", s.handleCheckIPv6)
 				r.Get("/mail", s.handleGetMail)
 				r.Put("/mail/settings", s.handlePutMailSettings)
 				r.Get("/captcha", s.handleGetCaptcha)

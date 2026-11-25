@@ -279,6 +279,7 @@ Admins manage every account, resellers their own customers.
 | `POST /domains/{id}/actions/stop` | Stop it |
 | `POST /domains/{id}/actions/restart` | Restart it |
 | `GET /domains/{id}/stats` | CPU, memory and traffic |
+| `GET /domains/{id}/certificate` | Its HTTPS certificate and its aliases': `issued`, `expiring`, `pending` (being requested) or `missing` (none 30 minutes after the name was added) |
 | `GET /domains/{id}/php` | PHP settings |
 | `PUT /domains/{id}/php` | Change them |
 | `GET /domains/{id}/logs/ws` | Live access and error logs (WebSocket) |
@@ -470,5 +471,6 @@ whole website), `read_only`, `enabled`, `expires_at` (RFC 3339, `""` = never). T
 |---|---|
 | `GET /dns` | The DNS server: state and name servers |
 | `PUT /dns/settings` | Change its settings |
+| `POST /dns/check-ipv6` | Test whether an IPv6 address of this server (`address`, or the first one found) reaches the internet |
 | `GET /mail` | The mail server: state and host name |
 | `PUT /mail/settings` | Change its settings |

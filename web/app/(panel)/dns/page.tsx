@@ -8,7 +8,7 @@ import { Badge, Button, Card, CardBody, CardHeader, Empty, ErrorBox, Field, Inpu
 import { api } from "@/lib/api";
 import { keys, useAction, useDNS } from "@/lib/hooks";
 import { tServer, useT } from "@/lib/i18n";
-import type { DNSSettings, DNSStatus } from "@/lib/types";
+import type { DNSSettings, DNSStatus, IPv6Check } from "@/lib/types";
 import { ago } from "@/lib/utils";
 
 function SettingsCard({ st }: { st: DNSStatus }) {
@@ -19,6 +19,15 @@ function SettingsCard({ st }: { st: DNSStatus }) {
   useEffect(() => setF(pick(st)), [key]); // eslint-disable-line react-hooks/exhaustive-deps
   const set = <K extends keyof DNSSettings>(k: K, v: DNSSettings[K]) => setF((s) => ({ ...s, [k]: v }));
   const save = useAction(() => api.put("/dns/settings", f), { success: t("DNS settings saved"), invalidate: [keys.dns] });
+  const [v6, setV6] = useState<IPv6Check | null>(null);
+  const check = useAction(() => api.post<IPv6Check>("/dns/check-ipv6", { address: f.ipv6.trim() }), { onSuccess: setV6 });
+  const v6Hint = !v6
+    ? t("Leave it empty unless the server answers on IPv6: every new website gets an AAAA record pointing here.")
+    : !v6.address
+      ? t("This server has no public IPv6 address.")
+      : v6.works
+        ? t("{address} reaches the internet.", { address: v6.address })
+        : t("{address} does not reach the internet: leave the field empty until the server's IPv6 works, or new websites get an AAAA record that breaks HTTPS and their certificates.", { address: v6.address });
   return (
     <Card>
       <CardHeader title={t("DNS server")} description={t("Answers for the domains of this panel on port 53 (PowerDNS).")} />
@@ -46,8 +55,22 @@ function SettingsCard({ st }: { st: DNSStatus }) {
           <Field label={t("Server IPv4 address")} hint={t("New websites point here. Changing it also moves the records that use the old address.")}>
             <Input className="font-mono" placeholder="203.0.113.10" value={f.ipv4} onChange={(e) => set("ipv4", e.target.value)} />
           </Field>
-          <Field label={t("Server IPv6 address (optional)")}>
-            <Input className="font-mono" placeholder="2001:db8::10" value={f.ipv6} onChange={(e) => set("ipv6", e.target.value)} />
+          <Field label={t("Server IPv6 address (optional)")} hint={<span className={v6 && v6.address && !v6.works ? "text-destructive" : undefined}>{v6Hint}</span>}>
+            <div className="flex gap-2">
+              <Input
+                className="font-mono"
+                placeholder="2001:db8::10"
+                aria-label={t("Server IPv6 address (optional)")}
+                value={f.ipv6}
+                onChange={(e) => {
+                  set("ipv6", e.target.value);
+                  setV6(null);
+                }}
+              />
+              <Button type="button" variant="outline" loading={check.isPending} onClick={() => check.mutate(undefined)}>
+                {t("Check")}
+              </Button>
+            </div>
           </Field>
           <Field
             label={t("Hostmaster e-mail (optional)")}

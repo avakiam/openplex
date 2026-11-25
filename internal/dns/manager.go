@@ -60,6 +60,7 @@ type Manager struct {
 	deleg    map[string]Delegation
 	lookupNS func(ctx context.Context, name string) ([]*net.NS, error)
 	addrs    func() []netip.Addr
+	probe6   func(ctx context.Context, src netip.Addr) error
 }
 
 // New creates a Manager; srv may be nil.
@@ -67,7 +68,7 @@ func New(store *db.DB, srv Server, dataDir, apiURL string, log *slog.Logger) *Ma
 	return &Manager{
 		db: store, srv: srv, log: log, dataDir: dataDir, apiURL: apiURL,
 		kick: make(chan struct{}, 1), deleg: map[string]Delegation{},
-		lookupNS: parentNS, addrs: hostAddrs,
+		lookupNS: parentNS, addrs: hostAddrs, probe6: probeIPv6,
 	}
 }
 
@@ -116,6 +117,14 @@ func (m *Manager) initSettings(ctx context.Context) error {
 		return err
 	}
 	s.IPv4, s.IPv6 = defaultAddrs(m.addrs())
+	if s.IPv6 != "" {
+		// An address on the interface may have no route yet: AAAA records
+		// pointing at it would break HTTPS and certificates for every site.
+		if err := m.probe6(ctx, netip.MustParseAddr(s.IPv6)); err != nil {
+			m.log.Warn("dns: IPv6 address does not reach the internet; not used for records", "addr", s.IPv6, "err", err)
+			s.IPv6 = ""
+		}
+	}
 	return m.db.SaveDNSSettings(ctx, s)
 }
 

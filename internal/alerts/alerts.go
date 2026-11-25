@@ -8,14 +8,9 @@ package alerts
 
 import (
 	"context"
-	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/fs"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -24,6 +19,7 @@ import (
 
 	"openplex.dev/openplex/internal/db"
 	"openplex.dev/openplex/internal/secrets"
+	"openplex.dev/openplex/internal/ssl"
 	"openplex.dev/openplex/internal/update"
 )
 
@@ -60,10 +56,11 @@ type Manager struct {
 	o       Options
 	mu      sync.Mutex
 	pending map[string]time.Time // website down since (not yet long enough to alert)
+	now     func() time.Time     // the clock of the certificate checks
 }
 
 // New returns a manager.
-func New(o Options) *Manager { return &Manager{o: o, pending: map[string]time.Time{}} }
+func New(o Options) *Manager { return &Manager{o: o, pending: map[string]time.Time{}, now: time.Now} }
 
 // Run checks every minute until ctx ends.
 func (m *Manager) Run(ctx context.Context) {
@@ -389,44 +386,19 @@ func (m *Manager) checkDisk(ctx context.Context, s *db.AlertSettings) error {
 }
 
 // checkCerts reports certificates of names still served that are close to
-// expiring: Caddy renews when a third of the lifetime is left, so one with
-// less than a sixth left has failed to renew for a while.
+// expiring (Caddy renews when a third of the lifetime is left, so one with
+// less than a sixth left has failed to renew for a while), and websites with
+// HTTPS on that still have no certificate ssl.IssueGrace after being added.
 func (m *Manager) checkCerts(ctx context.Context, s *db.AlertSettings) error {
 	served, err := m.servedHosts(ctx)
 	if err != nil {
 		return err
 	}
-	now := time.Now()
-	newest := map[string]*x509.Certificate{} // a renewed name may keep an older file from another issuer
-	_ = filepath.WalkDir(m.o.CertDir, func(p string, e fs.DirEntry, err error) error {
-		if err != nil || e.IsDir() || !strings.HasSuffix(p, ".crt") {
-			return nil
-		}
-		b, err := os.ReadFile(p)
-		if err != nil {
-			return nil
-		}
-		blk, _ := pem.Decode(b)
-		if blk == nil {
-			return nil
-		}
-		c, err := x509.ParseCertificate(blk.Bytes)
-		if err != nil {
-			return nil
-		}
-		host := strings.TrimSuffix(filepath.Base(p), ".crt")
-		if !served[host] {
-			return nil
-		}
-		if old := newest[host]; old == nil || c.NotAfter.After(old.NotAfter) {
-			newest[host] = c
-		}
-		return nil
-	})
+	now := m.now()
+	newest := ssl.Certificates(m.o.CertDir)
 	active := map[string]bool{}
 	for host, c := range newest {
-		life := c.NotAfter.Sub(c.NotBefore)
-		if c.NotAfter.Sub(now) >= life/6 {
+		if !served[host] || ssl.StateOf(newest, host, c.NotBefore, now).State != "expiring" {
 			continue
 		}
 		key := "cert:" + host
@@ -436,13 +408,34 @@ func (m *Manager) checkCerts(ctx context.Context, s *db.AlertSettings) error {
 			return err
 		}
 	}
+	ds, err := m.o.DB.ListDomains(ctx, db.DomainFilter{})
+	if err != nil {
+		return err
+	}
+	for _, d := range ds {
+		if !d.SSLEnabled || d.Status == db.StatusDisabled || ssl.StateOf(newest, d.Name, d.CreatedAt, now).State != "missing" {
+			continue
+		}
+		key := "certmissing:" + d.Name
+		active[key] = true
+		v := map[string]string{"host": d.Name}
+		if err := m.firing(ctx, s, key, KindCertExpiring, text(s.Language, "cert_missing.subject", v), text(s.Language, "cert_missing.body", v)); err != nil {
+			return err
+		}
+	}
 	return m.resolveMissing(ctx, s, KindCertExpiring, active, func(a *db.Alert) (string, string) {
-		host := strings.TrimPrefix(a.Key, "cert:")
+		host, missing := strings.CutPrefix(a.Key, "certmissing:")
+		if !missing {
+			host = strings.TrimPrefix(a.Key, "cert:")
+		}
 		c := newest[host]
 		if c == nil {
 			return "", "" // the name is not served any more: nothing to report
 		}
 		v := map[string]string{"host": host, "date": c.NotAfter.UTC().Format("2006-01-02")}
+		if missing {
+			return text(s.Language, "cert_missing.resolved", v), text(s.Language, "cert_missing.resolved_body", v)
+		}
 		return text(s.Language, "cert_expiring.resolved", v), text(s.Language, "cert_expiring.resolved_body", v)
 	})
 }

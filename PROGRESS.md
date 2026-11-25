@@ -45,6 +45,9 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] Caddy edge container (80/443/443udp, admin API on 127.0.0.1:2019)
 - [x] Caddyfile rendering: vhosts, aliases, redirects, force-HTTPS, PHP FastCGI, reverse proxy, static
 - [x] Live config reload via Caddy admin API
+- [x] Certificate status per website (`GET /domains/{id}/certificate`, read from Caddy's storage): the Overview shows
+      the main name, www and aliases as valid until a date, expiring and not renewed, being requested (refreshed
+      every 30 s) or not issued, with the usual causes
 - [x] Site runtimes: static, PHP 7.4/8.1/8.2/8.3/8.4-FPM, Node.js, Python, Go
 - [x] Per-site CPU/memory limits, env vars, restart policy, hardening (static sites' file server included; it
       had a fixed 128 MB ceiling before)
@@ -136,6 +139,10 @@ has been verified on the Linux test server. One commit per milestone.
       DNS tab per website, admin DNS page with nameservers, registrar/glue instructions and a delegation check asked
       of the parent zone's servers (not the caching system resolver); a zone's www record makes the edge serve
       www.<domain> as a 308 redirect to the main name with its own certificate
+- [x] IPv6 is only taken as the DNS default when it works: the detected address must reach a public IPv6
+      service (TCP to Cloudflare's/Google's resolvers) or it is left empty, so new websites get no AAAA record
+      pointing at an unrouted address (it broke HTTPS behind Cloudflare and certificate issuance); the DNS settings
+      have a "Check" button for the IPv6 address (`POST /dns/check-ipv6`)
 
 ## M10 — Security & cron
 - [x] Firewall rules (nftables) CRUD + apply with safety rollback — implemented: own table `inet openplex` replaced
@@ -328,7 +335,8 @@ has been verified on the Linux test server. One commit per milestone.
       `docs/*/websites.md` (sites, applications, PHP settings, SFTP)
 - [x] E-mail alerts (`internal/alerts`, v0.21.0, migration v18): failed backup, website down (>= 2 min in error),
       data disk >= 90 % (clears < 85 %), certificate of a served name with < 1/6 of its lifetime left (Caddy renews at
-      1/3), new release, update rolled back/failed. Checked every minute; ongoing problems sent once, reminded every
+      1/3), a website with HTTPS still without a certificate 30 min after it was added, new release, update
+      rolled back/failed. Checked every minute; ongoing problems sent once, reminded every
       24 h and reported when over; state in the `alerts` table so restarts don't resend; 90 days of history.
       Up to 10 recipients, e-mails in en/es/ca, sent through the server's mail service (sendmail in the mail
       container) or an SMTP server (STARTTLS/TLS/none, password sealed); header-injection-proof messages, test

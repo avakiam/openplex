@@ -15,7 +15,10 @@ const kindLabels: Record<string, { label: string; hint: string }> = {
   site_down: { label: tk("A website is down"), hint: tk("After two minutes in error; again when it is back up.") },
   disk_full: { label: tk("The disk is almost full"), hint: tk("Above 90%; again when it drops below 85%.") },
   database_full: { label: tk("A database goes over its size limit"), hint: tk("When it becomes read-only; again when it is back under its limit.") },
-  cert_expiring: { label: tk("A certificate is not renewing"), hint: tk("When a certificate is close to expiring without having been renewed.") },
+  cert_expiring: {
+    label: tk("A certificate is not renewing or not issued"),
+    hint: tk("When a certificate is close to expiring without having been renewed, or a website has had HTTPS on for 30 minutes without one."),
+  },
   update_available: { label: tk("A new OpenPlex version is available"), hint: tk("Once per version.") },
   update_failed: { label: tk("An OpenPlex update fails"), hint: tk("When an update is undone or fails.") },
 };

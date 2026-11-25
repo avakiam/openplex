@@ -10,6 +10,7 @@ import type {
   GitDeploy,
   PHPSettings,
   SFTPStatus,
+  CertificateStatus,
   SFTPAccount,
   SFTPAccountInput,
   SFTPAccountList,
@@ -341,6 +342,15 @@ export const useSiteApp = (id: number) =>
   });
 
 export const useSFTP = () => useQuery({ queryKey: keys.sftp, queryFn: () => api.get<SFTPStatus>("/auth/me/sftp") });
+
+/** A website's HTTPS certificate; polled while one is being requested. */
+export const useCertificate = (id: number, enabled = true) =>
+  useQuery({
+    queryKey: ["domains", id, "certificate"] as const,
+    queryFn: () => api.get<CertificateStatus>(`/domains/${id}/certificate`),
+    enabled: enabled && id > 0,
+    refetchInterval: (q) => (q.state.data?.hosts.some((h) => h.state === "pending") ? 30_000 : false),
+  });
 
 // ---------- SFTP accounts of a website ----------
 

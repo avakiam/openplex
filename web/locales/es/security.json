@@ -98,5 +98,7 @@
   "Copy it now: it cannot be shown again.": "Cópiala ahora: no se podrá volver a mostrar.",
   "Remove the SFTP password?": "¿Eliminar la contraseña SFTP?",
   "SFTP clients that use it stop connecting. Your SSH keys keep working.": "Los clientes SFTP que la usan dejarán de conectarse. Tus claves SSH siguen funcionando.",
-  "The server's firewall (ufw) does not let port {port} in, so SFTP clients cannot connect. An administrator must run on the server:": "El cortafuegos del servidor (ufw) no deja pasar el puerto {port}, así que los clientes SFTP no pueden conectarse. Un administrador debe ejecutar en el servidor:"
+  "The server's firewall (ufw) does not let port {port} in, so SFTP clients cannot connect. An administrator must run on the server:": "El cortafuegos del servidor (ufw) no deja pasar el puerto {port}, así que los clientes SFTP no pueden conectarse. Un administrador debe ejecutar en el servidor:",
+  "A certificate is not renewing or not issued": "Un certificado no se renueva o no se emite",
+  "When a certificate is close to expiring without having been renewed, or a website has had HTTPS on for 30 minutes without one.": "Cuando un certificado está a punto de caducar sin haberse renovado, o una web lleva 30 minutos con HTTPS activado sin tener uno."
 }

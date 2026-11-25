@@ -701,6 +701,26 @@ export interface SiteApp {
   site_checks: SecurityCheck[];
 }
 
+export interface CertState {
+  host: string;
+  state: "issued" | "expiring" | "pending" | "missing";
+  issuer?: string;
+  expires_at?: string;
+}
+
+export interface CertificateStatus {
+  ssl_enabled: boolean;
+  hosts: CertState[];
+  grace_minutes: number;
+}
+
+export interface IPv6Check {
+  /** "" when the server has no IPv6 address */
+  address: string;
+  works: boolean;
+  error?: string;
+}
+
 export interface SFTPAccount {
   id: number;
   domain_id: number;

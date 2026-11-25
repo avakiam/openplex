@@ -58,5 +58,10 @@
   "No records yet": "Encara no hi ha registres",
   "Edit record": "Edita el registre",
   "Delete record": "Elimina el registre",
-  "Delete this record?": "Vols eliminar aquest registre?"
+  "Delete this record?": "Vols eliminar aquest registre?",
+  "Leave it empty unless the server answers on IPv6: every new website gets an AAAA record pointing here.": "Deixa-la buida tret que el servidor respongui per IPv6: cada web nou rep un registre AAAA que hi apunta.",
+  "This server has no public IPv6 address.": "Aquest servidor no té cap adreça IPv6 pública.",
+  "{address} reaches the internet.": "{address} té sortida a internet.",
+  "{address} does not reach the internet: leave the field empty until the server's IPv6 works, or new websites get an AAAA record that breaks HTTPS and their certificates.": "{address} no té sortida a internet: deixa el camp buit fins que funcioni la IPv6 del servidor, o els webs nous rebran un registre AAAA que trenca l'HTTPS i els seus certificats.",
+  "Check": "Comprovar"
 }

@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"sync"
 
 	"openplex.dev/openplex/internal/db"
@@ -66,6 +67,23 @@ func (s *Server) handlePutDNSSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, st)
+}
+
+// handleCheckIPv6 tests whether an IPv6 address of this server (the first
+// one found when none is given) reaches the internet.
+func (s *Server) handleCheckIPv6(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Address string `json:"address"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	c, err := s.dns.CheckIPv6(r.Context(), strings.TrimSpace(in.Address))
+	if err != nil {
+		badRequestErr(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, c)
 }
 
 // loadZone resolves the website in the URL to its own zone.

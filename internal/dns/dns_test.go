@@ -328,3 +328,39 @@ func TestDelegation(t *testing.T) {
 		}
 	}
 }
+
+func TestDefaultIPv6NeedsARoute(t *testing.T) {
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name   string
+		probe  error
+		want6  string
+		checks bool
+	}{
+		{"routed", nil, "2001:db8::10", true},
+		{"no route", errors.New("network is unreachable"), "", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := db.OpenMemory(t)
+			m := New(store, nil, t.TempDir(), "", slog.New(slog.NewTextHandler(io.Discard, nil)))
+			m.addrs = func() []netip.Addr {
+				return []netip.Addr{netip.MustParseAddr("203.0.113.10"), netip.MustParseAddr("2001:db8::10")}
+			}
+			m.probe6 = func(context.Context, netip.Addr) error { return tc.probe }
+			if err := m.initSettings(ctx); err != nil {
+				t.Fatal(err)
+			}
+			s, _ := store.GetDNSSettings(ctx)
+			if s.IPv4 != "203.0.113.10" || s.IPv6 != tc.want6 {
+				t.Errorf("addresses = %q %q, want IPv6 %q", s.IPv4, s.IPv6, tc.want6)
+			}
+			c, err := m.CheckIPv6(ctx, "")
+			if err != nil || c.Address != "2001:db8::10" || c.Works != tc.checks || (c.Error == "") != tc.checks {
+				t.Errorf("check = %+v %v", c, err)
+			}
+			if _, err := m.CheckIPv6(ctx, "203.0.113.10"); err == nil {
+				t.Error("checked an IPv4 address as IPv6")
+			}
+		})
+	}
+}

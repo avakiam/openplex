@@ -347,5 +347,11 @@
   "by the webhook": "por el webhook",
   "by hand": "a mano",
   "another deploy follows": "después viene otro despliegue",
-  "Output of the last deploy": "Salida del último despliegue"
+  "Output of the last deploy": "Salida del último despliegue",
+  "Certificate": "Certificado",
+  "Valid until {date}": "Válido hasta el {date}",
+  "Expires {date} and has not renewed yet": "Caduca el {date} y aún no se ha renovado",
+  "Being requested": "Solicitándose",
+  "Not issued": "Sin emitir",
+  "Check that the name's DNS points to this server (an A record; no AAAA unless the server's IPv6 works) and that port 80 reaches it from the internet. It keeps being requested, and shows up here once issued.": "Comprueba que el DNS del nombre apunta a este servidor (un registro A; ningún AAAA salvo que la IPv6 del servidor funcione) y que el puerto 80 le llega desde internet. Se sigue solicitando, y aparecerá aquí en cuanto se emita."
 }

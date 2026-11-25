@@ -154,7 +154,7 @@ func siteArea(r *http.Request) (area string, write bool) {
 			return "", false
 		}
 		return db.AreaSite, true
-	case "stats":
+	case "stats", "certificate":
 		return "", write
 	case "app":
 		// Installing creates a database for the owner and fills the files.

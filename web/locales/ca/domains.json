@@ -347,5 +347,11 @@
   "by the webhook": "pel webhook",
   "by hand": "a mà",
   "another deploy follows": "després ve un altre desplegament",
-  "Output of the last deploy": "Sortida del darrer desplegament"
+  "Output of the last deploy": "Sortida del darrer desplegament",
+  "Certificate": "Certificat",
+  "Valid until {date}": "Vàlid fins al {date}",
+  "Expires {date} and has not renewed yet": "Caduca el {date} i encara no s'ha renovat",
+  "Being requested": "Sol·licitant-se",
+  "Not issued": "Sense emetre",
+  "Check that the name's DNS points to this server (an A record; no AAAA unless the server's IPv6 works) and that port 80 reaches it from the internet. It keeps being requested, and shows up here once issued.": "Comprova que el DNS del nom apunta a aquest servidor (un registre A; cap AAAA tret que la IPv6 del servidor funcioni) i que el port 80 hi arriba des d'internet. Es continua sol·licitant, i apareixerà aquí quan s'emeti."
 }

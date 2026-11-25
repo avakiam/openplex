@@ -21,6 +21,10 @@ import {
   Square,
   SquareTerminal,
   GitBranch,
+  Loader2,
+  ShieldAlert,
+  ShieldCheck,
+  ShieldX,
   Trash2,
   X,
 } from "lucide-react";
@@ -76,7 +80,7 @@ const WebTerminal = dynamic(() => import("@/components/web-terminal").then((m) =
     </div>
   ),
 });
-import { keys, useAction, useDomain, useDomainStats, useDomains, useExtensionsUI, useRedirects, useRuntimes } from "@/lib/hooks";
+import { keys, useAction, useCertificate, useDomain, useDomainStats, useDomains, useExtensionsUI, useRedirects, useRuntimes } from "@/lib/hooks";
 import { fmtNumber, tk, tServer, useT } from "@/lib/i18n";
 import { type Domain, extText, type SiteArea, siteAccess } from "@/lib/types";
 import { bytes, dateTime, pct } from "@/lib/utils";
@@ -86,6 +90,54 @@ const KIND_LABELS: Record<string, string> = {
   subdomain: tk("Subdomain"),
   alias: tk("Alias"),
 };
+
+/** The HTTPS certificate of the website and its aliases, with the usual causes when there is none. */
+function CertificateInfo({ d }: { d: Domain }) {
+  const { t } = useT();
+  const on = d.ssl_enabled && d.kind !== "alias";
+  const { data } = useCertificate(d.id, on);
+  if (!on || !data || data.hosts.length === 0) return null;
+  const many = data.hosts.length > 1;
+  return (
+    <Info label={t("Certificate")}>
+      <ul className="grid gap-1.5">
+        {data.hosts.map((h) => (
+          <li key={h.host}>
+            {many && <span className="mr-2 font-mono text-xs">{h.host}</span>}
+            {h.state === "issued" && (
+              <Badge tone="success">
+                <ShieldCheck className="size-3" /> {t("Valid until {date}", { date: dateTime(h.expires_at!) })}
+              </Badge>
+            )}
+            {h.state === "expiring" && (
+              <Badge tone="warning">
+                <ShieldAlert className="size-3" /> {t("Expires {date} and has not renewed yet", { date: dateTime(h.expires_at!) })}
+              </Badge>
+            )}
+            {h.state === "pending" && (
+              <Badge tone="info">
+                <Loader2 className="size-3 animate-spin" /> {t("Being requested")}
+              </Badge>
+            )}
+            {h.state === "missing" && (
+              <Badge tone="danger">
+                <ShieldX className="size-3" /> {t("Not issued")}
+              </Badge>
+            )}
+            {h.issuer && h.state !== "missing" && <span className="ml-2 text-xs text-muted-foreground">{h.issuer}</span>}
+          </li>
+        ))}
+      </ul>
+      {data.hosts.some((h) => h.state === "missing" || h.state === "expiring") && (
+        <p className="mt-1.5 text-xs text-destructive">
+          {t(
+            "Check that the name's DNS points to this server (an A record; no AAAA unless the server's IPv6 works) and that port 80 reaches it from the internet. It keeps being requested, and shows up here once issued.",
+          )}
+        </p>
+      )}
+    </Info>
+  );
+}
 
 function Overview({ d }: { d: Domain }) {
   const { t } = useT();
@@ -130,6 +182,7 @@ function Overview({ d }: { d: Domain }) {
             </Info>
           )}
           <Info label="HTTPS">{d.ssl_enabled ? (d.force_https ? t("Enabled, HTTP redirects to HTTPS") : t("Enabled, HTTP also served")) : t("Disabled")}</Info>
+          <CertificateInfo d={d} />
           <Info label={t("Limits")}>
             {fmtNumber(d.memory_mb)} MB RAM · {fmtNumber(d.cpus)} CPU
           </Info>

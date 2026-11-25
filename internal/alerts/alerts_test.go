@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"openplex.dev/openplex/internal/db"
+	"openplex.dev/openplex/internal/ssl"
 	"openplex.dev/openplex/internal/update"
 )
 
@@ -191,6 +192,26 @@ func TestCertificates(t *testing.T) {
 	_ = m.Check(ctx)
 	if got := box.take(); len(got) != 1 || !strings.Contains(got[0], "Certificate renewed") {
 		t.Fatalf("renewal: %v", got)
+	}
+
+	// A new website with HTTPS on and no certificate: nothing at first, an
+	// alert once the grace period is over, resolved when it is issued.
+	_ = store.CreateDomain(ctx, &db.Domain{OwnerID: u.ID, Name: "new.example", Kind: db.KindPrimary, Runtime: "static", DocumentRoot: "public", SSLEnabled: true})
+	_ = store.CreateDomain(ctx, &db.Domain{OwnerID: u.ID, Name: "plain.example", Kind: db.KindPrimary, Runtime: "static", DocumentRoot: "public"})
+	_ = m.Check(ctx)
+	if got := box.take(); len(got) != 0 {
+		t.Fatalf("alerted during the grace period: %v", got)
+	}
+	m.now = func() time.Time { return time.Now().Add(ssl.IssueGrace + time.Minute) }
+	_ = m.Check(ctx)
+	_ = m.Check(ctx)
+	if got := box.take(); len(got) != 1 || !strings.Contains(got[0], "No HTTPS certificate yet: new.example") {
+		t.Fatalf("missing certificate: %v", got)
+	}
+	writeCert(t, m.o.CertDir, "new.example", now, now.Add(90*24*time.Hour))
+	_ = m.Check(ctx)
+	if got := box.take(); len(got) != 1 || !strings.Contains(got[0], "Certificate issued: new.example") {
+		t.Fatalf("issued: %v", got)
 	}
 }
 

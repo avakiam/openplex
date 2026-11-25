@@ -58,5 +58,10 @@
   "No records yet": "Todavía no hay registros",
   "Edit record": "Editar registro",
   "Delete record": "Eliminar registro",
-  "Delete this record?": "¿Eliminar este registro?"
+  "Delete this record?": "¿Eliminar este registro?",
+  "Leave it empty unless the server answers on IPv6: every new website gets an AAAA record pointing here.": "Déjala vacía salvo que el servidor responda por IPv6: cada web nueva recibe un registro AAAA que apunta aquí.",
+  "This server has no public IPv6 address.": "Este servidor no tiene dirección IPv6 pública.",
+  "{address} reaches the internet.": "{address} tiene salida a internet.",
+  "{address} does not reach the internet: leave the field empty until the server's IPv6 works, or new websites get an AAAA record that breaks HTTPS and their certificates.": "{address} no tiene salida a internet: deja el campo vacío hasta que funcione la IPv6 del servidor, o las webs nuevas recibirán un registro AAAA que rompe el HTTPS y sus certificados.",
+  "Check": "Comprobar"
 }
