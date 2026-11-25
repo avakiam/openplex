@@ -735,3 +735,11 @@ has been verified on the Linux test server. One commit per milestone.
   their configured memory limit (was a fixed 128 MB), no webmail.<domain> record for new mail domains while the
   webmail is off. CI and the Release workflow green; the published release has both binaries, install.sh,
   SHA256SUMS and its signature. Not yet installed on panel.avakiam.com.
+- 2026-11-25 — Released v0.36.0 (signed with avakiam-release-2026): webmail per mail domain, certificate status per
+  website with an alert when one with HTTPS has none after 30 min, IPv6 only used as the DNS default when it reaches
+  the internet (plus a check in the DNS settings). The first tag (on 45a7f97) never got a release: GitHub answered
+  500 to "Draft release" and to every rerun, so the tag was moved to 6517d42 before anything was published. CI and
+  the Release workflow green; the release has both binaries, install.sh, SHA256SUMS and its signature. Also fixed in
+  production: clinicadentaljesusbalbin.avakiam.com gave Cloudflare 525 (no certificate) because an AAAA record
+  pointed at the VPS's unrouted IPv6; with the AAAA and the DNS settings' IPv6 removed, an edge reload made Caddy
+  retry and Let's Encrypt issued it.
