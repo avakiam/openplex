@@ -749,3 +749,6 @@ has been verified on the Linux test server. One commit per milestone.
   answer on the address (ports 443 and 80); README and docs in en/es/ca cover webmail per server/domain, SFTP
   accounts per website, certificate status and its alert, and when AAAA records are made. panel.avakiam.com was on
   0.36.0 at release time: all 8 HTTPS websites showed valid certificates.
+- 2026-11-25 — Released v0.36.2 (signed with avakiam-release-2026): the per-domain webmail switch stays visible,
+  greyed out with the reason, while the server's webmail is off (it was hidden). Release workflow green; both
+  binaries, install.sh, SHA256SUMS and its signature published.
