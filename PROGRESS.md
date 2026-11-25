@@ -102,7 +102,8 @@ has been verified on the Linux test server. One commit per milestone.
       SRS for forwards, spoofing protection, nothing on Docker networks trusted; files rendered from the DB and picked
       up by the container without restarts (only rewritten when they change)
 - [x] Roundcube webmail (1.7.6, SQLite in a volume) behind the edge on the mail host and on webmail.<domain> (a CNAME
-      added to zones hosted here); reaches Dovecot/Postfix over an internal Docker network; can be turned off
+      added to zones hosted here); reaches Dovecot/Postfix over an internal Docker network; can be turned off (no
+      web login page, no Dovecot master user, no webmail.<domain> record for new mail domains; IMAP/SMTP unchanged)
 - [x] Mail domains (per website, alias or subdomain), mailboxes (SHA512-CRYPT, 10–128 chars, quota, enable/disable,
       password change), aliases/forwarding (to local or external addresses), usage from Dovecot, 200 each per domain;
       owners manage their own; deleting a mailbox, turning mail off or deleting the website removes the stored mail

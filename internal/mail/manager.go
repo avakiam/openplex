@@ -521,6 +521,9 @@ func (m *Manager) addRecords(ctx context.Context, d *db.Domain, key string) erro
 	}
 	var add []db.DNSRecord
 	for _, r := range Records(prefix, host, DKIMSelector, dkim, d.ID) {
+		if !s.Webmail && r.Type == "CNAME" && r.Name == WebmailRecord(prefix, host, d.ID).Name {
+			continue // no webmail to point at; turning it on adds the name
+		}
 		if slices.ContainsFunc(existing, func(e db.DNSRecord) bool { return clashes(e, r) }) {
 			continue
 		}

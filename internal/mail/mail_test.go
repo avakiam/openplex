@@ -190,7 +190,7 @@ func TestManager(t *testing.T) {
 		t.Fatal(err)
 	}
 	recs, _ := store.ListDNSRecords(ctx, z.ID)
-	var spf, mx, dkim int
+	var spf, mx, dkim, webmail int
 	for _, r := range recs {
 		switch {
 		case r.Type == "TXT" && strings.HasPrefix(r.Content, "v=spf1"):
@@ -199,10 +199,12 @@ func TestManager(t *testing.T) {
 			mx++
 		case r.Name == "opx._domainkey":
 			dkim++
+		case r.Name == "webmail":
+			webmail++
 		}
 	}
-	if spf != 1 || mx != 1 || dkim != 1 {
-		t.Errorf("records: spf=%d mx=%d dkim=%d (%+v)", spf, mx, dkim, recs)
+	if spf != 1 || mx != 1 || dkim != 1 || webmail != 1 {
+		t.Errorf("records: spf=%d mx=%d dkim=%d webmail=%d (%+v)", spf, mx, dkim, webmail, recs)
 	}
 	_ = store.CreateMailbox(ctx, &db.Mailbox{MailDomainID: md.ID, LocalPart: "info", PasswordHash: HashPassword("correct horse battery"), QuotaMB: 100, Enabled: true})
 	_ = store.CreateMailbox(ctx, &db.Mailbox{MailDomainID: md.ID, LocalPart: "off", PasswordHash: HashPassword("correct horse battery"), QuotaMB: 100})
@@ -262,6 +264,25 @@ func TestManager(t *testing.T) {
 	if len(srv.execs) == 0 || srv.execs[len(srv.execs)-1] != "rm -rf -- /var/mail/example.com" {
 		t.Errorf("stored mail not removed: %v", srv.execs)
 	}
+
+	// Webmail off: mail keeps working, Roundcube and its DNS name go.
+	if _, err := m.EnableDomain(ctx, d); err != nil {
+		t.Fatal(err)
+	}
+	m.Sync(ctx)
+	if st, _ := m.Status(ctx); st.LastError != "" || !srv.running || srv.webmail || st.WebmailURL != "" {
+		t.Errorf("webmail off: status = %+v, webmail running = %v", st, srv.webmail)
+	}
+	recs, _ = store.ListDNSRecords(ctx, z.ID)
+	for _, r := range recs {
+		if r.Name == "webmail" {
+			t.Errorf("webmail record added with the webmail off: %+v", r)
+		}
+	}
+	if _, err := m.WebmailLogin(ctx, "info@example.com"); err == nil {
+		t.Error("webmail login link with the webmail off")
+	}
+
 	_ = m.UpdateSettings(ctx, db.MailSettings{Hostname: "mx.example.com"})
 	m.Sync(ctx)
 	if srv.running || srv.webmail {

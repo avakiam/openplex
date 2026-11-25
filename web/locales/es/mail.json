@@ -71,6 +71,7 @@
   "Webmail": "Webmail",
   "Webmail (Roundcube)": "Webmail (Roundcube)",
   "Read and send mail from the browser at the mail host and at webmail.<domain> for domains whose DNS is here.": "Leer y enviar correo desde el navegador en el host de correo y en webmail.<dominio> para los dominios cuyo DNS está aquí.",
+  "Off: no web login page to attack; mailboxes keep working in e-mail apps (IMAP and SMTP).": "Apagado: no hay página de acceso web que atacar; los buzones siguen funcionando en las aplicaciones de correo (IMAP y SMTP).",
   "Webmail running.": "Webmail en marcha.",
   "The webmail is starting or not running.": "El webmail se está iniciando o no está en marcha.",
   "Open webmail": "Abrir webmail",
