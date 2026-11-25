@@ -188,8 +188,10 @@ func (o *Orchestrator) specFor(d *db.Domain) (*siteSpec, error) {
 	inner := path.Join(ssl.EdgeSitesRoot, d.Name) // the site's directory inside its container
 	docroot := path.Join(inner, d.DocumentRoot)
 	if rt.Name == "static" {
+		// A file server needs little, but the limit is a ceiling the
+		// administrator sets: busy sites get the headroom they are given.
 		mem := d.MemoryMB
-		if mem <= 0 || mem > 128 {
+		if mem <= 0 {
 			mem = 128
 		}
 		return &siteSpec{

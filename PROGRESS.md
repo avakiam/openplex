@@ -46,7 +46,8 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] Caddyfile rendering: vhosts, aliases, redirects, force-HTTPS, PHP FastCGI, reverse proxy, static
 - [x] Live config reload via Caddy admin API
 - [x] Site runtimes: static, PHP 7.4/8.1/8.2/8.3/8.4-FPM, Node.js, Python, Go
-- [x] Per-site CPU/memory limits, env vars, restart policy, hardening
+- [x] Per-site CPU/memory limits, env vars, restart policy, hardening (static sites' file server included; it
+      had a fixed 128 MB ceiling before)
 - [x] Deploy / start / stop / restart / remove site container
 - [x] Reconcile loop (DB → Docker + Caddy) at boot and on demand
 - [x] Sync website status from container health every 15 s (crash loop / unexpected exit → error, recovers on its own)

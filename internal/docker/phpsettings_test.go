@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"openplex.dev/openplex/internal/config"
+	"openplex.dev/openplex/internal/db"
 )
 
 func TestValidatePHPSettings(t *testing.T) {
@@ -60,6 +63,19 @@ func TestPHPIni(t *testing.T) {
 	}
 	if strings.Contains(ini, "auto_prepend_file") {
 		t.Error("unvalidated key rendered")
+	}
+}
+
+func TestStaticSpecMemory(t *testing.T) {
+	o := &Orchestrator{cfg: &config.Config{DataDir: t.TempDir()}}
+	for _, tc := range []struct{ set, want int }{{0, 128}, {64, 64}, {512, 512}, {1024, 1024}} {
+		s, err := o.specFor(&db.Domain{ID: 1, OwnerID: 1, Name: "example.com", Runtime: "static", DocumentRoot: "public", MemoryMB: tc.set, CPUs: 2})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if s.MemoryMB != tc.want || s.CPUs != 2 {
+			t.Errorf("memory %d: spec has %d MB, %v CPUs; want %d MB", tc.set, s.MemoryMB, s.CPUs, tc.want)
+		}
 	}
 }
 
