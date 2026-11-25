@@ -25,6 +25,20 @@ sirve la **raíz de documentos**, `public/` por defecto.
 Los subdominios (`blog.example.com`) son webs propias. Los **alias** son
 nombres adicionales que muestran la misma web (`www.example.com`).
 
+### Certificado HTTPS
+
+El servidor obtiene un certificado gratuito para cada nombre (Let's Encrypt,
+con ZeroSSL de reserva) y lo renueva solo. El **Resumen** de la web muestra el
+certificado de cada nombre: **válido hasta** una fecha, **solicitándose**
+(normalmente menos de un minuto), **sin emitir** (sigue sin él 30 minutos
+después de añadir el nombre) o **caduca** en una fecha **y aún no se ha renovado**. Sin
+emitir o sin renovar casi siempre significa que el DNS del nombre no apunta al
+servidor, que un registro AAAA apunta a una IPv6 que no funciona o que el
+puerto 80 está bloqueado; los administradores reciben también una
+[alerta](installation.md#alertas-por-correo). Detrás de Cloudflare, usa el modo
+SSL **Full (strict)**: Cloudflare responde 525 mientras el servidor no tiene
+certificado.
+
 ## Aplicaciones: WordPress, Joomla, Drupal
 
 Al crear una web, elige una **Aplicación**. También puedes instalarla después

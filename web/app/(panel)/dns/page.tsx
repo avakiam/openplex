@@ -26,8 +26,10 @@ function SettingsCard({ st }: { st: DNSStatus }) {
     : !v6.address
       ? t("This server has no public IPv6 address.")
       : v6.works
-        ? t("{address} reaches the internet.", { address: v6.address })
-        : t("{address} does not reach the internet: leave the field empty until the server's IPv6 works, or new websites get an AAAA record that breaks HTTPS and their certificates.", { address: v6.address });
+        ? t("{address} reaches the internet and the websites answer on it here. A firewall outside the server (such as the provider's) can still block it: open https://[{address}]/ from a network with IPv6 before using it.", { address: v6.address })
+        : v6.outbound
+          ? t("{address} reaches the internet, but the websites do not answer on it (ports 443 and 80): leave the field empty, or new websites get an AAAA record that breaks HTTPS and their certificates.", { address: v6.address })
+          : t("{address} does not reach the internet: leave the field empty until the server's IPv6 works, or new websites get an AAAA record that breaks HTTPS and their certificates.", { address: v6.address });
   return (
     <Card>
       <CardHeader title={t("DNS server")} description={t("Answers for the domains of this panel on port 53 (PowerDNS).")} />

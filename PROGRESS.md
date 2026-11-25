@@ -142,7 +142,8 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] IPv6 is only taken as the DNS default when it works: the detected address must reach a public IPv6
       service (TCP to Cloudflare's/Google's resolvers) or it is left empty, so new websites get no AAAA record
       pointing at an unrouted address (it broke HTTPS behind Cloudflare and certificate issuance); the DNS settings
-      have a "Check" button for the IPv6 address (`POST /dns/check-ipv6`)
+      have a "Check" button for the IPv6 address (`POST /dns/check-ipv6`) that also tests that the websites answer
+      on it (ports 443 and 80, from the server itself: a provider firewall is not seen)
 
 ## M10 — Security & cron
 - [x] Firewall rules (nftables) CRUD + apply with safety rollback — implemented: own table `inet openplex` replaced

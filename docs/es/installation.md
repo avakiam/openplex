@@ -81,6 +81,15 @@ reales de los clientes. El correo saliente sigue prefiriendo IPv4: configura
 también el DNS inverso de la dirección IPv6 del servidor antes de contar con
 ella.
 
+Las webs nuevas reciben un registro AAAA solo cuando la página **DNS** tiene una
+dirección IPv6 del servidor. OpenPlex la rellena por sí solo únicamente si esa dirección
+tiene salida a internet; **Comprobar**, junto al campo, también prueba que las
+webs respondan en ella (puertos 443 y 80). Un cortafuegos fuera del servidor,
+como el de tu proveedor, no se ve desde ahí: abre `https://[<dirección>]/` desde
+una red con IPv6 antes de contar con ella. Un registro AAAA que apunta a una
+IPv6 que no funciona rompe el HTTPS para los visitantes con IPv6 (y detrás de
+Cloudflare) e impide emitir los certificados.
+
 ## Configuración
 
 Los ajustes están en `/etc/openplex/openplex.env` (`CLAVE=valor`; reinicia el
@@ -99,6 +108,18 @@ servicio después de cambiarlos). Los más útiles:
 | `OPENPLEX_DB_REMOTE_MARIADB` | `:3306` | Acceso remoto a las bases de datos MariaDB (vacío lo desactiva) |
 | `OPENPLEX_DB_REMOTE_POSTGRES` | `:5432` | Acceso remoto a las bases de datos PostgreSQL (vacío lo desactiva) |
 
+## Webmail
+
+Con **Correo** activado, Roundcube responde en `https://<host de correo>/` y en
+`webmail.<dominio>` de cada dominio de correo, y los buzones lo abren desde el
+panel con un clic. El interruptor **Webmail** de la página **Correo** lo desactiva para
+todo el servidor (menos partes expuestas a la web); la pestaña **Correo** de cada
+dominio también puede desactivarlo solo para ese dominio, como en Plesk. Con el
+webmail desactivado, los buzones de ese dominio no pueden entrar en Roundcube
+(las sesiones abiertas terminan en su siguiente petición) y `webmail.<dominio>`
+sale de la zona DNS. Los programas de correo (IMAP y SMTP) siguen funcionando
+en ambos casos.
+
 ## Alertas por correo
 
 **Alertas** (administradores) envía un correo a las direcciones que elijas
@@ -110,6 +131,7 @@ cuando algo necesita atención. Lo comprueba cada minuto:
 | Una web está caída | tras dos minutos con error, y otra vez cuando se recupera |
 | El disco está casi lleno | por encima del 90 % del disco de datos, y otra vez por debajo del 85 % |
 | Una base de datos supera su límite de tamaño | cuando pasa a solo lectura, y otra vez cuando vuelve a estar por debajo (ver [bases de datos](databases.md#límites-de-tamaño)) |
+| Una web no tiene certificado | cuando una con HTTPS sigue sin él 30 minutos después de añadirla (suele ser que su DNS no apunta aquí, que un registro AAAA apunta a una IPv6 que no funciona o que el puerto 80 está bloqueado) |
 | Un certificado no se renueva | cuando el de un nombre en uso está a punto de caducar (la renovación lleva tiempo fallando: suele ser el DNS o el puerto 80) |
 | Nueva versión de OpenPlex | una vez por versión |
 | Falla una actualización de OpenPlex | cuando una actualización se deshace o falla |

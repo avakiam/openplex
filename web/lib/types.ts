@@ -717,6 +717,11 @@ export interface CertificateStatus {
 export interface IPv6Check {
   /** "" when the server has no IPv6 address */
   address: string;
+  /** reaches a public IPv6 service */
+  outbound: boolean;
+  /** the websites' ports 443 and 80 answer on it */
+  serves: boolean;
+  /** both: AAAA records can point at it */
   works: boolean;
   error?: string;
 }

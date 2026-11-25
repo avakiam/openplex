@@ -471,6 +471,6 @@ whole website), `read_only`, `enabled`, `expires_at` (RFC 3339, `""` = never). T
 |---|---|
 | `GET /dns` | The DNS server: state and name servers |
 | `PUT /dns/settings` | Change its settings |
-| `POST /dns/check-ipv6` | Test whether an IPv6 address of this server (`address`, or the first one found) reaches the internet |
+| `POST /dns/check-ipv6` | Test whether an IPv6 address of this server (`address`, or the first one found) reaches the internet (`outbound`) and the websites answer on it, ports 443 and 80 (`serves`); `works` is both |
 | `GET /mail` | The mail server: state and host name |
 | `PUT /mail/settings` | Change its settings |

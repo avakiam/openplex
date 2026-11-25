@@ -61,6 +61,7 @@ type Manager struct {
 	lookupNS func(ctx context.Context, name string) ([]*net.NS, error)
 	addrs    func() []netip.Addr
 	probe6   func(ctx context.Context, src netip.Addr) error
+	serve6   func(ctx context.Context, addr netip.Addr) error
 }
 
 // New creates a Manager; srv may be nil.
@@ -68,7 +69,7 @@ func New(store *db.DB, srv Server, dataDir, apiURL string, log *slog.Logger) *Ma
 	return &Manager{
 		db: store, srv: srv, log: log, dataDir: dataDir, apiURL: apiURL,
 		kick: make(chan struct{}, 1), deleg: map[string]Delegation{},
-		lookupNS: parentNS, addrs: hostAddrs, probe6: probeIPv6,
+		lookupNS: parentNS, addrs: hostAddrs, probe6: probeIPv6, serve6: probeServes,
 	}
 }
 

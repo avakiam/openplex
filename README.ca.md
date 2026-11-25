@@ -34,15 +34,15 @@ còpies de seguretat i seguretat.
 
 | | |
 |---|---|
-| **Webs** | Estàtics, PHP 7.4–8.4 (amb les extensions que necessiten WordPress, Laravel o Drupal), Node.js, Python i Go; configuració de PHP per web (memòria, mida de pujada, temps, zona horària…); WordPress, Joomla i Drupal amb un clic (última versió, base de dades pròpia, en anglès, castellà o català) i les seves actualitzacions, amb còpia de seguretat prèvia; comprovacions de seguretat amb correccions en un clic; desplegament des de Git (clau de desplegament, webhook de push, ordre de compilació); còpies de staging en un subdomini que s'envien a producció; àlies i subdominis; redireccions; variables d'entorn; engegar/aturar/reiniciar; registres d'accés i d'errors; límits de recursos |
-| **Fitxers** | Gestor de fitxers web amb editor, pujada, comprimir/descomprimir i permisos; SFTP (port 2222, claus SSH o una contrasenya només per a SFTP); terminal web al contenidor del web |
+| **Webs** | Estàtics, PHP 7.4–8.4 (amb les extensions que necessiten WordPress, Laravel o Drupal), Node.js, Python i Go; configuració de PHP per web (memòria, mida de pujada, temps, zona horària…); WordPress, Joomla i Drupal amb un clic (última versió, base de dades pròpia, en anglès, castellà o català) i les seves actualitzacions, amb còpia de seguretat prèvia; comprovacions de seguretat amb correccions en un clic; desplegament des de Git (clau de desplegament, webhook de push, ordre de compilació); còpies de staging en un subdomini que s'envien a producció; àlies i subdominis; redireccions; variables d'entorn; engegar/aturar/reiniciar; registres d'accés i d'errors; límits de recursos; estat del certificat HTTPS de cada nom |
+| **Fitxers** | Gestor de fitxers web amb editor, pujada, comprimir/descomprimir i permisos; SFTP (port 2222, claus SSH o una contrasenya només per a SFTP, i comptes SFTP per web per a qui no té compte al tauler); terminal web al contenidor del web |
 | **Bases de dades** | MariaDB, PostgreSQL i Redis; Adminer amb un clic; rotació de contrasenyes; límits de mida (només lectura en superar-los); accés remot amb TLS per a les adreces que permetis |
-| **Correu** | Bústies, àlies i reenviaments, quotes, registres DKIM/SPF/DMARC, webmail Roundcube amb accés en un clic |
+| **Correu** | Bústies, àlies i reenviaments, quotes, registres DKIM/SPF/DMARC, webmail Roundcube amb accés en un clic, que es pot desactivar per a tot el servidor o per domini de correu |
 | **DNS** | DNS autoritatiu (PowerDNS) amb zones creades per als teus dominis |
 | **Còpies de seguretat** | Còpies xifrades i deduplicades (restic) en un disc local o a S3, programades; restauració d'un web, una base de dades, un domini de correu o una sola bústia; reconstrucció completa del servidor amb `openplexd restore-panel` |
 | **Seguretat** | Tallafocs del servidor (nftables) amb aplicació segura i marxa enrere, Fail2Ban, captcha a l'inici de sessió (Turnstile, hCaptcha, reCAPTCHA), verificació en dos passos, registre d'auditoria |
 | **Usuaris** | Administradors, revenedors i clients amb quotes; compartir un web (només algunes àrees, opcionalment en només lectura) o una base de dades amb un altre usuari; claus d'API |
-| **Tasques i monitoratge** | Tasques programades per web; CPU, memòria, disc i xarxa del servidor i dels contenidors; alertes per correu (còpia fallida, web caigut, disc gairebé ple, certificat sense renovar, actualitzacions) |
+| **Tasques i monitoratge** | Tasques programades per web; CPU, memòria, disc i xarxa del servidor i dels contenidors; alertes per correu (còpia fallida, web caigut, disc gairebé ple, certificat sense renovar o sense emetre, actualitzacions) |
 | **Idiomes** | Anglès, castellà i català |
 
 ## Requisits
@@ -72,7 +72,7 @@ les actualitzacions i com reconstruir un servidor perdut.
 ## Documentació
 
 - [Instal·lació, actualitzacions i recuperació](docs/ca/installation.md)
-- [Webs: aplicacions, configuració de PHP i SFTP](docs/ca/websites.md)
+- [Webs: aplicacions, certificats HTTPS, configuració de PHP i SFTP](docs/ca/websites.md)
 - [Bases de dades: límits de mida i accés remot](docs/ca/databases.md)
 - [OpenPlex per a proveïdors d'allotjament](docs/ca/hosting-providers.md)
 - [Referència de l'API](docs/ca/api.md)

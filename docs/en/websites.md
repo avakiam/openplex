@@ -25,6 +25,19 @@ root**, `public/` by default.
 Subdomains (`blog.example.com`) are websites of their own. **Aliases** are extra
 names that show the same website (`www.example.com`).
 
+### HTTPS certificate
+
+The edge gets a free certificate for each name (Let's Encrypt, with ZeroSSL as a
+fallback) and renews it on its own. The website's **Overview** shows each
+name's certificate: **valid until** a date, **being requested** (usually under
+a minute), **not issued** (still none 30 minutes after the name was added) or
+**expires** on a date **and has not renewed yet**. Not issued or not renewed almost always
+means the name's DNS does not point at the server, an AAAA record points at an
+IPv6 address that does not work, or port 80 is blocked; administrators get an
+[alert](installation.md#e-mail-alerts) too. Behind Cloudflare, use the
+**Full (strict)** SSL mode: Cloudflare answers 525 while the server has no
+certificate.
+
 ## Applications: WordPress, Joomla, Drupal
 
 When you create a website, choose an **Application**. You can also install one

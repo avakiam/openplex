@@ -61,7 +61,8 @@
   "Delete this record?": "Vols eliminar aquest registre?",
   "Leave it empty unless the server answers on IPv6: every new website gets an AAAA record pointing here.": "Deixa-la buida tret que el servidor respongui per IPv6: cada web nou rep un registre AAAA que hi apunta.",
   "This server has no public IPv6 address.": "Aquest servidor no té cap adreça IPv6 pública.",
-  "{address} reaches the internet.": "{address} té sortida a internet.",
   "{address} does not reach the internet: leave the field empty until the server's IPv6 works, or new websites get an AAAA record that breaks HTTPS and their certificates.": "{address} no té sortida a internet: deixa el camp buit fins que funcioni la IPv6 del servidor, o els webs nous rebran un registre AAAA que trenca l'HTTPS i els seus certificats.",
-  "Check": "Comprovar"
+  "Check": "Comprovar",
+  "{address} reaches the internet and the websites answer on it here. A firewall outside the server (such as the provider's) can still block it: open https://[{address}]/ from a network with IPv6 before using it.": "{address} té sortida a internet i els webs hi responen des d'aquí. Un tallafocs fora del servidor (com el del proveïdor) encara la pot bloquejar: obre https://[{address}]/ des d'una xarxa amb IPv6 abans de fer-la servir.",
+  "{address} reaches the internet, but the websites do not answer on it (ports 443 and 80): leave the field empty, or new websites get an AAAA record that breaks HTTPS and their certificates.": "{address} té sortida a internet, però els webs no hi responen (ports 443 i 80): deixa el camp buit, o els webs nous rebran un registre AAAA que trenca l'HTTPS i els seus certificats."
 }

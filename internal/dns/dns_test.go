@@ -354,9 +354,16 @@ func TestDefaultIPv6NeedsARoute(t *testing.T) {
 			if s.IPv4 != "203.0.113.10" || s.IPv6 != tc.want6 {
 				t.Errorf("addresses = %q %q, want IPv6 %q", s.IPv4, s.IPv6, tc.want6)
 			}
+			m.serve6 = func(context.Context, netip.Addr) error { return nil }
 			c, err := m.CheckIPv6(ctx, "")
-			if err != nil || c.Address != "2001:db8::10" || c.Works != tc.checks || (c.Error == "") != tc.checks {
+			if err != nil || c.Address != "2001:db8::10" || c.Outbound != tc.checks || c.Works != tc.checks || (c.Error == "") != tc.checks {
 				t.Errorf("check = %+v %v", c, err)
+			}
+			if tc.checks {
+				m.serve6 = func(context.Context, netip.Addr) error { return errors.New("connection refused") }
+				if c, _ := m.CheckIPv6(ctx, ""); !c.Outbound || c.Serves || c.Works || c.Error == "" {
+					t.Errorf("check without the websites answering = %+v", c)
+				}
 			}
 			if _, err := m.CheckIPv6(ctx, "203.0.113.10"); err == nil {
 				t.Error("checked an IPv4 address as IPv6")

@@ -61,7 +61,8 @@
   "Delete this record?": "¿Eliminar este registro?",
   "Leave it empty unless the server answers on IPv6: every new website gets an AAAA record pointing here.": "Déjala vacía salvo que el servidor responda por IPv6: cada web nueva recibe un registro AAAA que apunta aquí.",
   "This server has no public IPv6 address.": "Este servidor no tiene dirección IPv6 pública.",
-  "{address} reaches the internet.": "{address} tiene salida a internet.",
   "{address} does not reach the internet: leave the field empty until the server's IPv6 works, or new websites get an AAAA record that breaks HTTPS and their certificates.": "{address} no tiene salida a internet: deja el campo vacío hasta que funcione la IPv6 del servidor, o las webs nuevas recibirán un registro AAAA que rompe el HTTPS y sus certificados.",
-  "Check": "Comprobar"
+  "Check": "Comprobar",
+  "{address} reaches the internet and the websites answer on it here. A firewall outside the server (such as the provider's) can still block it: open https://[{address}]/ from a network with IPv6 before using it.": "{address} tiene salida a internet y las webs responden en ella desde aquí. Un cortafuegos fuera del servidor (como el del proveedor) aún puede bloquearla: abre https://[{address}]/ desde una red con IPv6 antes de usarla.",
+  "{address} reaches the internet, but the websites do not answer on it (ports 443 and 80): leave the field empty, or new websites get an AAAA record that breaks HTTPS and their certificates.": "{address} tiene salida a internet, pero las webs no responden en ella (puertos 443 y 80): deja el campo vacío, o las webs nuevas recibirán un registro AAAA que rompe el HTTPS y sus certificados."
 }

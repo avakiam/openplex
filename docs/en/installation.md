@@ -79,6 +79,15 @@ DNS server and mail answer on IPv6 as well, and see the clients' real
 addresses. Outgoing mail still prefers IPv4: set up the reverse DNS of the
 server's IPv6 address too before relying on it.
 
+New websites get an AAAA record only when the **DNS** page has a server IPv6
+address. OpenPlex fills it in on its own only when that address reaches the
+internet; **Check** next to the field also tests that the websites answer on
+it (ports 443 and 80). A firewall outside the server, such as your provider's,
+is not seen from there: open `https://[<address>]/` from a network with IPv6
+before relying on it. An AAAA record pointing at an IPv6 address that does not
+work breaks HTTPS for visitors with IPv6 (and behind Cloudflare) and stops the
+certificates from being issued.
+
 ## Configuration
 
 Settings live in `/etc/openplex/openplex.env` (`KEY=value`, restart the
@@ -97,6 +106,17 @@ service after a change). The most useful ones:
 | `OPENPLEX_DB_REMOTE_MARIADB` | `:3306` | Remote access to MariaDB databases (empty turns it off) |
 | `OPENPLEX_DB_REMOTE_POSTGRES` | `:5432` | Remote access to PostgreSQL databases (empty turns it off) |
 
+## Webmail
+
+With **Mail** on, Roundcube answers at `https://<mail host>/` and at
+`webmail.<domain>` of each mail domain, and mailboxes open it from the panel
+with one click. The **Webmail** switch on the **Mail** page turns it off for the whole server
+(fewer web-facing parts); each mail domain's **Mail** tab can also turn it off
+for that domain alone, as in Plesk. With it off, that domain's mailboxes cannot
+sign in to Roundcube (open sessions end on their next request) and
+`webmail.<domain>` leaves the DNS zone. E-mail apps (IMAP and SMTP) keep
+working either way.
+
 ## E-mail alerts
 
 **Alerts** (administrators) e-mails the addresses you choose when something
@@ -109,6 +129,7 @@ needs attention. It checks every minute:
 | The disk is almost full | above 90 % of the data disk, and again below 85 % |
 | A database goes over its size limit | when it becomes read-only, and again when it is back under (see [databases](databases.md#size-limits)) |
 | A certificate is not renewing | when one for a name still in use is close to expiring (renewal has failed for a while: usually DNS or port 80) |
+| A website has no certificate | when one with HTTPS still has none 30 minutes after it was added (usually its DNS does not point here, an AAAA record points at an IPv6 that does not work, or port 80 is blocked) |
 | A new OpenPlex version | once per version |
 | An OpenPlex update fails | when an update is undone or fails |
 

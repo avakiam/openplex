@@ -33,15 +33,15 @@ dashboard for websites, databases, mail, DNS, backups and security.
 
 | | |
 |---|---|
-| **Websites** | Static, PHP 7.4–8.4 (with the extensions WordPress, Laravel or Drupal need), Node.js, Python and Go; PHP settings per website (memory, upload size, time limits, time zone…); one-click WordPress, Joomla and Drupal installs (latest release, own database, in English, Spanish or Catalan) and their updates, with a backup first; security checks with one-click fixes; deploys from Git (deploy key, push webhook, build command); staging copies on a subdomain, pushed back to the live site; aliases and subdomains; redirects; environment variables; start/stop/restart; access and error logs; resource limits |
-| **Files** | Web file manager with editor, upload, archive/extract and permissions; SFTP (port 2222, SSH keys or an SFTP-only password); web terminal in the site's container |
+| **Websites** | Static, PHP 7.4–8.4 (with the extensions WordPress, Laravel or Drupal need), Node.js, Python and Go; PHP settings per website (memory, upload size, time limits, time zone…); one-click WordPress, Joomla and Drupal installs (latest release, own database, in English, Spanish or Catalan) and their updates, with a backup first; security checks with one-click fixes; deploys from Git (deploy key, push webhook, build command); staging copies on a subdomain, pushed back to the live site; aliases and subdomains; redirects; environment variables; start/stop/restart; access and error logs; resource limits; HTTPS certificate status of each name |
+| **Files** | Web file manager with editor, upload, archive/extract and permissions; SFTP (port 2222, SSH keys or an SFTP-only password, plus SFTP accounts per website for people without a panel account); web terminal in the site's container |
 | **Databases** | MariaDB, PostgreSQL and Redis; one-click Adminer; password rotation; size limits (read-only when over); remote access over TLS for the addresses you allow |
-| **Mail** | Mailboxes, aliases and forwarding, quotas, DKIM/SPF/DMARC records, Roundcube webmail with one-click login |
+| **Mail** | Mailboxes, aliases and forwarding, quotas, DKIM/SPF/DMARC records, Roundcube webmail with one-click login, which can be turned off for the whole server or per mail domain |
 | **DNS** | Authoritative DNS (PowerDNS) with zones created for your domains |
 | **Backups** | Encrypted, deduplicated backups (restic) to a local disk or S3, scheduled; restore of a site, database, mail domain or single mailbox; full server rebuild with `openplexd restore-panel` |
 | **Security** | Host firewall (nftables) with safe apply/rollback, Fail2Ban, login captcha (Turnstile, hCaptcha, reCAPTCHA), two-factor authentication, audit log |
 | **Users** | Administrators, resellers and customers with quotas; share a website (only some areas, optionally read-only) or a database with another user; API keys |
-| **Tasks & monitoring** | Scheduled tasks per website; server and container CPU, memory, disk and network; e-mail alerts (failed backup, website down, disk almost full, certificate not renewing, updates) |
+| **Tasks & monitoring** | Scheduled tasks per website; server and container CPU, memory, disk and network; e-mail alerts (failed backup, website down, disk almost full, certificate not renewing or not issued, updates) |
 | **Languages** | English, Spanish and Catalan |
 
 ## Requirements
@@ -71,7 +71,7 @@ upgrades and rebuilding a lost server.
 ## Documentation
 
 - [Installation, upgrades and recovery](docs/en/installation.md)
-- [Websites: applications, PHP settings and SFTP](docs/en/websites.md)
+- [Websites: applications, HTTPS certificates, PHP settings and SFTP](docs/en/websites.md)
 - [Databases: size limits and remote access](docs/en/databases.md)
 - [OpenPlex for hosting providers](docs/en/hosting-providers.md)
 - [API reference](docs/en/api.md)

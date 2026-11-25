@@ -34,15 +34,15 @@ copias de seguridad y seguridad.
 
 | | |
 |---|---|
-| **Webs** | Estáticas, PHP 7.4–8.4 (con las extensiones que necesitan WordPress, Laravel o Drupal), Node.js, Python y Go; configuración de PHP por web (memoria, tamaño de subida, tiempos, zona horaria…); WordPress, Joomla y Drupal con un clic (última versión, base de datos propia, en inglés, español o catalán) y sus actualizaciones, con copia de seguridad previa; comprobaciones de seguridad con correcciones en un clic; despliegue desde Git (clave de despliegue, webhook de push, comando de compilación); copias de staging en un subdominio que se envían a producción; alias y subdominios; redirecciones; variables de entorno; arrancar/parar/reiniciar; registros de acceso y de errores; límites de recursos |
-| **Archivos** | Gestor de archivos web con editor, subida, comprimir/descomprimir y permisos; SFTP (puerto 2222, claves SSH o una contraseña solo para SFTP); terminal web en el contenedor de la web |
+| **Webs** | Estáticas, PHP 7.4–8.4 (con las extensiones que necesitan WordPress, Laravel o Drupal), Node.js, Python y Go; configuración de PHP por web (memoria, tamaño de subida, tiempos, zona horaria…); WordPress, Joomla y Drupal con un clic (última versión, base de datos propia, en inglés, español o catalán) y sus actualizaciones, con copia de seguridad previa; comprobaciones de seguridad con correcciones en un clic; despliegue desde Git (clave de despliegue, webhook de push, comando de compilación); copias de staging en un subdominio que se envían a producción; alias y subdominios; redirecciones; variables de entorno; arrancar/parar/reiniciar; registros de acceso y de errores; límites de recursos; estado del certificado HTTPS de cada nombre |
+| **Archivos** | Gestor de archivos web con editor, subida, comprimir/descomprimir y permisos; SFTP (puerto 2222, claves SSH o una contraseña solo para SFTP, y cuentas SFTP por web para quien no tiene cuenta en el panel); terminal web en el contenedor de la web |
 | **Bases de datos** | MariaDB, PostgreSQL y Redis; Adminer con un clic; rotación de contraseñas; límites de tamaño (solo lectura al superarlos); acceso remoto con TLS para las direcciones que permitas |
-| **Correo** | Buzones, alias y reenvíos, cuotas, registros DKIM/SPF/DMARC, webmail Roundcube con acceso en un clic |
+| **Correo** | Buzones, alias y reenvíos, cuotas, registros DKIM/SPF/DMARC, webmail Roundcube con acceso en un clic, que se puede desactivar para todo el servidor o por dominio de correo |
 | **DNS** | DNS autoritativo (PowerDNS) con zonas creadas para tus dominios |
 | **Copias de seguridad** | Copias cifradas y deduplicadas (restic) en un disco local o en S3, programadas; restauración de una web, una base de datos, un dominio de correo o un solo buzón; reconstrucción completa del servidor con `openplexd restore-panel` |
 | **Seguridad** | Cortafuegos del servidor (nftables) con aplicación segura y vuelta atrás, Fail2Ban, captcha en el inicio de sesión (Turnstile, hCaptcha, reCAPTCHA), verificación en dos pasos, registro de auditoría |
 | **Usuarios** | Administradores, revendedores y clientes con cuotas; compartir una web (solo algunas áreas, opcionalmente en solo lectura) o una base de datos con otro usuario; claves de API |
-| **Tareas y monitorización** | Tareas programadas por web; CPU, memoria, disco y red del servidor y de los contenedores; alertas por correo (copia fallida, web caída, disco casi lleno, certificado sin renovar, actualizaciones) |
+| **Tareas y monitorización** | Tareas programadas por web; CPU, memoria, disco y red del servidor y de los contenedores; alertas por correo (copia fallida, web caída, disco casi lleno, certificado sin renovar o sin emitir, actualizaciones) |
 | **Idiomas** | Inglés, español y catalán |
 
 ## Requisitos
@@ -72,7 +72,7 @@ las actualizaciones y cómo reconstruir un servidor perdido.
 ## Documentación
 
 - [Instalación, actualizaciones y recuperación](docs/es/installation.md)
-- [Webs: aplicaciones, configuración de PHP y SFTP](docs/es/websites.md)
+- [Webs: aplicaciones, certificados HTTPS, configuración de PHP y SFTP](docs/es/websites.md)
 - [Bases de datos: límites de tamaño y acceso remoto](docs/es/databases.md)
 - [OpenPlex para proveedores de hosting](docs/es/hosting-providers.md)
 - [Referencia de la API](docs/es/api.md)

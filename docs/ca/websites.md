@@ -25,6 +25,19 @@ servidor web serveix l'**arrel de documents**, `public/` per defecte.
 Els subdominis (`blog.example.com`) són webs propis. Els **àlies** són noms
 addicionals que mostren el mateix web (`www.example.com`).
 
+### Certificat HTTPS
+
+El servidor obté un certificat gratuït per a cada nom (Let's Encrypt, amb
+ZeroSSL de reserva) i el renova sol. El **Resum** del web mostra el certificat
+de cada nom: **vàlid fins** a una data, **sol·licitant-se** (normalment menys
+d'un minut), **sense emetre** (continua sense 30 minuts després d'afegir el nom) o
+**caduca** en una data **i encara no s'ha renovat**. Sense emetre o sense renovar gairebé sempre vol
+dir que el DNS del nom no apunta al servidor, que un registre AAAA apunta a una
+IPv6 que no funciona o que el port 80 està bloquejat; els administradors també
+reben una [alerta](installation.md#alertes-per-correu). Darrere de Cloudflare,
+fes servir el mode SSL **Full (strict)**: Cloudflare respon 525 mentre el
+servidor no té certificat.
+
 ## Aplicacions: WordPress, Joomla, Drupal
 
 En crear un web, tria una **Aplicació**. També la pots instal·lar després en

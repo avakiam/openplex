@@ -80,6 +80,15 @@ servidor DNS i el correu responen també per IPv6 i veuen les adreces reals
 dels clients. El correu sortint continua preferint IPv4: configura també el
 DNS invers de l'adreça IPv6 del servidor abans de comptar-hi.
 
+Els webs nous reben un registre AAAA només quan la pàgina **DNS** té una
+adreça IPv6 del servidor. OpenPlex l'omple pel seu compte únicament si aquesta adreça té
+sortida a internet; **Comprovar**, al costat del camp, també prova que els webs
+hi responguin (ports 443 i 80). Un tallafocs fora del servidor, com el del teu
+proveïdor, no es veu des d'allà: obre `https://[<adreça>]/` des d'una xarxa amb
+IPv6 abans de comptar-hi. Un registre AAAA que apunta a una IPv6 que no
+funciona trenca l'HTTPS per als visitants amb IPv6 (i darrere de Cloudflare) i
+impedeix emetre els certificats.
+
 ## Configuració
 
 Els paràmetres són a `/etc/openplex/openplex.env` (`CLAU=valor`; reinicia el
@@ -98,6 +107,18 @@ servei després de canviar-los). Els més útils:
 | `OPENPLEX_DB_REMOTE_MARIADB` | `:3306` | Accés remot a les bases de dades MariaDB (buit el desactiva) |
 | `OPENPLEX_DB_REMOTE_POSTGRES` | `:5432` | Accés remot a les bases de dades PostgreSQL (buit el desactiva) |
 
+## Webmail
+
+Amb **Correu** activat, Roundcube respon a `https://<host de correu>/` i a
+`webmail.<domini>` de cada domini de correu, i les bústies l'obren des del
+tauler amb un clic. L'interruptor **Webmail** de la pàgina **Correu** el desactiva per a
+tot el servidor (menys parts exposades al web); la pestanya **Correu** de cada
+domini també el pot desactivar només per a aquell domini, com a Plesk. Amb el
+webmail desactivat, les bústies d'aquell domini no poden entrar a Roundcube
+(les sessions obertes acaben a la següent petició) i `webmail.<domini>` surt de
+la zona DNS. Els programes de correu (IMAP i SMTP) continuen funcionant en tots
+dos casos.
+
 ## Alertes per correu
 
 **Alertes** (administradors) envia un correu a les adreces que triïs quan
@@ -109,6 +130,7 @@ alguna cosa necessita atenció. Ho comprova cada minut:
 | Un web està caigut | després de dos minuts amb error, i un altre cop quan es recupera |
 | El disc és gairebé ple | per sobre del 90 % del disc de dades, i un altre cop per sota del 85 % |
 | Una base de dades supera el seu límit de mida | quan passa a només lectura, i un altre cop quan torna a estar-ne per sota (vegeu [bases de dades](databases.md#límits-de-mida)) |
+| Un web no té certificat | quan un amb HTTPS continua sense 30 minuts després d'afegir-lo (sol ser que el seu DNS no apunta aquí, que un registre AAAA apunta a una IPv6 que no funciona o que el port 80 està bloquejat) |
 | Un certificat no es renova | quan el d'un nom en ús és a punt de caducar (la renovació fa temps que falla: sol ser el DNS o el port 80) |
 | Nova versió d'OpenPlex | un cop per versió |
 | Falla una actualització d'OpenPlex | quan una actualització es desfà o falla |
