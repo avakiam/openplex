@@ -697,6 +697,43 @@ export interface SiteApp {
   site_checks: SecurityCheck[];
 }
 
+export interface SFTPAccount {
+  id: number;
+  domain_id: number;
+  username: string;
+  public_key: string;
+  key_fingerprint: string;
+  directory: string;
+  read_only: boolean;
+  enabled: boolean;
+  expires_at: string | null;
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string;
+  has_password: boolean;
+  expired: boolean;
+}
+
+export interface SFTPAccountList {
+  accounts: SFTPAccount[];
+  max_accounts: number;
+  enabled: boolean;
+  suffix: string;
+  port?: number;
+  fingerprint?: string;
+}
+
+/** Changes to an SFTP account; "" removes a password, key or end date. */
+export interface SFTPAccountInput {
+  name?: string;
+  password?: string;
+  public_key?: string;
+  directory?: string;
+  read_only?: boolean;
+  enabled?: boolean;
+  expires_at?: string;
+}
+
 export interface SFTPStatus {
   enabled: boolean;
   port?: number;

@@ -329,5 +329,15 @@
   "{address} is not a valid e-mail address": "{address} no és una adreça de correu vàlida",
   "{provider} rejected the secret key ({code})": "{provider} ha rebutjat la clau secreta ({code})",
   "the database {name} is not running": "la base de dades {name} no està en marxa",
-  "this sign-in link is not valid: it was used already or has expired": "Aquest enllaç d'accés no és vàlid: ja s'ha fet servir o ha caducat"
+  "this sign-in link is not valid: it was used already or has expired": "Aquest enllaç d'accés no és vàlid: ja s'ha fet servir o ha caducat",
+  "the account name must be 1-32 characters: lowercase letters, digits, '_', '.', '-'": "el nom del compte ha de tenir d'1 a 32 caràcters: minúscules, números, '_', '.', '-'",
+  "this website already has the maximum of 20 SFTP accounts": "aquest web ja té el màxim de 20 comptes SFTP",
+  "this website already has an account with that name": "aquest web ja té un compte amb aquest nom",
+  "an account's name cannot change; create a new account": "el nom d'un compte no es pot canviar; crea un compte nou",
+  "could not store the password": "no s'ha pogut desar la contrasenya",
+  "paste an SSH public key, such as the contents of id_ed25519.pub": "enganxa una clau pública SSH, com el contingut de id_ed25519.pub",
+  "the folder does not exist in this website": "la carpeta no existeix en aquest web",
+  "enter the end date as a date and time": "indica la data de fi com a data i hora",
+  "the end date must be in the future": "la data de fi ha de ser futura",
+  "set a password or an SSH key for the account": "posa una contrasenya o una clau SSH al compte"
 }

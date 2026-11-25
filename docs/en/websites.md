@@ -235,3 +235,23 @@ The server listens on port 2222 (`OPENPLEX_SFTP_LISTEN`, see
 open. On a server that uses ufw instead, the installer opens it; if ufw still
 blocks it (for example after updating from the panel), the **SFTP access**
 card says so, and an administrator runs `ufw allow 2222/tcp` on the server.
+
+### SFTP accounts of a website
+
+To give someone access to one website only — a developer, a designer — without
+a panel account, add an **SFTP account** in the website's **Files** tab. It
+signs in to the same server and port as `name@website` (for example
+`dev@example.com`) with its own password, its own SSH key or both, and cannot
+open the panel.
+
+- **Folder**: the whole website, or one of its folders (for example
+  `public/wp-content/uploads`); the account sees nothing above it.
+- **Read-only**: it can download but not change anything.
+- **End date**: from then on it cannot sign in. You can also turn an account
+  off and on, or delete it; that ends its access within seconds, even in an
+  open session.
+
+Accounts stop working while the website or its owner is suspended, and are
+deleted with the website. Only the website's owner (and whoever manages that
+account) can manage them; people the website is shared with cannot. A website
+can have up to 20. Sign-ins and changes appear in the audit log.

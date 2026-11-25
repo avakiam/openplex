@@ -251,3 +251,24 @@ mantiene abierto. En un servidor que usa ufw en su lugar, lo abre el
 instalador; si ufw aún lo bloquea (por ejemplo, tras actualizar desde el
 panel), la tarjeta **Acceso SFTP** lo avisa, y un administrador ejecuta
 `ufw allow 2222/tcp` en el servidor.
+
+### Cuentas SFTP de una web
+
+Para dar acceso solo a una web a otra persona (un programador, un diseñador)
+sin cuenta en el panel, añade una **cuenta SFTP** en la pestaña **Archivos**
+de la web. Entra al mismo servidor y puerto como `nombre@web` (por ejemplo
+`dev@example.com`) con su propia contraseña, su propia clave SSH o ambas, y no
+puede entrar en el panel.
+
+- **Carpeta**: toda la web o una de sus carpetas (por ejemplo
+  `public/wp-content/uploads`); la cuenta no ve nada por encima.
+- **Solo lectura**: puede descargar pero no cambiar nada.
+- **Fecha de fin**: a partir de entonces no puede entrar. También puedes
+  desactivar y reactivar una cuenta, o borrarla; su acceso termina en
+  segundos, incluso con una sesión abierta.
+
+Las cuentas dejan de funcionar mientras la web o su propietario están
+suspendidos, y se borran con la web. Solo las gestiona el propietario de la
+web (y quien gestiona esa cuenta); las personas con quien se comparte la web
+no. Cada web puede tener hasta 20. Los accesos y los cambios aparecen en el
+registro de auditoría.

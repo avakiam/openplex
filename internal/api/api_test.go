@@ -514,6 +514,86 @@ func TestCronJobs(t *testing.T) {
 	}
 }
 
+func TestSFTPAccounts(t *testing.T) {
+	h := newHarness(t)
+	h.mkUser("carla", db.RoleCustomer, nil)
+	h.mkUser("dani", db.RoleCustomer, nil)
+	carla, dani := h.login("carla").AccessToken, h.login("dani").AccessToken
+	var site db.Domain
+	if c := h.do("POST", "/domains", carla, map[string]any{"name": "sftp.test"}, &site); c != 201 {
+		t.Fatalf("create site: %d", c)
+	}
+	base := "/domains/" + itoa(site.ID) + "/sftp-accounts"
+	pw := "dev-Secret-2026"
+	cases := []struct {
+		name, token, method string
+		body                map[string]any
+		want                int
+	}{
+		{"foreign website", dani, "GET", nil, 404},
+		{"no credential", carla, "POST", map[string]any{"name": "dev"}, 400},
+		{"bad name", carla, "POST", map[string]any{"name": "Dev@x", "password": pw}, 400},
+		{"weak password", carla, "POST", map[string]any{"name": "dev", "password": "short"}, 400},
+		{"bad key", carla, "POST", map[string]any{"name": "dev", "public_key": "ssh-rsa nope"}, 400},
+		{"missing folder", carla, "POST", map[string]any{"name": "dev", "password": pw, "directory": "nope"}, 400},
+		{"folder outside", carla, "POST", map[string]any{"name": "dev", "password": pw, "directory": "../../etc"}, 400},
+		{"past end date", carla, "POST", map[string]any{"name": "dev", "password": pw, "expires_at": "2020-01-01T00:00:00Z"}, 400},
+	}
+	for _, c := range cases {
+		if got := h.do(c.method, base, c.token, c.body, nil); got != c.want {
+			t.Errorf("%s: got %d, want %d", c.name, got, c.want)
+		}
+	}
+
+	var acc struct {
+		db.SFTPAccount
+		HasPassword bool `json:"has_password"`
+	}
+	if c := h.do("POST", base, carla, map[string]any{"name": " Dev ", "password": pw, "directory": "/public/"}, &acc); c != 201 {
+		t.Fatalf("create: %d", c)
+	}
+	if acc.Username != "dev@sftp.test" || !acc.HasPassword || acc.Directory != "public" || !acc.Enabled || acc.PasswordHash != "" {
+		t.Fatalf("account = %+v", acc)
+	}
+	if c := h.do("POST", base, carla, map[string]any{"name": "dev", "password": pw}, nil); c != 409 {
+		t.Errorf("duplicate: %d", c)
+	}
+	apath := base + "/" + itoa(acc.ID)
+	if c := h.do("PATCH", apath, dani, map[string]any{"enabled": false}, nil); c != 404 {
+		t.Errorf("foreign update: %d", c)
+	}
+	if c := h.do("PATCH", apath, carla, map[string]any{"password": ""}, nil); c != 400 {
+		t.Errorf("removed the only credential: %d", c)
+	}
+
+	stored, _ := h.srv.db.GetSFTPAccount(context.Background(), acc.ID)
+	sites, err := h.srv.SFTPAccountSites(context.Background(), stored)
+	if err != nil || len(sites) != 1 || sites[0].Name != "sftp.test" || sites[0].Sub != "public" || sites[0].ReadOnly {
+		t.Fatalf("account reaches %+v (%v)", sites, err)
+	}
+	if c := h.do("PATCH", apath, carla, map[string]any{"enabled": false, "read_only": true}, &acc); c != 200 || acc.Enabled || !acc.ReadOnly {
+		t.Fatalf("disable: %d %+v", c, acc)
+	}
+	stored, _ = h.srv.db.GetSFTPAccount(context.Background(), acc.ID)
+	if sites, _ := h.srv.SFTPAccountSites(context.Background(), stored); len(sites) != 0 {
+		t.Errorf("disabled account reaches %+v", sites)
+	}
+
+	var list struct {
+		Accounts []map[string]any `json:"accounts"`
+		Suffix   string           `json:"suffix"`
+	}
+	if c := h.do("GET", base, carla, nil, &list); c != 200 || len(list.Accounts) != 1 || list.Suffix != "@sftp.test" {
+		t.Fatalf("list: %d %+v", c, list)
+	}
+	if _, leaked := list.Accounts[0]["password_hash"]; leaked {
+		t.Error("password hash in the list")
+	}
+	if c := h.do("DELETE", apath, carla, nil, nil); c != 204 {
+		t.Fatalf("delete: %d", c)
+	}
+}
+
 func TestFirewallGuards(t *testing.T) {
 	h := newHarness(t)
 	h.mkUser("carla", db.RoleCustomer, nil)

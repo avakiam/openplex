@@ -13,27 +13,24 @@ import (
 	"time"
 
 	"github.com/pkg/sftp"
-
-	"openplex.dev/openplex/internal/db"
 )
 
 // siteTTL is how long a session trusts its list of websites before asking again.
 const siteTTL = 15 * time.Second
 
 // vfs is the filesystem of one SFTP session: "/" lists the websites, and
-// "/<website>/…" is that website's directory.
+// "/<website>/…" is that website's directory (or the folder it is limited to).
 type vfs struct {
 	ctx   context.Context
-	user  *db.User
-	sites func(context.Context, *db.User) ([]Site, error)
+	sites func(context.Context) ([]Site, error)
 
 	mu      sync.Mutex
 	cache   []Site
 	fetched time.Time
 }
 
-func newFS(ctx context.Context, u *db.User, sites func(context.Context, *db.User) ([]Site, error)) *vfs {
-	return &vfs{ctx: ctx, user: u, sites: sites}
+func newFS(ctx context.Context, sites func(context.Context) ([]Site, error)) *vfs {
+	return &vfs{ctx: ctx, sites: sites}
 }
 
 func (v *vfs) list() ([]Site, error) {
@@ -42,7 +39,7 @@ func (v *vfs) list() ([]Site, error) {
 	if v.cache != nil && time.Since(v.fetched) < siteTTL {
 		return v.cache, nil
 	}
-	sites, err := v.sites(v.ctx, v.user)
+	sites, err := v.sites(v.ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +76,16 @@ func (v *vfs) resolve(p string) (target, error) {
 	return target{site: &sites[i], rel: rest}, nil
 }
 
-func (t target) open() (*os.Root, error) { return os.OpenRoot(t.site.Root) }
+// open opens the website's directory, or the folder the session is limited
+// to through it, so a symlink on the way cannot lead outside the website.
+func (t target) open() (*os.Root, error) {
+	r, err := os.OpenRoot(t.site.Root)
+	if err != nil || t.site.Sub == "" {
+		return r, err
+	}
+	defer r.Close()
+	return r.OpenRoot(t.site.Sub)
+}
 
 // writable resolves p for a change: inside a website, not its directory itself, not read-only.
 func (v *vfs) writable(p string) (target, error) {

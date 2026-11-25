@@ -495,6 +495,23 @@ UPDATE alert_settings SET events = events || ',database_full' WHERE ',' || event
 	`ALTER TABLE login_links ADD COLUMN purpose TEXT NOT NULL DEFAULT 'handover';`,
 	// 26: suspended websites (status disabled) remember the status to go back to
 	`ALTER TABLE domains ADD COLUMN suspended_status TEXT NOT NULL DEFAULT '';`,
+	// 27: SFTP accounts of one website (name@website), no panel access
+	`CREATE TABLE sftp_accounts (
+	id              INTEGER PRIMARY KEY AUTOINCREMENT,
+	domain_id       INTEGER NOT NULL REFERENCES domains(id) ON DELETE CASCADE,
+	username        TEXT NOT NULL UNIQUE,
+	password_hash   TEXT NOT NULL DEFAULT '',
+	public_key      TEXT NOT NULL DEFAULT '',
+	key_fingerprint TEXT NOT NULL DEFAULT '',
+	directory       TEXT NOT NULL DEFAULT '',
+	read_only       INTEGER NOT NULL DEFAULT 0,
+	enabled         INTEGER NOT NULL DEFAULT 1,
+	expires_at      TIMESTAMP,
+	last_login_at   TIMESTAMP,
+	created_at      TIMESTAMP NOT NULL,
+	updated_at      TIMESTAMP NOT NULL
+);
+CREATE INDEX sftp_accounts_domain ON sftp_accounts(domain_id);`,
 }
 
 func (d *DB) migrate(ctx context.Context) error {

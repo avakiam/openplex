@@ -10,6 +10,9 @@ import type {
   GitDeploy,
   PHPSettings,
   SFTPStatus,
+  SFTPAccount,
+  SFTPAccountInput,
+  SFTPAccountList,
   AppInfo,
   SiteApp,
   UpdateStatus,
@@ -70,6 +73,7 @@ export const keys = {
   userAccess: (id: number) => ["users", id, "access"] as const,
   sshKeys: ["ssh-keys"] as const,
   sftp: ["auth", "me", "sftp"] as const,
+  sftpAccounts: (id: number) => ["domains", id, "sftp-accounts"] as const,
   audit: ["audit"] as const,
   info: ["system", "info"] as const,
   stats: ["system", "stats"] as const,
@@ -337,6 +341,31 @@ export const useSiteApp = (id: number) =>
   });
 
 export const useSFTP = () => useQuery({ queryKey: keys.sftp, queryFn: () => api.get<SFTPStatus>("/auth/me/sftp") });
+
+// ---------- SFTP accounts of a website ----------
+
+export const useSFTPAccounts = (id: number) =>
+  useQuery({ queryKey: keys.sftpAccounts(id), queryFn: () => api.get<SFTPAccountList>(`/domains/${id}/sftp-accounts`) });
+
+export const useCreateSFTPAccount = (id: number, onSuccess?: (a: SFTPAccount) => void) =>
+  useAction((body: SFTPAccountInput) => api.post<SFTPAccount>(`/domains/${id}/sftp-accounts`, body), {
+    success: t("SFTP account created"),
+    invalidate: [keys.sftpAccounts(id)],
+    onSuccess,
+  });
+
+export const useUpdateSFTPAccount = (id: number, onSuccess?: (a: SFTPAccount) => void) =>
+  useAction(({ aid, ...body }: SFTPAccountInput & { aid: number }) => api.patch<SFTPAccount>(`/domains/${id}/sftp-accounts/${aid}`, body), {
+    invalidate: [keys.sftpAccounts(id)],
+    onSuccess,
+  });
+
+export const useDeleteSFTPAccount = (id: number, onSuccess?: () => void) =>
+  useAction((aid: number) => api.del(`/domains/${id}/sftp-accounts/${aid}`), {
+    success: t("SFTP account deleted"),
+    invalidate: [keys.sftpAccounts(id)],
+    onSuccess,
+  });
 
 export const usePHPSettings = (id: number) =>
   useQuery({ queryKey: keys.phpSettings(id), queryFn: () => api.get<PHPSettings>(`/domains/${id}/php`) });

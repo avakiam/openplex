@@ -222,6 +222,9 @@ func run(args []string) error {
 		sftpSrv, err = sftpd.New(sftpd.Options{
 			Listen: cfg.SFTPListen, HostKeyPath: filepath.Join(cfg.DataDir, "sftp_host_ed25519_key"), DB: store, Log: log,
 			Sites: func(ctx context.Context, u *db.User) ([]sftpd.Site, error) { return srv.SFTPSites(ctx, u) },
+			AccountSites: func(ctx context.Context, a *db.SFTPAccount) ([]sftpd.Site, error) {
+				return srv.SFTPAccountSites(ctx, a)
+			},
 		})
 		if err != nil {
 			return err

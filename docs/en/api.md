@@ -323,6 +323,20 @@ Admins manage every account, resellers their own customers.
 | `POST /domains/{id}/cron/{jid}/run` | Run it now |
 | `GET /domains/{id}/cron/{jid}/runs` | Its last runs and their output |
 
+### SFTP accounts of a website
+
+Accounts that sign in to the SFTP server as `name@website` and reach only that website, or one of its folders;
+they cannot open the panel. Only the website's owner (and whoever manages that account) may manage them.
+Fields: `name` (on creation), `password` and `public_key` (at least one; `""` removes it), `directory` (`""` = the
+whole website), `read_only`, `enabled`, `expires_at` (RFC 3339, `""` = never). The password is never returned.
+
+| Endpoint | What it does |
+|---|---|
+| `GET /domains/{id}/sftp-accounts` | The website's SFTP accounts, the server port and its host-key fingerprint |
+| `POST /domains/{id}/sftp-accounts` | Add one (20 per website) |
+| `PATCH /domains/{id}/sftp-accounts/{aid}` | Change it |
+| `DELETE /domains/{id}/sftp-accounts/{aid}` | Delete it |
+
 ### Files
 
 `path` is relative to the website's folder.

@@ -250,3 +250,24 @@ obert. En un servidor que fa servir ufw, l'obre l'instal·lador; si ufw encara e
 bloqueja (per exemple, després d'actualitzar des del tauler), la targeta
 **Accés SFTP** ho avisa, i un administrador executa `ufw allow 2222/tcp` al
 servidor.
+
+### Comptes SFTP d'un web
+
+Per donar accés només a un web a una altra persona (un programador, un
+dissenyador) sense compte al tauler, afegeix un **compte SFTP** a la pestanya
+**Fitxers** del web. Entra al mateix servidor i port com a `nom@web` (per
+exemple `dev@example.com`) amb la seva pròpia contrasenya, la seva pròpia
+clau SSH o totes dues, i no pot entrar al tauler.
+
+- **Carpeta**: tot el web o una de les seves carpetes (per exemple
+  `public/wp-content/uploads`); el compte no veu res per sobre.
+- **Només lectura**: pot descarregar però no canviar res.
+- **Data de fi**: a partir d'aleshores no pot entrar. També pots desactivar i
+  reactivar un compte, o esborrar-lo; el seu accés s'acaba en segons, fins i
+  tot amb una sessió oberta.
+
+Els comptes deixen de funcionar mentre el web o el seu propietari estan
+suspesos, i s'esborren amb el web. Només els gestiona el propietari del web
+(i qui gestiona aquell compte); les persones amb qui es comparteix el web no.
+Cada web pot tenir-ne fins a 20. Els accessos i els canvis apareixen al
+registre d'auditoria.

@@ -329,5 +329,15 @@
   "{address} is not a valid e-mail address": "{address} no es una dirección de correo válida",
   "{provider} rejected the secret key ({code})": "{provider} ha rechazado la clave secreta ({code})",
   "the database {name} is not running": "la base de datos {name} no está en marcha",
-  "this sign-in link is not valid: it was used already or has expired": "Este enlace de acceso no es válido: ya se ha usado o ha caducado"
+  "this sign-in link is not valid: it was used already or has expired": "Este enlace de acceso no es válido: ya se ha usado o ha caducado",
+  "the account name must be 1-32 characters: lowercase letters, digits, '_', '.', '-'": "el nombre de la cuenta debe tener de 1 a 32 caracteres: minúsculas, números, '_', '.', '-'",
+  "this website already has the maximum of 20 SFTP accounts": "esta web ya tiene el máximo de 20 cuentas SFTP",
+  "this website already has an account with that name": "esta web ya tiene una cuenta con ese nombre",
+  "an account's name cannot change; create a new account": "el nombre de una cuenta no se puede cambiar; crea una cuenta nueva",
+  "could not store the password": "no se ha podido guardar la contraseña",
+  "paste an SSH public key, such as the contents of id_ed25519.pub": "pega una clave pública SSH, como el contenido de id_ed25519.pub",
+  "the folder does not exist in this website": "la carpeta no existe en esta web",
+  "enter the end date as a date and time": "indica la fecha de fin como fecha y hora",
+  "the end date must be in the future": "la fecha de fin debe ser futura",
+  "set a password or an SSH key for the account": "pon una contraseña o una clave SSH a la cuenta"
 }

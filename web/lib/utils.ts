@@ -7,6 +7,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** A 20-character password from an unambiguous alphabet, with letters and digits (the policy). */
+export function generatePassword(): string {
+  const abc = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const buf = new Uint32Array(20);
+  crypto.getRandomValues(buf);
+  const pw = Array.from(buf, (n) => abc[n % abc.length]).join("");
+  return /\d/.test(pw) && /[a-z]/i.test(pw) ? pw : generatePassword();
+}
+
 const units = ["B", "KB", "MB", "GB", "TB"];
 
 export function bytes(n: number, digits = 1) {

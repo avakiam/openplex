@@ -38,6 +38,7 @@ import { MailTab } from "@/components/mail-tab";
 import { PHPSettingsCard } from "@/components/php-settings";
 import { SiteAppCard } from "@/components/site-app";
 import { FileManager } from "@/components/file-manager";
+import { SFTPAccounts } from "@/components/sftp-accounts";
 import { ItemBackups } from "@/components/item-backups";
 import { LogViewer } from "@/components/log-viewer";
 import { StatusBadge, stateLabels } from "@/components/status";
@@ -699,6 +700,11 @@ function DomainView() {
         </TabsContent>
         <TabsContent value="files">
           <FileManager domainId={d.id} />
+          {acc.owner && d.kind !== "alias" && (
+            <div className="mt-4">
+              <SFTPAccounts domain={d} />
+            </div>
+          )}
         </TabsContent>
         <TabsContent value="settings">
           <SettingsTab d={d} />

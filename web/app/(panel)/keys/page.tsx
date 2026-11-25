@@ -26,7 +26,7 @@ import { api } from "@/lib/api";
 import { keys, useAction, useAPIKeys, useSFTP, useSSHKeys } from "@/lib/hooks";
 import { getLocale, useT } from "@/lib/i18n";
 import type { APIKey } from "@/lib/types";
-import { ago } from "@/lib/utils";
+import { ago, generatePassword } from "@/lib/utils";
 
 function CopyField({ value }: { value: string }) {
   const { t } = useT();
@@ -155,14 +155,6 @@ function SSHKeys() {
   );
 }
 
-/** A 20-character password from an unambiguous alphabet, with letters and digits (the policy). */
-function generatePassword(): string {
-  const abc = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const buf = new Uint32Array(20);
-  crypto.getRandomValues(buf);
-  const pw = Array.from(buf, (n) => abc[n % abc.length]).join("");
-  return /\d/.test(pw) && /[a-z]/i.test(pw) ? pw : generatePassword();
-}
 
 function SFTPAccess() {
   const { t } = useT();

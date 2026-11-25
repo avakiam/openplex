@@ -309,6 +309,11 @@ has been verified on the Linux test server. One commit per milestone.
       Port opened by the panel firewall (service port) and by the installer in ufw; "SFTP access" card on the
       API & SSH keys page with host, port, user and host-key fingerprint, and a warning with the `ufw allow` command
       when ufw is active and does not let the port in (v0.20.1; the panel cannot edit ufw, /etc is read-only to it)
+- [x] SFTP accounts of a website (migration v27): `name@website` logins on the same server with their own password
+      and/or SSH key, no panel access; limited to the website or one of its folders (opened through the website's
+      os.Root, so a symlinked folder cannot lead out), read-only option, on/off, optional end date; refused while
+      the website or its owner is suspended, rechecked during a session, deleted with the website; managed by the
+      owner chain only (not grants), 20 per website, logins and changes audited; card on the Files tab
 - [x] PHP settings per website (v0.20.0, migration v17): memory_limit (up to the website's memory, clamped if
       that is lowered later), upload_max_filesize, post_max_size (≥ upload), max_execution_time, max_input_time,
       max_input_vars, session.gc_maxlifetime, display_errors, allow_url_fopen, date.timezone, disable_functions;

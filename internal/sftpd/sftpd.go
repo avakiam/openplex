@@ -1,9 +1,11 @@
 // Package sftpd is OpenPlex's built-in SFTP server for website files. Users
 // sign in with their panel username and one of their SSH keys or their SFTP
-// password (never the panel password). The root directory lists the websites
-// whose files they may change; every operation inside a website goes through
-// an os.Root on its directory, so "..", absolute paths and symlinks cannot
-// leave it, and new files belong to the website's own user.
+// password (never the panel password); a website's own SFTP accounts sign in
+// as name@website and reach only that website (or one of its folders). The
+// root directory lists the websites the session may change; every operation
+// inside a website goes through an os.Root on its directory, so "..",
+// absolute paths and symlinks cannot leave it, and new files belong to the
+// website's own user.
 package sftpd
 
 import (
@@ -18,6 +20,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -34,6 +37,7 @@ type Site struct {
 	Root     string // host directory of the website
 	UID      int    // owner of new files
 	ReadOnly bool   // shared read-only: no changes allowed
+	Sub      string // folder of Root the session is limited to ("" = all of it)
 }
 
 // Options configure the server.
@@ -45,6 +49,9 @@ type Options struct {
 	// Sites lists the websites u may reach (recomputed during a session, so
 	// revoked access takes effect within seconds).
 	Sites func(ctx context.Context, u *db.User) ([]Site, error)
+	// AccountSites is the website an SFTP account reaches (none once the
+	// account or its website is off), also recomputed during a session.
+	AccountSites func(ctx context.Context, a *db.SFTPAccount) ([]Site, error)
 }
 
 // Limits.
@@ -235,13 +242,27 @@ func (s *Server) serveConn(ctx context.Context, c net.Conn, ip string) {
 	_ = c.SetDeadline(time.Now().Add(idleTimeout))
 	go ssh.DiscardRequests(reqs)
 
-	uid, _ := strconv.ParseInt(sc.Permissions.Extensions["uid"], 10, 64)
-	user, err := s.opt.DB.GetUser(ctx, uid)
-	if err != nil {
-		return
+	method := sc.Permissions.Extensions["method"]
+	var sites func(context.Context) ([]Site, error)
+	if aid, err := strconv.ParseInt(sc.Permissions.Extensions["account"], 10, 64); err == nil {
+		a, err := s.opt.DB.GetSFTPAccount(ctx, aid)
+		if err != nil {
+			return
+		}
+		sites = func(ctx context.Context) ([]Site, error) { return s.accountSites(ctx, a.ID) }
+		_ = s.opt.DB.TouchSFTPAccountLogin(ctx, a.ID)
+		s.opt.Log.Info("sftp session", "account", a.Username, "ip", ip, "auth", method)
+		_ = s.opt.DB.Audit(ctx, db.AuditEntry{Action: "sftp.account_login", Target: a.Username, Detail: method, IP: ip})
+	} else {
+		uid, _ := strconv.ParseInt(sc.Permissions.Extensions["uid"], 10, 64)
+		user, err := s.opt.DB.GetUser(ctx, uid)
+		if err != nil {
+			return
+		}
+		sites = func(ctx context.Context) ([]Site, error) { return s.opt.Sites(ctx, user) }
+		s.opt.Log.Info("sftp session", "user", user.Username, "ip", ip, "auth", method)
+		_ = s.opt.DB.Audit(ctx, db.AuditEntry{UserID: &user.ID, Action: "sftp.login", Target: user.Username, Detail: method, IP: ip})
 	}
-	s.opt.Log.Info("sftp session", "user", user.Username, "ip", ip, "auth", sc.Permissions.Extensions["method"])
-	_ = s.opt.DB.Audit(ctx, db.AuditEntry{UserID: &user.ID, Action: "sftp.login", Target: user.Username, Detail: sc.Permissions.Extensions["method"], IP: ip})
 
 	for nc := range chans {
 		if nc.ChannelType() != "session" {
@@ -252,17 +273,17 @@ func (s *Server) serveConn(ctx context.Context, c net.Conn, ip string) {
 		if err != nil {
 			continue
 		}
-		go s.session(ctx, ch, creqs, user)
+		go s.session(ctx, ch, creqs, sites)
 	}
 }
 
 // session serves one channel: only the "sftp" subsystem is accepted (no shell, no exec).
-func (s *Server) session(ctx context.Context, ch ssh.Channel, reqs <-chan *ssh.Request, user *db.User) {
+func (s *Server) session(ctx context.Context, ch ssh.Channel, reqs <-chan *ssh.Request, sites func(context.Context) ([]Site, error)) {
 	defer ch.Close()
 	for req := range reqs {
 		if req.Type == "subsystem" && len(req.Payload) >= 4 && string(req.Payload[4:]) == "sftp" {
 			_ = req.Reply(true, nil)
-			fs := newFS(ctx, user, s.opt.Sites)
+			fs := newFS(ctx, sites)
 			srv := sftp.NewRequestServer(ch, sftp.Handlers{FileGet: fs, FilePut: fs, FileCmd: fs, FileList: fs})
 			_ = srv.Serve()
 			srv.Close()
@@ -274,32 +295,66 @@ func (s *Server) session(ctx context.Context, ch ssh.Channel, reqs <-chan *ssh.R
 	}
 }
 
-func (s *Server) lookup(meta ssh.ConnMetadata) (*db.User, string) {
+// lookup finds who signs in: a panel user, or (for name@website) a
+// website's SFTP account that is on and reaches its website.
+func (s *Server) lookup(meta ssh.ConnMetadata) (*db.User, *db.SFTPAccount, string) {
 	ip := remoteIP(meta.RemoteAddr())
 	s.mu.Lock()
 	blocked := s.blockedLocked(ip)
 	s.mu.Unlock()
 	if blocked {
-		return nil, ip
+		return nil, nil, ip
 	}
-	u, err := s.opt.DB.GetUserByUsername(context.Background(), meta.User())
+	ctx := context.Background()
+	if strings.Contains(meta.User(), "@") { // panel usernames have no "@"
+		a, err := s.opt.DB.GetSFTPAccountByUsername(ctx, meta.User())
+		if err != nil || s.opt.AccountSites == nil {
+			return nil, nil, ip
+		}
+		if sites, err := s.opt.AccountSites(ctx, a); err != nil || len(sites) == 0 {
+			return nil, nil, ip
+		}
+		return nil, a, ip
+	}
+	u, err := s.opt.DB.GetUserByUsername(ctx, meta.User())
 	if err != nil || u.Disabled {
-		return nil, ip
+		return nil, nil, ip
 	}
-	return u, ip
+	return u, nil, ip
 }
 
-func perms(u *db.User, method string) *ssh.Permissions {
+// accountSites reloads the account, so disabling, expiring or deleting it
+// ends access within a session too.
+func (s *Server) accountSites(ctx context.Context, id int64) ([]Site, error) {
+	a, err := s.opt.DB.GetSFTPAccount(ctx, id)
+	if errors.Is(err, db.ErrNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return s.opt.AccountSites(ctx, a)
+}
+
+func perms(u *db.User, a *db.SFTPAccount, method string) *ssh.Permissions {
+	if a != nil {
+		return &ssh.Permissions{Extensions: map[string]string{"account": strconv.FormatInt(a.ID, 10), "method": method}}
+	}
 	return &ssh.Permissions{Extensions: map[string]string{"uid": strconv.FormatInt(u.ID, 10), "method": method}}
 }
 
 var errDenied = errors.New("access denied")
 
 func (s *Server) checkPassword(meta ssh.ConnMetadata, pw []byte) (*ssh.Permissions, error) {
-	u, ip := s.lookup(meta)
-	if u != nil {
+	u, a, ip := s.lookup(meta)
+	switch {
+	case a != nil:
+		if a.PasswordHash != "" && auth.VerifyPassword(a.PasswordHash, string(pw)) {
+			return perms(nil, a, "password"), nil
+		}
+	case u != nil:
 		if h, err := s.opt.DB.SFTPPasswordHash(context.Background(), u.ID); err == nil && h != "" && auth.VerifyPassword(h, string(pw)) {
-			return perms(u, "password"), nil
+			return perms(u, nil, "password"), nil
 		}
 	}
 	s.failed(ip, meta.User())
@@ -307,15 +362,22 @@ func (s *Server) checkPassword(meta ssh.ConnMetadata, pw []byte) (*ssh.Permissio
 }
 
 func (s *Server) checkKey(meta ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
-	u, _ := s.lookup(meta)
-	if u != nil {
+	u, a, _ := s.lookup(meta)
+	want := key.Marshal()
+	switch {
+	case a != nil:
+		if a.PublicKey != "" {
+			if pk, _, _, _, err := ssh.ParseAuthorizedKey([]byte(a.PublicKey)); err == nil && bytes.Equal(pk.Marshal(), want) {
+				return perms(nil, a, "key "+a.KeyFingerprint), nil
+			}
+		}
+	case u != nil:
 		keys, err := s.opt.DB.ListSSHKeys(context.Background(), u.ID)
 		if err == nil {
-			want := key.Marshal()
 			for _, k := range keys {
 				pk, _, _, _, err := ssh.ParseAuthorizedKey([]byte(k.PublicKey))
 				if err == nil && bytes.Equal(pk.Marshal(), want) {
-					return perms(u, "key "+k.Fingerprint), nil
+					return perms(u, nil, "key "+k.Fingerprint), nil
 				}
 			}
 		}

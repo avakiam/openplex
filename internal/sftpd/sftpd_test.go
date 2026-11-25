@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -27,6 +28,8 @@ type fixture struct {
 	sites   string // directory holding the websites
 	outside string // a directory no website may reach
 	key     ssh.Signer
+	store   *db.DB
+	blog    int64 // website ID of blog.example
 }
 
 func setup(t *testing.T) fixture {
@@ -62,6 +65,12 @@ func setup(t *testing.T) fixture {
 	_ = os.WriteFile(filepath.Join(f.sites, "blog.example/public/index.html"), []byte("<h1>hi</h1>"), 0o644)
 	_ = os.Symlink(f.outside, filepath.Join(f.sites, "blog.example/public/escape"))
 
+	blog := &db.Domain{OwnerID: u.ID, Name: "blog.example", Kind: db.KindPrimary, Runtime: "static", Status: db.StatusRunning}
+	if err := store.CreateDomain(ctx, blog); err != nil {
+		t.Fatal(err)
+	}
+	f.store, f.blog = store, blog.ID
+
 	srv, err := New(Options{
 		HostKeyPath: filepath.Join(base, "host_key"), DB: store, Log: slog.New(slog.NewTextHandler(io.Discard, nil)),
 		Sites: func(_ context.Context, u *db.User) ([]Site, error) {
@@ -72,6 +81,12 @@ func setup(t *testing.T) fixture {
 				{Name: "blog.example", Root: filepath.Join(f.sites, "blog.example"), UID: os.Getuid()},
 				{Name: "shop.example", Root: filepath.Join(f.sites, "shop.example"), UID: os.Getuid(), ReadOnly: true},
 			}, nil
+		},
+		AccountSites: func(_ context.Context, a *db.SFTPAccount) ([]Site, error) {
+			if !a.Enabled || a.Expired(time.Now()) || a.DomainID != blog.ID {
+				return nil, nil
+			}
+			return []Site{{Name: "blog.example", Root: filepath.Join(f.sites, "blog.example"), UID: os.Getuid(), ReadOnly: a.ReadOnly, Sub: a.Directory}}, nil
 		},
 	})
 	if err != nil {
@@ -87,8 +102,12 @@ func setup(t *testing.T) fixture {
 }
 
 func dial(t *testing.T, addr string, am ssh.AuthMethod) (*sftp.Client, error) {
+	return dialAs(t, addr, "ana", am)
+}
+
+func dialAs(t *testing.T, addr, user string, am ssh.AuthMethod) (*sftp.Client, error) {
 	t.Helper()
-	conn, err := ssh.Dial("tcp", addr, &ssh.ClientConfig{User: "ana", Auth: []ssh.AuthMethod{am}, HostKeyCallback: ssh.InsecureIgnoreHostKey()})
+	conn, err := ssh.Dial("tcp", addr, &ssh.ClientConfig{User: user, Auth: []ssh.AuthMethod{am}, HostKeyCallback: ssh.InsecureIgnoreHostKey()})
 	if err != nil {
 		return nil, err
 	}
@@ -213,5 +232,107 @@ func TestFiles(t *testing.T) {
 	}
 	if _, err := c.Create("/shop.example/public/x"); !errors.Is(err, os.ErrPermission) && err == nil {
 		t.Fatal("wrote to a read-only website")
+	}
+}
+
+func TestWebsiteAccounts(t *testing.T) {
+	f := setup(t)
+	ctx := context.Background()
+	h, _ := auth.HashPassword("dev-Secret-2026")
+	_, priv, _ := ed25519.GenerateKey(rand.Reader)
+	devKey, _ := ssh.NewSignerFromKey(priv)
+	norm, fp, _ := auth.ParseSSHPublicKey(string(ssh.MarshalAuthorizedKey(devKey.PublicKey())))
+	past := time.Now().Add(-time.Hour)
+	accounts := []*db.SFTPAccount{
+		{DomainID: f.blog, Username: "dev@blog.example", PasswordHash: h, PublicKey: norm, KeyFingerprint: fp, Directory: "public", Enabled: true},
+		{DomainID: f.blog, Username: "off@blog.example", PasswordHash: h, Enabled: false},
+		{DomainID: f.blog, Username: "old@blog.example", PasswordHash: h, Enabled: true, ExpiresAt: &past},
+		{DomainID: f.blog, Username: "out@blog.example", PasswordHash: h, Directory: "public/escape", Enabled: true},
+		{DomainID: f.blog, Username: "ro@blog.example", PasswordHash: h, ReadOnly: true, Enabled: true},
+	}
+	for _, a := range accounts {
+		if err := f.store.CreateSFTPAccount(ctx, a); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for _, u := range []string{"off@blog.example", "old@blog.example", "nobody@blog.example"} {
+		if _, err := dialAs(t, f.addr, u, ssh.Password("dev-Secret-2026")); err == nil {
+			t.Errorf("%s signed in", u)
+		}
+	}
+	if _, err := dialAs(t, f.addr, "dev@blog.example", ssh.Password("sftp-Secret-2026")); err == nil {
+		t.Error("an account signed in with another password")
+	}
+	if _, err := dialAs(t, f.addr, "dev@blog.example", ssh.PublicKeys(f.key)); err == nil {
+		t.Error("an account signed in with the owner's key")
+	}
+	if _, err := dialAs(t, f.addr, "dev@blog.example", ssh.PublicKeys(devKey)); err != nil {
+		t.Fatalf("account key: %v", err)
+	}
+
+	c, err := dialAs(t, f.addr, "dev@blog.example", ssh.Password("dev-Secret-2026"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, _ := c.ReadDir("/")
+	if len(root) != 1 || root[0].Name() != "blog.example" {
+		t.Fatalf("account root lists %v", root)
+	}
+	// Limited to public/: its files are at the top, nothing above is reachable.
+	if r, err := c.Open("/blog.example/index.html"); err != nil {
+		t.Fatalf("read inside its folder: %v", err)
+	} else {
+		r.Close()
+	}
+	if _, err := c.ReadDir("/shop.example"); err == nil {
+		t.Error("listed another website")
+	}
+	w, err := c.Create("/blog.example/new.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.Close()
+	if _, err := os.Stat(filepath.Join(f.sites, "blog.example/public/new.txt")); err != nil {
+		t.Errorf("upload not in the folder: %v", err)
+	}
+	if _, err := c.ReadDir("/blog.example/escape"); err == nil {
+		t.Error("followed a symlink out of the website")
+	}
+
+	// A folder that is a symlink leading outside is never opened.
+	if c2, err := dialAs(t, f.addr, "out@blog.example", ssh.Password("dev-Secret-2026")); err == nil {
+		if _, err := c2.ReadDir("/blog.example"); err == nil {
+			t.Error("account folder escaped through a symlink")
+		}
+	}
+
+	ro, err := dialAs(t, f.addr, "ro@blog.example", ssh.Password("dev-Secret-2026"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ro.Create("/blog.example/public/x"); err == nil {
+		t.Error("read-only account wrote a file")
+	}
+
+	if a, _ := f.store.GetSFTPAccount(ctx, accounts[0].ID); a.LastLoginAt == nil {
+		t.Error("last sign-in not recorded")
+	}
+	// Turned off: no new sign-in, and a session's website list comes back empty.
+	accounts[0].Enabled = false
+	if err := f.store.UpdateSFTPAccount(ctx, accounts[0]); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := dialAs(t, f.addr, "dev@blog.example", ssh.Password("dev-Secret-2026")); err == nil {
+		t.Error("disabled account signed in")
+	}
+	srv := &Server{opt: Options{DB: f.store, AccountSites: func(_ context.Context, a *db.SFTPAccount) ([]Site, error) {
+		if !a.Enabled {
+			return nil, nil
+		}
+		return []Site{{Name: "blog.example"}}, nil
+	}}}
+	if sites, err := srv.accountSites(ctx, accounts[0].ID); err != nil || len(sites) != 0 {
+		t.Errorf("disabled account reaches %v (%v)", sites, err)
 	}
 }

@@ -232,6 +232,11 @@ func (s *Server) routes() http.Handler {
 				r.Patch("/mail/aliases/{aid}", s.handleUpdateAlias)
 				r.Delete("/mail/aliases/{aid}", s.handleDeleteAlias)
 
+				r.Get("/sftp-accounts", s.handleListSFTPAccounts)
+				r.Post("/sftp-accounts", s.handleCreateSFTPAccount)
+				r.Patch("/sftp-accounts/{aid}", s.handleUpdateSFTPAccount)
+				r.Delete("/sftp-accounts/{aid}", s.handleDeleteSFTPAccount)
+
 				r.Get("/files", s.handleListFiles)
 				r.Get("/files/content", s.handleReadFile)
 				r.Put("/files/content", s.handleWriteFile)
