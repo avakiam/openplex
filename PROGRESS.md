@@ -766,3 +766,8 @@ has been verified on the Linux test server. One commit per milestone.
   the end, ufw off and the `inet openplex` table on; root's first login ran the assistant (no domain → SSH tunnel
   instructions; `65-20-98-120.sslip.io` → Let's Encrypt certificate, panel at /login, health ok). Fixed: Vultr's
   "cloud-init may still be running" note stayed in /etc/motd. Test servers and the throwaway SSH key deleted.
+- 2026-11-26 — Released v0.37.0 (signed with avakiam-release-2026): file manager with drag-and-drop moves, folder
+  uploads and a right-click menu (`files/move`, uploads keep folders, archives store relative names), and the Vultr
+  script's MOTD fix. CI and the Release workflow green; both binaries, install.sh, SHA256SUMS and its signature
+  published. Tested in a local panel (Docker): moves by dialog and by dragging onto a folder, `..` and the path,
+  drop uploads into a folder, compress and extract into a folder, refusals (into itself 400, existing name 409).
