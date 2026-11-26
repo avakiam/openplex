@@ -230,6 +230,28 @@ un contenidor temporal que només veu els fitxers del web; les claus d'amfitrió
 SSH s'accepten el primer cop i es comproven després. Treure el desplegament
 des de Git deixa els fitxers.
 
+## Gestor de fitxers
+
+La pestanya **Fitxers** del web és un gestor de fitxers al navegador:
+
+- **Puja** fitxers o una carpeta sencera (amb les seves subcarpetes), o deixa
+  anar fitxers i carpetes des de l'ordinador sobre la llista, o sobre una
+  carpeta per pujar-los a dins.
+- **Mou** fitxers arrossegant-los a una carpeta, a la fila `..` (la carpeta de
+  dalt) o a una carpeta del camí de dalt; marca'n diversos per moure'ls junts.
+  **Mou a…** fa el mateix escrivint la carpeta, que es crea si no existeix. Mai
+  no se substitueix un fitxer: moure sobre un nom que ja existeix es rebutja.
+- **Fes clic dret** en un fitxer o carpeta per veure'n les accions: obrir o
+  editar, descarregar, extreure un `.zip`, `.tar.gz` o `.tar` aquí o en una
+  carpeta, comprimir, canviar el nom, moure, permisos i eliminar. Amb diversos
+  marcats, el menú actua sobre tots. Fes clic dret en una zona buida per crear
+  una carpeta o un fitxer, o per pujar.
+- Els fitxers de text s'obren en un editor amb ressaltat de sintaxi
+  (**Ctrl+S** desa).
+
+Tot queda dins de la carpeta del web i pertany a l'usuari del web, igual que
+per SFTP.
+
 ## Fitxers per SFTP
 
 A més del gestor de fitxers (pestanya **Fitxers**), cada usuari pot accedir

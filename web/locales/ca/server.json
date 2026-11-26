@@ -340,5 +340,9 @@
   "enter the end date as a date and time": "Indica la data de fi com a data i hora",
   "the end date must be in the future": "La data de fi ha de ser futura",
   "set a password or an SSH key for the account": "Posa una contrasenya o una clau SSH al compte",
-  "the webmail is off for this domain": "El webmail està desactivat per a aquest domini"
+  "the webmail is off for this domain": "El webmail està desactivat per a aquest domini",
+  "{name} already exists in that folder": "{name} ja existeix en aquella carpeta",
+  "a folder cannot be moved into itself": "una carpeta no es pot moure dins d'ella mateixa",
+  "paths is required": "Indica què vols moure",
+  "not a directory": "no és una carpeta"
 }

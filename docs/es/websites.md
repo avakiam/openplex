@@ -230,6 +230,29 @@ de la web en un contenedor temporal que solo ve los archivos de la web; las
 claves de host SSH se aceptan la primera vez y se comprueban después. Quitar
 el despliegue desde Git deja los archivos.
 
+## Gestor de archivos
+
+La pestaña **Archivos** de la web es un gestor de archivos en el navegador:
+
+- **Sube** archivos o una carpeta entera (con sus subcarpetas), o suelta
+  archivos y carpetas desde tu ordenador sobre la lista, o sobre una carpeta
+  para subirlos dentro.
+- **Mueve** archivos arrastrándolos a una carpeta, a la fila `..` (la carpeta
+  de arriba) o a una carpeta de la ruta de arriba; marca varios para moverlos
+  juntos. **Mover a…** hace lo mismo escribiendo la carpeta, que se crea si no
+  existe. Nunca se sustituye un archivo: mover sobre un nombre que ya existe se
+  rechaza.
+- **Haz clic derecho** en un archivo o carpeta para ver sus acciones: abrir o
+  editar, descargar, extraer un `.zip`, `.tar.gz` o `.tar` aquí o en una
+  carpeta, comprimir, renombrar, mover, permisos y eliminar. Con varios
+  marcados, el menú actúa sobre todos. Haz clic derecho en una zona vacía para
+  crear una carpeta o un archivo, o para subir.
+- Los archivos de texto se abren en un editor con resaltado de sintaxis
+  (**Ctrl+S** guarda).
+
+Todo se queda dentro de la carpeta de la web y pertenece al usuario de la web,
+igual que por SFTP.
+
 ## Archivos por SFTP
 
 Además del gestor de archivos (pestaña **Archivos**), cada usuario puede

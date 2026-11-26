@@ -348,13 +348,14 @@ whole website), `read_only`, `enabled`, `expires_at` (RFC 3339, `""` = never). T
 | `GET /domains/{id}/files/content` | Read a text file |
 | `PUT /domains/{id}/files/content` | Write a text file |
 | `GET /domains/{id}/files/download` | Download a file |
-| `POST /domains/{id}/files/upload` | Upload files (multipart) |
+| `POST /domains/{id}/files/upload` | Upload files (multipart); a file name with folders (`site/css/main.css`) creates them |
 | `POST /domains/{id}/files/mkdir` | Create a folder |
 | `POST /domains/{id}/files/rename` | Rename or move |
+| `POST /domains/{id}/files/move` | Move `paths` into the folder `dest`, created when missing (never replaces an existing name) |
 | `POST /domains/{id}/files/delete` | Delete |
 | `POST /domains/{id}/files/chmod` | Change permissions |
 | `POST /domains/{id}/files/extract` | Extract an archive |
-| `POST /domains/{id}/files/compress` | Make a zip archive |
+| `POST /domains/{id}/files/compress` | Make a `.tar.gz` archive |
 
 ### DNS
 

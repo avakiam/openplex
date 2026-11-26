@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"mime"
+	"mime/multipart"
 	"net/http"
 	"path"
 	"path/filepath"
@@ -38,8 +39,12 @@ func (s *Server) fileErr(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, files.ErrTooLarge):
 		writeErrFrom(w, http.StatusRequestEntityTooLarge, "too_large", err)
-	case errors.Is(err, files.ErrRoot):
+	case errors.Is(err, files.ErrRoot), errors.Is(err, files.ErrIntoItself), errors.Is(err, files.ErrNotDir):
 		badRequestErr(w, err)
+	case errors.As(err, new(*files.ExistsError)):
+		var ee *files.ExistsError
+		errors.As(err, &ee)
+		writeMsg(w, http.StatusConflict, "conflict", msg.New("{name} already exists in that folder", "name", ee.Name))
 	default:
 		if strings.Contains(err.Error(), "escapes from parent") {
 			badRequest(w, "path escapes the site directory")
@@ -140,16 +145,21 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 			writeMsg(w, http.StatusBadRequest, "bad_request", msg.New("malformed upload: {error}", "error", err.Error()))
 			return
 		}
-		if part.FileName() == "" {
+		// The file name may carry a folder path (a folder upload sends
+		// "site/css/main.css"); FileName() keeps only the base name.
+		rel := uploadPath(part)
+		if rel == "" {
 			part.Close()
 			continue
 		}
-		name := path.Base(strings.ReplaceAll(part.FileName(), "\\", "/"))
-		if name == "." || name == "/" || name == ".." {
-			part.Close()
-			continue
+		target := path.Join(dir, rel)
+		if sub := path.Dir(rel); sub != "." {
+			if err := j.Mkdir(path.Join(dir, sub)); err != nil {
+				part.Close()
+				s.fileErr(w, r, err)
+				return
+			}
 		}
-		target := path.Join(dir, name)
 		_, err = j.WriteFile(target, part)
 		part.Close()
 		if err != nil {
@@ -160,6 +170,28 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	s.audit(r, "file.upload", d.Name, fmt.Sprintf("%d files to %s", len(saved), dir))
 	writeJSON(w, http.StatusCreated, map[string]any{"saved": saved})
+}
+
+// uploadPath is the relative path a multipart file part asks for: its
+// file name, which may hold folders ("site/css/main.css"), cleaned so that it
+// stays inside the upload folder. "" means the part is skipped.
+func uploadPath(part *multipart.Part) string {
+	_, params, err := mime.ParseMediaType(part.Header.Get("Content-Disposition"))
+	name := params["filename"]
+	if err != nil || name == "" {
+		name = part.FileName()
+	}
+	var segs []string
+	for _, seg := range strings.Split(strings.ReplaceAll(name, "\\", "/"), "/") {
+		switch seg {
+		case "", ".":
+		case "..":
+			return ""
+		default:
+			segs = append(segs, seg)
+		}
+	}
+	return strings.Join(segs, "/")
 }
 
 func (s *Server) handleFileOp(w http.ResponseWriter, r *http.Request) {
@@ -186,6 +218,12 @@ func (s *Server) handleFileOp(w http.ResponseWriter, r *http.Request) {
 		err = j.Mkdir(in.Path)
 	case "rename":
 		err = j.Rename(in.From, in.To)
+	case "move":
+		if len(in.Paths) == 0 {
+			badRequest(w, "paths is required")
+			return
+		}
+		err = j.Move(in.Paths, in.Dest)
 	case "delete":
 		if len(in.Paths) == 0 && in.Path != "" {
 			in.Paths = []string{in.Path}
@@ -224,6 +262,10 @@ func (s *Server) handleFileOp(w http.ResponseWriter, r *http.Request) {
 		s.fileErr(w, r, err)
 		return
 	}
-	s.audit(r, "file."+op, d.Name, strings.TrimSpace(in.Path+" "+in.From+" "+in.To+" "+in.Dest))
+	detail := strings.TrimSpace(in.Path + " " + in.From + " " + in.To + " " + in.Dest)
+	if op == "move" {
+		detail = strings.Join(in.Paths, ", ") + " → " + files.Clean(in.Dest)
+	}
+	s.audit(r, "file."+op, d.Name, detail)
 	writeJSON(w, http.StatusOK, result)
 }

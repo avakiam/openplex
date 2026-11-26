@@ -216,6 +216,28 @@ address** if it leaks. Fetching runs as the website's user in a throwaway
 container that sees only the website's files; SSH host keys are accepted the
 first time and checked afterwards. Removing Git deploy leaves the files.
 
+## File manager
+
+The website's **Files** tab is a file manager in the browser:
+
+- **Upload** files or a whole folder (its subfolders are kept), or drop
+  files and folders from your computer onto the list, or onto a folder to
+  upload into it.
+- **Move** files by dragging them onto a folder, onto the `..` row (the
+  parent folder) or onto a folder of the path at the top; tick several to move
+  them together. **Move to…** does the same by typing the folder, which is
+  created when missing. A file is never replaced: moving onto an existing name
+  is refused.
+- **Right-click** a file or folder for its actions: open or edit, download,
+  extract a `.zip`, `.tar.gz` or `.tar` here or into a folder, compress,
+  rename, move, permissions and delete. With several ticked, the menu acts on
+  all of them. Right-click an empty area to create a folder or a file, or to
+  upload.
+- Text files open in an editor with syntax highlighting (**Ctrl+S** saves).
+
+Everything stays inside the website's folder and belongs to the website's
+user, as with SFTP.
+
 ## Files over SFTP
 
 Besides the file manager (**Files** tab), every user can reach their websites'

@@ -3,6 +3,8 @@ package files
 import (
 	"archive/zip"
 	"bytes"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -106,5 +108,71 @@ func TestModesIgnoreUmask(t *testing.T) {
 		if err != nil || st.Mode().Perm() != want {
 			t.Errorf("%s: mode %v, want %v (err %v)", p, st.Mode().Perm(), want, err)
 		}
+	}
+}
+
+func TestMove(t *testing.T) {
+	j := Jail{Root: t.TempDir()}
+	for _, d := range []string{"dir", "dest"} {
+		if err := j.Mkdir(d); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, f := range []string{"a.txt", "b.txt", "dir/c.txt", "dest/b.txt"} {
+		if _, err := j.WriteFile(f, strings.NewReader(f)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := j.Move([]string{"a.txt", "dir"}, "dest"); err != nil {
+		t.Fatal(err)
+	}
+	if b, err := j.ReadFile("dest/dir/c.txt"); err != nil || string(b) != "dir/c.txt" {
+		t.Fatalf("moved folder: %q %v", b, err)
+	}
+	if _, err := j.Stat("a.txt"); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("a.txt still at the root: %v", err)
+	}
+	var ee *ExistsError
+	if err := j.Move([]string{"b.txt"}, "dest"); !errors.As(err, &ee) || ee.Name != "b.txt" || !errors.Is(err, fs.ErrExist) {
+		t.Fatalf("existing name: %v", err)
+	}
+	if b, _ := j.ReadFile("dest/b.txt"); string(b) != "dest/b.txt" {
+		t.Fatalf("existing file replaced: %q", b)
+	}
+	for _, dest := range []string{"dest", "dest/dir"} {
+		if err := j.Move([]string{"dest"}, dest); !errors.Is(err, ErrIntoItself) {
+			t.Fatalf("into itself (%s): %v", dest, err)
+		}
+	}
+	if err := j.Move([]string{"dest/a.txt"}, "dest/a.txt"); err == nil {
+		t.Fatal("moved into a file")
+	}
+	if err := j.Move([]string{"dest/a.txt"}, "dest"); err != nil { // already there: nothing to do
+		t.Fatal(err)
+	}
+	if err := j.Move([]string{"dest/a.txt"}, "../new/x"); err != nil { // stays in the jail, folder created
+		t.Fatal(err)
+	}
+	if _, err := j.Stat("new/x/a.txt"); err != nil {
+		t.Fatalf("move into a new folder: %v", err)
+	}
+}
+
+func TestCompressNestedKeepsRelativeNames(t *testing.T) {
+	j := Jail{Root: t.TempDir()}
+	if err := j.Mkdir("public/site/css"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := j.WriteFile("public/site/css/main.css", strings.NewReader("body{}")); err != nil {
+		t.Fatal(err)
+	}
+	if err := j.Compress([]string{"public/site"}, "public/site.tar.gz"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := j.Extract("public/site.tar.gz", "public/copy"); err != nil {
+		t.Fatal(err)
+	}
+	if b, err := j.ReadFile("public/copy/site/css/main.css"); err != nil || string(b) != "body{}" {
+		t.Fatalf("extracted layout: %q %v", b, err)
 	}
 }

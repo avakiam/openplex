@@ -340,5 +340,9 @@
   "enter the end date as a date and time": "Indica la fecha de fin como fecha y hora",
   "the end date must be in the future": "La fecha de fin debe ser futura",
   "set a password or an SSH key for the account": "Pon una contraseña o una clave SSH a la cuenta",
-  "the webmail is off for this domain": "El webmail está desactivado para este dominio"
+  "the webmail is off for this domain": "El webmail está desactivado para este dominio",
+  "{name} already exists in that folder": "{name} ya existe en esa carpeta",
+  "a folder cannot be moved into itself": "una carpeta no se puede mover dentro de sí misma",
+  "paths is required": "Indica qué mover",
+  "not a directory": "no es una carpeta"
 }

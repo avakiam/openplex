@@ -10,5 +10,13 @@
   "{count} checks passed": {
     "one": "{count} check passed",
     "other": "{count} checks passed"
+  },
+  "Move {count} items": {
+    "one": "Move {count} item",
+    "other": "Move {count} items"
+  },
+  "{count} items": {
+    "one": "{count} item",
+    "other": "{count} items"
   }
 }

@@ -248,6 +248,63 @@ func (j Jail) Rename(from, to string) error {
 	return r.Rename(from, to)
 }
 
+// ErrIntoItself is returned when a folder would be moved into itself.
+var ErrIntoItself = errors.New("a folder cannot be moved into itself")
+
+// ErrNotDir is returned when a move's destination is not a folder.
+var ErrNotDir = errors.New("not a directory")
+
+// ExistsError is returned when the destination already has an entry with the
+// same name; it matches fs.ErrExist.
+type ExistsError struct{ Name string }
+
+func (e *ExistsError) Error() string { return e.Name + " already exists in that folder" }
+func (e *ExistsError) Unwrap() error { return fs.ErrExist }
+
+// Move moves each path into the folder dest (created when missing), keeping
+// its name. It stops at the first failure: an existing name in dest is never
+// replaced.
+func (j Jail) Move(paths []string, dest string) error {
+	dest = Clean(dest)
+	if _, err := j.Stat(dest); errors.Is(err, fs.ErrNotExist) {
+		if err := j.Mkdir(dest); err != nil {
+			return err
+		}
+	}
+	r, err := j.open()
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	st, err := r.Stat(dest)
+	if err != nil {
+		return err
+	}
+	if !st.IsDir() {
+		return ErrNotDir
+	}
+	for _, p := range paths {
+		p = Clean(p)
+		if p == "." {
+			return ErrRoot
+		}
+		if path.Dir(p) == dest {
+			continue // already there
+		}
+		if dest == p || strings.HasPrefix(dest+"/", p+"/") {
+			return ErrIntoItself
+		}
+		to := path.Join(dest, path.Base(p))
+		if _, err := r.Lstat(to); err == nil {
+			return &ExistsError{Name: path.Base(p)}
+		}
+		if err := r.Rename(p, to); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Remove deletes a file or directory tree.
 func (j Jail) Remove(p string) error {
 	r, err := j.open()
@@ -505,7 +562,13 @@ func (j Jail) Compress(paths []string, dst string) error {
 				if err != nil {
 					return err
 				}
+				// Names start at the compressed item, like other file
+				// managers: compressing public/site stores site/…, so
+				// extracting next to it gives the same layout back.
 				h.Name = fp
+				if parent := path.Dir(p); parent != "." {
+					h.Name = strings.TrimPrefix(fp, parent+"/")
+				}
 				h.Uid, h.Gid, h.Uname, h.Gname = 0, 0, "", ""
 				if err := tw.WriteHeader(h); err != nil {
 					return err

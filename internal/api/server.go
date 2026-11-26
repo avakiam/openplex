@@ -244,7 +244,7 @@ func (s *Server) routes() http.Handler {
 				r.Put("/files/content", s.handleWriteFile)
 				r.Get("/files/download", s.handleDownloadFile)
 				r.Post("/files/upload", s.handleUpload)
-				for _, op := range []string{"mkdir", "rename", "delete", "chmod", "extract", "compress"} {
+				for _, op := range []string{"mkdir", "rename", "move", "delete", "chmod", "extract", "compress"} {
 					r.Post("/files/"+op, s.handleFileOp)
 				}
 			})

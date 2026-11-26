@@ -76,6 +76,12 @@ has been verified on the Linux test server. One commit per milestone.
 - [x] List / read / write / mkdir / rename / delete / chmod
 - [x] Multipart upload + download
 - [x] Extract `.zip` / `.tar.gz` (zip-slip safe) + compress
+- [x] Move (`files/move`: several items into a folder, created when missing; never into itself or onto an existing
+      name), folder uploads (file names with folders create them, `..` refused), archives store names relative to
+      the compressed item. Dashboard: drag files onto a folder, the `..` row or the path to move them; drop files or
+      folders from the computer (onto a folder to upload into it); Upload → Files / Folder; right-click menu on an
+      entry (open/edit, download, extract here or into a folder, compress, rename, move to…, permissions, delete;
+      acts on the whole selection when several are ticked) and on empty space (new folder/file, upload, refresh)
 - [x] WebSocket web terminal (xterm.js): docker exec TTY in the site's own container as the site uid,
       throwaway `openplex/shell` tools container for static sites, resize, root mode (admins only),
       30 min idle / 4 h max, whole session killed on disconnect, audited open/close

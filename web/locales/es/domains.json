@@ -353,5 +353,30 @@
   "Expires {date} and has not renewed yet": "Caduca el {date} y aún no se ha renovado",
   "Being requested": "Solicitándose",
   "Not issued": "Sin emitir",
-  "Check that the name's DNS points to this server (an A record; no AAAA unless the server's IPv6 works) and that port 80 reaches it from the internet. It keeps being requested, and shows up here once issued.": "Comprueba que el DNS del nombre apunta a este servidor (un registro A; ningún AAAA salvo que la IPv6 del servidor funcione) y que el puerto 80 le llega desde internet. Se sigue solicitando, y aparecerá aquí en cuanto se emita."
+  "Check that the name's DNS points to this server (an A record; no AAAA unless the server's IPv6 works) and that port 80 reaches it from the internet. It keeps being requested, and shows up here once issued.": "Comprueba que el DNS del nombre apunta a este servidor (un registro A; ningún AAAA salvo que la IPv6 del servidor funcione) y que el puerto 80 le llega desde internet. Se sigue solicitando, y aparecerá aquí en cuanto se emita.",
+  "Move to…": "Mover a…",
+  "Open": "Abrir",
+  "Extract to folder…": "Extraer en carpeta…",
+  "Compress": "Comprimir",
+  "Upload files": "Subir archivos",
+  "Upload folder": "Subir carpeta",
+  "Move {name}": "Mover {name}",
+  "Extract {name}": "Extraer {name}",
+  "Move ({count})": "Mover ({count})",
+  "Drop files or folders here, or use Upload.": "Suelta archivos o carpetas aquí, o usa Subir.",
+  "Up one folder": "Subir una carpeta",
+  "This folder is empty. Drop files or folders here, or use Upload.": "Esta carpeta está vacía. Suelta archivos o carpetas aquí, o usa Subir.",
+  "Tip: drag files onto a folder, the .. row or the path above to move them; right-click for more actions.": "Consejo: arrastra archivos a una carpeta, a la fila .. o a la ruta de arriba para moverlos; haz clic derecho para ver más acciones.",
+  "Destination folder": "Carpeta de destino",
+  "A folder of the website, such as public/img; empty for the website's root. It is created if it does not exist.": "Una carpeta de la web, como public/img; vacío para la raíz de la web. Se crea si no existe.",
+  "Move": "Mover",
+  "Extract": "Extraer",
+  "Move {count} items": {
+    "one": "Mover {count} elemento",
+    "other": "Mover {count} elementos"
+  },
+  "{count} items": {
+    "one": "{count} elemento",
+    "other": "{count} elementos"
+  }
 }

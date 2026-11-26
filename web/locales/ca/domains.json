@@ -353,5 +353,30 @@
   "Expires {date} and has not renewed yet": "Caduca el {date} i encara no s'ha renovat",
   "Being requested": "Sol·licitant-se",
   "Not issued": "Sense emetre",
-  "Check that the name's DNS points to this server (an A record; no AAAA unless the server's IPv6 works) and that port 80 reaches it from the internet. It keeps being requested, and shows up here once issued.": "Comprova que el DNS del nom apunta a aquest servidor (un registre A; cap AAAA tret que la IPv6 del servidor funcioni) i que el port 80 hi arriba des d'internet. Es continua sol·licitant, i apareixerà aquí quan s'emeti."
+  "Check that the name's DNS points to this server (an A record; no AAAA unless the server's IPv6 works) and that port 80 reaches it from the internet. It keeps being requested, and shows up here once issued.": "Comprova que el DNS del nom apunta a aquest servidor (un registre A; cap AAAA tret que la IPv6 del servidor funcioni) i que el port 80 hi arriba des d'internet. Es continua sol·licitant, i apareixerà aquí quan s'emeti.",
+  "Move to…": "Mou a…",
+  "Open": "Obre",
+  "Extract to folder…": "Extreu en una carpeta…",
+  "Compress": "Comprimeix",
+  "Upload files": "Puja fitxers",
+  "Upload folder": "Puja una carpeta",
+  "Move {name}": "Mou {name}",
+  "Extract {name}": "Extreu {name}",
+  "Move ({count})": "Mou ({count})",
+  "Drop files or folders here, or use Upload.": "Deixa anar fitxers o carpetes aquí, o fes servir Puja.",
+  "Up one folder": "Puja una carpeta enrere",
+  "This folder is empty. Drop files or folders here, or use Upload.": "Aquesta carpeta és buida. Deixa anar fitxers o carpetes aquí, o fes servir Puja.",
+  "Tip: drag files onto a folder, the .. row or the path above to move them; right-click for more actions.": "Consell: arrossega fitxers a una carpeta, a la fila .. o al camí de dalt per moure'ls; fes clic dret per veure més accions.",
+  "Destination folder": "Carpeta de destinació",
+  "A folder of the website, such as public/img; empty for the website's root. It is created if it does not exist.": "Una carpeta del web, com public/img; buit per a l'arrel del web. Es crea si no existeix.",
+  "Move": "Mou",
+  "Extract": "Extreu",
+  "Move {count} items": {
+    "one": "Mou {count} element",
+    "other": "Mou {count} elements"
+  },
+  "{count} items": {
+    "one": "{count} element",
+    "other": "{count} elements"
+  }
 }
