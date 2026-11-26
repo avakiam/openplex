@@ -93,4 +93,9 @@ EOF
 
 apt_get autoremove
 apt_get clean
+# Vultr's image leaves a "cloud-init may still be running" note in /etc/motd;
+# provisioning is over, and 99-openplex says what to do next.
+if grep -q 'cloud-init may still be running' /etc/motd 2>/dev/null; then
+  : >/etc/motd
+fi
 log "OpenPlex is installed${domain:+: https://$domain}"

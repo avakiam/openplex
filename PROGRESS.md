@@ -752,3 +752,11 @@ has been verified on the Linux test server. One commit per milestone.
 - 2026-11-25 — Released v0.36.2 (signed with avakiam-release-2026): the per-domain webmail switch stays visible,
   greyed out with the reason, while the server's webmail is off (it was hidden). Release workflow green; both
   binaries, install.sh, SHA256SUMS and its signature published.
+- 2026-11-26 — Vultr Marketplace: vendor approved (vendor user `OpenPlex`, $100 credit). App `openplex` (id 4444,
+  private) created with the texts of `deploy/vultr/LISTING.md`, icons, support links, variables `panel_domain` and
+  `acme_email`, and a Vendor Data build on Ubuntu 24.04. The vendor console's "Deploy Image" for that build fails
+  ("Unable to determine a source snapshot for this subscription!"), so the script was tested on a plain Ubuntu 24.04
+  vc2-1c-2gb in Madrid as cloud-init user data: OpenPlex 0.36.2 installed in about 3 minutes with SSH closed until
+  the end, ufw off and the `inet openplex` table on; root's first login ran the assistant (no domain → SSH tunnel
+  instructions; `65-20-98-120.sslip.io` → Let's Encrypt certificate, panel at /login, health ok). Fixed: Vultr's
+  "cloud-init may still be running" note stayed in /etc/motd. Test servers and the throwaway SSH key deleted.
